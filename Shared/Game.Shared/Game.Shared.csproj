@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Regras do jogo compartilhadas entre cliente (Unity) e servidor (.NET).
+    netstandard2.1 + C# 9 para manter compatibilidade com o Unity 6.
+    Não referenciar UnityEngine nem nada específico de servidor aqui.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Game.Shared</RootNamespace>
+    <AssemblyName>Game.Shared</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
