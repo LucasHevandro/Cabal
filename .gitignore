@@ -1,0 +1,58 @@
+# ===== Unity (Client/) =====
+Client/[Ll]ibrary/
+Client/[Tt]emp/
+Client/[Oo]bj/
+Client/[Bb]uild/
+Client/[Bb]uilds/
+Client/[Ll]ogs/
+Client/[Uu]ser[Ss]ettings/
+Client/[Mm]emoryCaptures/
+Client/[Rr]ecordings/
+Client/Assets/Plugins/Editor/JetBrains*
+Client/*.csproj
+Client/*.sln
+Client/*.slnx
+Client/*.suo
+Client/*.user
+Client/*.pidb
+Client/*.booproj
+Client/*.unityproj
+Client/*.apk
+Client/*.aab
+Client/crashlytics-build.properties
+Client/Assets/StreamingAssets/aa*
+Client/Assets/AddressableAssetsData/*/*.bin*
+
+# DLL gerada a partir de Shared/ (copiada pelo build, não versionada)
+Client/Assets/Plugins/Shared/
+
+# ===== .NET (Server/, Shared/, Tools/) =====
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.rsuser
+TestResults/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+
+# ===== IDEs =====
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# ===== Sistema =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== Segredos e ambiente local =====
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+*.pfx
+*.key
