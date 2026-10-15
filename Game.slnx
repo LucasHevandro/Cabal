@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Shared/">
+    <Project Path="Shared/Game.Shared.Tests/Game.Shared.Tests.csproj" />
     <Project Path="Shared/Game.Shared/Game.Shared.csproj" />
   </Folder>
 </Solution>
