@@ -31,6 +31,15 @@ A biblioteca `Shared` mira **.NET Standard 2.1** para poder ser usada dentro do 
 dotnet test Game.slnx
 ```
 
+**Servidor** (porta padrão 7777; Ctrl+C desliga):
+
+```bash
+dotnet run --project Server/Game.Server -- --port 7777
+```
+
+Por enquanto o servidor aceita conexões, valida o movimento e envia o estado dos jogadores. Monstros, combate e o
+cliente em rede estão sendo feitos na Fase 3; o protótipo no Unity ainda roda offline.
+
 **Protótipo de combate** (Unity 6000.6.6f1):
 
 1. Abra a pasta `Client/` no Unity Hub.

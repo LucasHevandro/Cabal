@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Server/">
+    <Project Path="Server/Game.Server.Tests/Game.Server.Tests.csproj" />
+    <Project Path="Server/Game.Server/Game.Server.csproj" />
+  </Folder>
   <Folder Name="/Shared/">
     <Project Path="Shared/Game.Shared.Tests/Game.Shared.Tests.csproj" />
     <Project Path="Shared/Game.Shared/Game.Shared.csproj" />

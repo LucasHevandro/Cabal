@@ -1,0 +1,110 @@
+using System.Net.Sockets;
+using Game.Server.Net;
+using Game.Shared.Net;
+
+namespace Game.Server.Tests;
+
+/// <summary>Testes com TCP de verdade, em porta livre escolhida pelo sistema.</summary>
+public class ServerHostTests
+{
+    private sealed class TestClient : IDisposable
+    {
+        private readonly TcpClient _tcp = new();
+        private readonly FrameBuffer _frames = new();
+        private readonly byte[] _buffer = new byte[8192];
+        private NetworkStream _stream = null!;
+
+        public async Task ConnectAsync(int port)
+        {
+            await _tcp.ConnectAsync("127.0.0.1", port);
+            _stream = _tcp.GetStream();
+        }
+
+        public Task SendAsync(INetMessage message) => _stream.WriteAsync(NetCodec.Encode(message)).AsTask();
+
+        /// <summary>Lê mensagens até chegar uma do tipo pedido (ou estourar o tempo).</summary>
+        public async Task<T> ReceiveAsync<T>(TimeSpan? timeout = null) where T : INetMessage
+        {
+            using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
+            while (true)
+            {
+                while (_frames.TryRead(out var type, out var payload))
+                {
+                    if (NetCodec.Decode(type, payload) is T match) return match;
+                }
+                var read = await _stream.ReadAsync(_buffer, cts.Token);
+                if (read == 0) throw new IOException("Servidor fechou a conexão.");
+                _frames.Append(_buffer, 0, read);
+            }
+        }
+
+        public void Dispose() => _tcp.Dispose();
+    }
+
+    [Fact]
+    public async Task Cliente_conecta_recebe_boas_vindas_e_snapshots()
+    {
+        using var host = new ServerHost(port: 0);
+        host.Start();
+        using var client = new TestClient();
+        await client.ConnectAsync(host.Port);
+
+        await client.SendAsync(new Hello { Name = "Teste" });
+        var welcome = await client.ReceiveAsync<Welcome>();
+        var snapshot = await client.ReceiveAsync<Snapshot>();
+
+        Assert.True(welcome.PlayerId > 0);
+        Assert.Contains(snapshot.Entities, e => e.Id == welcome.PlayerId);
+    }
+
+    [Fact]
+    public async Task Dois_clientes_se_enxergam()
+    {
+        using var host = new ServerHost(port: 0);
+        host.Start();
+        using var ana = new TestClient();
+        using var bia = new TestClient();
+        await ana.ConnectAsync(host.Port);
+        await ana.SendAsync(new Hello { Name = "Ana" });
+        var anaId = (await ana.ReceiveAsync<Welcome>()).PlayerId;
+
+        await bia.ConnectAsync(host.Port);
+        await bia.SendAsync(new Hello { Name = "Bia" });
+
+        Assert.Equal("Ana", (await bia.ReceiveAsync<EntitySpawned>()).Name);
+        Assert.Equal("Bia", (await ana.ReceiveAsync<EntitySpawned>()).Name);
+        var snapshot = await bia.ReceiveAsync<Snapshot>();
+        Assert.Contains(snapshot.Entities, e => e.Id == anaId);
+    }
+
+    [Fact]
+    public async Task Versao_errada_eh_recusada_com_motivo()
+    {
+        using var host = new ServerHost(port: 0);
+        host.Start();
+        using var client = new TestClient();
+        await client.ConnectAsync(host.Port);
+
+        await client.SendAsync(new Hello { ProtocolVersion = 999, Name = "Antigo" });
+
+        var reject = await client.ReceiveAsync<Reject>();
+        Assert.Contains("Versão", reject.Reason);
+    }
+
+    [Fact]
+    public async Task Ping_mede_ida_e_volta()
+    {
+        using var host = new ServerHost(port: 0);
+        host.Start();
+        using var client = new TestClient();
+        await client.ConnectAsync(host.Port);
+        await client.SendAsync(new Hello { Name = "Teste" });
+        await client.ReceiveAsync<Welcome>();
+
+        await client.SendAsync(new Ping { ClientTime = 42 });
+
+        var pong = await client.ReceiveAsync<Pong>();
+        Assert.Equal(42, pong.ClientTime);
+        Assert.True(pong.ServerTime > 0);
+    }
+}
