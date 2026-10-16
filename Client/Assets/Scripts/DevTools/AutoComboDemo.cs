@@ -2,6 +2,9 @@ using System;
 using System.Collections;
 using System.IO;
 using Game.Client.Combat;
+using Game.Client.Loot;
+using Game.Client.Monsters;
+using Game.Client.Player;
 using Game.Shared.Combat;
 using UnityEngine;
 
@@ -107,10 +110,128 @@ namespace Game.Client.DevTools
             Capture("3-finalizador");
 
             var dealt = hpBefore - target.Hp.Current;
-            var ok = combat.Combo.LastEndReason == ComboEndReason.Finished && dealt > 0 && _routesSeen > 0;
+            var comboOk = combat.Combo.LastEndReason == ComboEndReason.Finished && dealt > 0 && _routesSeen > 0;
+            if (!comboOk)
+            {
+                Finish($"FALHA: fim = {combat.Combo.LastEndReason}, rotas {_routesSeen}, dano {dealt}");
+                yield break;
+            }
+            Log($"Combo OK: {HitsBeforeFinisher} acertos, {_routesSeen} rotas + finalizador, {dealt} de dano");
+
+            yield return HuntDemo(combat, selector);
+        }
+
+        /// <summary>
+        /// Fase 2: caça um coelho nos Campos do Vento, confere XP e drop, coleta os itens
+        /// e fotografa as zonas do mapa.
+        /// </summary>
+        private IEnumerator HuntDemo(PlayerCombat combat, TargetSelector selector)
+        {
+            var progression = combat.GetComponent<PlayerProgression>();
+            var loot = combat.GetComponent<PlayerLoot>();
+            var monster = FindMonster("coelho_saltador", combat.transform.position);
+            if (monster == null || progression == null || loot == null)
+            {
+                Finish("FALHA: coelho, PlayerProgression ou PlayerLoot não encontrados");
+                yield break;
+            }
+
+            var levelBefore = progression.Level;
+            var xpBefore = progression.Progress.Xp;
+            var alzBefore = loot.Alz;
+            var kills = 0;
+
+            // Caça coelhos até cair algum item (cerca de 1 em 3 coelhos não derruba nada), no máximo 5.
+            // (o jogador pode coletar sozinho passando por cima, por isso confere chão e inventário).
+            while (kills < 5 && LootPickup.All.Count == 0 && loot.Inventory.Count == 0)
+            {
+                monster = FindMonster("coelho_saltador", combat.transform.position);
+                if (monster == null) break;
+                var monsterTarget = monster.GetComponent<Targetable>();
+                Log($"Caçando {monster.Data.Name} (HP {monsterTarget.Hp.Current})");
+
+                var giveUpAt = Time.realtimeSinceStartup + 25f;
+                while (!monster.IsDead && Time.realtimeSinceStartup < giveUpAt)
+                {
+                    var offset = combat.transform.position - monster.transform.position;
+                    offset.y = 0;
+                    if (offset.magnitude > 2.2f || offset.magnitude < 0.5f)
+                        Teleport(combat.transform, monster.transform.position + (offset.sqrMagnitude > 0.01f ? offset.normalized : Vector3.back) * 1.8f);
+                    if (selector.Current != monsterTarget) selector.Select(monsterTarget);
+                    if (combat.CooldownRemaining(0) <= 0) combat.RequestSkill(0);
+                    yield return null;
+                }
+
+                if (!monster.IsDead)
+                {
+                    Finish($"FALHA: o coelho não morreu em 25 s (HP {monsterTarget.Hp.Current}; {combat.Message})");
+                    yield break;
+                }
+                kills++;
+                yield return new WaitForSecondsRealtime(0.6f);
+                Log($"Coelho {kills} derrotado: XP {progression.Progress.Xp}, Alz {loot.Alz}, itens no chão {LootPickup.All.Count}");
+            }
+
+            yield return CaptureNow("4-monstro-derrotado");
+            var xpGained = progression.Level > levelBefore || progression.Progress.Xp > xpBefore;
+            var dropped = LootPickup.All.Count;
+            Log($"Depois de {kills} coelhos: nível {levelBefore} -> {progression.Level}, XP {xpBefore} -> {progression.Progress.Xp}, " +
+                $"Alz {alzBefore} -> {loot.Alz}, itens no chão {dropped}");
+
+            // Coleta passando por cima de cada item.
+            while (LootPickup.All.Count > 0)
+            {
+                Teleport(combat.transform, LootPickup.All[0].transform.position);
+                yield return new WaitForSecondsRealtime(0.15f);
+            }
+            var items = 0;
+            foreach (var stack in loot.Inventory) items += stack.Quantity;
+            Log($"Inventário: {loot.Inventory.Count} tipos, {items} itens");
+
+            // Fotos do mapa: monstros com plaquinhas na Mata Sombria e o chefe na arena.
+            var boar = FindMonster("javali_furioso", combat.transform.position);
+            if (boar != null)
+            {
+                Teleport(combat.transform, boar.transform.position + Vector3.back * 14f);
+                yield return new WaitForSecondsRealtime(0.8f);
+                yield return CaptureNow("5-mata-sombria");
+            }
+            var boss = FindMonster("guardiao_das_ruinas", combat.transform.position);
+            if (boss != null)
+            {
+                Teleport(combat.transform, boss.transform.position + Vector3.back * 12f);
+                yield return new WaitForSecondsRealtime(0.8f);
+                yield return CaptureNow("6-arena-do-chefe");
+            }
+
+            var ok = xpGained && loot.Alz > alzBefore && items > 0 && boss != null;
             Finish(ok
-                ? $"SUCESSO: {HitsBeforeFinisher} acertos, {_routesSeen} rotas + finalizador, {dealt} de dano no alvo"
-                : $"FALHA: fim = {combat.Combo.LastEndReason}, rotas {_routesSeen}, dano {dealt}");
+                ? $"SUCESSO: combo com rotas e finalizador; {kills} coelhos com XP e Alz; {items} itens coletados; chefe na arena"
+                : $"FALHA: XP {(xpGained ? "ok" : "não ganhou")}, Alz {loot.Alz - alzBefore}, drops {dropped}, " +
+                  $"coletados {items}, chefe {(boss != null ? "ok" : "ausente")}");
+        }
+
+        /// <summary>Tira a screenshot e espera o quadro ser gravado antes de mudar a cena.</summary>
+        private IEnumerator CaptureNow(string name)
+        {
+            Capture(name);
+            yield return new WaitForEndOfFrame();
+            yield return null;
+        }
+
+        private static MonsterController FindMonster(string id, Vector3 near)
+        {
+            MonsterController best = null;
+            var bestDistance = float.MaxValue;
+            foreach (var monster in FindObjectsByType<MonsterController>())
+            {
+                if (monster.Data == null || monster.Data.Id != id || monster.IsDead) continue;
+                var distance = Vector3.Distance(near, monster.transform.position);
+                if (distance >= bestDistance) continue;
+                best = monster;
+                bestDistance = distance;
+            }
+            return best;
         }
 
         private static void Teleport(Transform player, Vector3 position)

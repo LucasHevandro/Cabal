@@ -1,6 +1,7 @@
 using Game.Client.Combat;
 using Game.Client.Loot;
 using Game.Client.Player;
+using Game.Client.World;
 using Game.Shared.Combat;
 using Game.Shared.Progression;
 using UnityEngine;
@@ -38,6 +39,16 @@ namespace Game.Client.UI
         private PlayerProgression _progression;
         private PlayerLoot _loot;
         private bool _showInventory;
+
+        private static string _announcement;
+        private static float _announcementAt = float.NegativeInfinity;
+
+        /// <summary>Mostra um aviso grande no topo da tela por alguns segundos.</summary>
+        public static void Announce(string text)
+        {
+            _announcement = text;
+            _announcementAt = Time.unscaledTime;
+        }
 
         public void SetCombat(PlayerCombat playerCombat) => combat = playerCombat;
 
@@ -79,6 +90,8 @@ namespace Game.Client.UI
             DrawGradePopup();
             DrawMessage();
             DrawXpBar();
+            DrawZone();
+            DrawAnnouncement();
             DrawDeathOverlay();
             if (_showInventory) DrawInventory();
 
@@ -180,6 +193,24 @@ namespace Game.Client.UI
                 ? "Nível máximo"
                 : $"XP {progress.Xp} / {toNext} ({fraction * 100:0.0}%)";
             GUI.Label(new Rect(0, VirtualHeight - 17, VirtualWidth, 20), text, _small.WithCenter());
+        }
+
+        private void DrawZone()
+        {
+            var zone = ZoneArea.At(combat.transform.position);
+            var levels = zone == null ? "" : zone.MinLevel == zone.MaxLevel ? $"{zone.MinLevel}" : $"{zone.MinLevel}–{zone.MaxLevel}";
+            var text = zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
+            var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
+            Box(rect, Panel);
+            GUI.Label(rect, text, _center);
+        }
+
+        private void DrawAnnouncement()
+        {
+            var age = Time.unscaledTime - _announcementAt;
+            if (age > 3.5f || string.IsNullOrEmpty(_announcement)) return;
+            ShadowLabel(new Rect(0, 130, VirtualWidth, 60), $"<b>{_announcement}</b>", _big.WithCenter(),
+                new Color(1f, 0.55f, 0.3f), 1f - Mathf.Clamp01((age - 2.8f) / 0.7f));
         }
 
         private void DrawDeathOverlay()

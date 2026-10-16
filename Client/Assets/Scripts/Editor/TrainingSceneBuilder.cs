@@ -26,14 +26,13 @@ namespace Game.Client.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var ground = MaterialFor("Chao", new Color(0.42f, 0.45f, 0.42f));
             var pillar = MaterialFor("Pilar", new Color(0.55f, 0.52f, 0.48f));
             var player = MaterialFor("Jogador", new Color(0.25f, 0.5f, 0.95f));
             var dummy = MaterialFor("Boneco", new Color(0.85f, 0.35f, 0.3f));
             var ring = MaterialFor("AnelSelecao", new Color(1f, 0.85f, 0.2f));
 
             CreateLight();
-            CreateGround(ground);
+            WorldBuilder.Build(ring, MaterialFor("AvisoGolpe", new Color(0.9f, 0.15f, 0.1f), "Universal Render Pipeline/Unlit"));
             CreatePillar(new Vector3(-7, 0, 3), pillar);
             CreatePillar(new Vector3(7, 0, 5), pillar);
 
@@ -70,14 +69,6 @@ namespace Game.Client.Editor
             light.intensity = 1.2f;
             light.shadows = LightShadows.Soft;
             light.transform.rotation = Quaternion.Euler(50, -30, 0);
-        }
-
-        private static void CreateGround(Material material)
-        {
-            var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            plane.name = "Chão";
-            plane.transform.localScale = new Vector3(6, 1, 6);
-            plane.GetComponent<Renderer>().sharedMaterial = material;
         }
 
         private static void CreatePillar(Vector3 position, Material material)
@@ -161,7 +152,7 @@ namespace Game.Client.Editor
             return primitive;
         }
 
-        private static Material MaterialFor(string name, Color color, string shaderName = "Universal Render Pipeline/Lit")
+        internal static Material MaterialFor(string name, Color color, string shaderName = "Universal Render Pipeline/Lit")
         {
             Directory.CreateDirectory(MaterialsFolder);
             var path = $"{MaterialsFolder}/{name}.mat";

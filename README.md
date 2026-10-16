@@ -38,7 +38,7 @@ dotnet test Game.slnx
 3. Se a cena não existir ou quiser recriá-la: menu **Protótipo > Criar cena de treino**.
 
 Controles: WASD andar, Shift correr, Espaço esquivar, botão direito gira a câmera, Tab ou clique seleciona o alvo,
-1–4 skills, Q inicia o combo (gasta SP), F finalizador. Os parâmetros do combo ficam no componente
+1–4 skills, Q inicia o combo (gasta SP), F finalizador, E coleta itens, I abre o inventário. Os parâmetros do combo ficam no componente
 `PlayerCombat` do objeto *Jogador* (seção *Combo Tuning*), para ajustar durante os testes.
 
 **Demo automática** (verifica o protótipo sem teclado): gere o executável pelo menu
@@ -52,4 +52,4 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 ## Status
 
-Fase 1 — Combate offline: protótipo do combo jogável na cena de treino. Veja o Backlog do MVP no GDD.
+Fase 2 — Mundo e monstros: vila inicial, três zonas de caça (Nv 1–10, 10–20, 20–30), seis tipos de monstro com IA, chefe com duas fases, XP, nível, drops e Alz. Tudo offline; a rede vem na Fase 3. Veja o Backlog do MVP no GDD.

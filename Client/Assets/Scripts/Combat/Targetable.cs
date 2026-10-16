@@ -56,6 +56,8 @@ namespace Game.Client.Combat
             selectionRing = ring;
             defense = newDefense;
             _hp = new ResourcePool(maxHp);
+            // O anel chega depois do OnEnable (que o esconderia); esconde aqui também.
+            SetSelected(false);
         }
 
         /// <summary>Volta com a vida cheia (renascer, voltar para casa).</summary>

@@ -30,14 +30,19 @@ namespace Game.Client.Monsters
         [SerializeField] private Material telegraphMaterial;
         [SerializeField] private Material ringMaterial;
 
+        [Header("Chefe")]
+        [Tooltip("Adiciona as habilidades de chefe (fase 2 e ataque em área).")]
+        [SerializeField] private bool isBoss;
+
         private readonly List<MonsterController> _monsters = new List<MonsterController>();
 
         public IReadOnlyList<MonsterController> Monsters => _monsters;
         public MonsterData Data => data;
 
         public void Configure(MonsterData monsterData, int monsterCount, float areaRadius, MonsterShape bodyShape,
-            Vector3 scale, Material body, Material telegraph, Material ring)
+            Vector3 scale, Material body, Material telegraph, Material ring, bool boss = false)
         {
+            isBoss = boss;
             data = monsterData;
             count = monsterCount;
             radius = areaRadius;
@@ -99,6 +104,7 @@ namespace Game.Client.Monsters
 
             var monster = root.AddComponent<MonsterController>();
             monster.Initialize(data, body, telegraph.transform);
+            if (isBoss) root.AddComponent<BossAbilities>().SetWarningMaterial(telegraphMaterial);
             return monster;
         }
 
