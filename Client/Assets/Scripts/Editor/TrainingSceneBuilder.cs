@@ -1,6 +1,7 @@
 using System.IO;
 using Game.Client.Combat;
 using Game.Client.Player;
+using Game.Client.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -42,6 +43,10 @@ namespace Game.Client.Editor
             CreateDummy("Boneco de treino A", new Vector3(0, 0, 6), dummy, ring);
             CreateDummy("Boneco de treino B", new Vector3(-4.5f, 0, 9), dummy, ring);
             CreateDummy("Boneco de treino C", new Vector3(4.5f, 0, 9), dummy, ring);
+
+            var hud = new GameObject("HUD");
+            hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());
+            hud.AddComponent<DamageNumbers>();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath)!);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -95,6 +100,7 @@ namespace Game.Client.Editor
 
             root.AddComponent<PlayerMotor>();
             root.AddComponent<TargetSelector>();
+            root.AddComponent<PlayerCombat>();
             return root;
         }
 

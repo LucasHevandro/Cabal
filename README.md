@@ -23,6 +23,33 @@ A biblioteca `Shared` mira **.NET Standard 2.1** para poder ser usada dentro do 
 - [Unity Hub](https://unity.com/download) com Unity 6 LTS
 - Docker Desktop (para o PostgreSQL, nas fases de persistência)
 
+## Como rodar
+
+**Testes das regras** (na raiz do repositório):
+
+```bash
+dotnet test Game.slnx
+```
+
+**Protótipo de combate** (Unity 6000.6.6f1):
+
+1. Abra a pasta `Client/` no Unity Hub.
+2. Abra a cena `Assets/Scenes/Treino.unity` e aperte Play.
+3. Se a cena não existir ou quiser recriá-la: menu **Protótipo > Criar cena de treino**.
+
+Controles: WASD andar, Shift correr, Espaço esquivar, botão direito gira a câmera, Tab ou clique seleciona o alvo,
+1–4 skills, Q inicia o combo (gasta SP), F finalizador. Os parâmetros do combo ficam no componente
+`PlayerCombat` do objeto *Jogador* (seção *Combo Tuning*), para ajustar durante os testes.
+
+**Demo automática** (verifica o protótipo sem teclado): gere o executável pelo menu
+**Protótipo > Gerar build Windows** e rode
+
+```bash
+Client/Builds/Windows/Prototipo.exe -autodemo saida-demo
+```
+
+A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCESSO ou FALHA.
+
 ## Status
 
-Fase 0 — Preparação. Veja o Backlog do MVP no GDD.
+Fase 1 — Combate offline: protótipo do combo jogável na cena de treino. Veja o Backlog do MVP no GDD.
