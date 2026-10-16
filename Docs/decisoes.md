@@ -27,3 +27,12 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   modelo usado por MMOs do gênero. Para 20 a 50 jogadores por mapa a latência do TCP é aceitável.
 - **Revisar se:** o combate em rede parecer travado com 150 ms de latência simulada (Fase 3), ou o número de
   jogadores por mapa crescer muito — nesse caso, avaliar UDP (ex.: LiteNetLib) mantendo o mesmo protocolo.
+
+## 2026-10-17 — Sistemas novos só no modo online
+
+- A partir da Fase 5, equipamento, melhoria, missões, atributos e classes existem só no modo online (servidor
+  decide).
+- O modo offline continua como **campo de treino de combate** (combo, rotas, monstros, efeitos), sem os sistemas
+  novos.
+- **Motivo:** manter duas versões completas de cada sistema (cliente offline e servidor) dobraria o trabalho e os
+  testes; o MVP é um jogo online.
