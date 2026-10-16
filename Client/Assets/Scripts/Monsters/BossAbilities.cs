@@ -3,6 +3,7 @@ using Game.Client.Fx;
 using Game.Client.UI;
 using Game.Shared.Combat;
 using Game.Shared.Monsters;
+using Game.Shared.World;
 using UnityEngine;
 
 namespace Game.Client.Monsters
@@ -15,11 +16,11 @@ namespace Game.Client.Monsters
     [RequireComponent(typeof(MonsterController), typeof(Targetable))]
     public sealed class BossAbilities : MonoBehaviour
     {
-        [SerializeField] private float phaseTwoAtHpFraction = 0.5f;
-        [SerializeField] private float areaInterval = 6f;
-        [SerializeField] private float areaWarningSeconds = 1.6f;
-        [SerializeField] private float areaRadius = 4f;
-        [SerializeField] private int areaDamage = 350;
+        [SerializeField] private float phaseTwoAtHpFraction = BossRules.PhaseTwoAtHpFraction;
+        [SerializeField] private float areaInterval = BossRules.AreaIntervalSeconds;
+        [SerializeField] private float areaWarningSeconds = BossRules.AreaWarningSeconds;
+        [SerializeField] private float areaRadius = BossRules.AreaRadius;
+        [SerializeField] private int areaDamage = BossRules.AreaDamage;
         [SerializeField] private Material warningMaterial;
 
         private MonsterController _monster;
@@ -64,7 +65,7 @@ namespace Game.Client.Monsters
         private void EnterPhaseTwo()
         {
             _phaseTwo = true;
-            _monster.Data.AttackCooldownSeconds = _baseCooldown * 0.6f;
+            _monster.Data.AttackCooldownSeconds = _baseCooldown * BossRules.PhaseTwoCooldownFactor;
             _nextAreaAt = Time.time + 1.5f;
             CombatHud.Announce($"{_target.DisplayName} ficou furioso!");
             SoundPlayer.Play(SoundId.Finisher, 1f, 0f);

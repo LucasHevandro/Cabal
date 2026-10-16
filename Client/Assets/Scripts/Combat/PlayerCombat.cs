@@ -4,6 +4,7 @@ using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Combat;
 using Game.Shared.Core;
+using Game.Shared.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,31 +18,25 @@ namespace Game.Client.Combat
     public sealed class PlayerCombat : MonoBehaviour
     {
         [Header("Skills (teclas 1 a 4)")]
-        [SerializeField] private List<SkillData> skills = new List<SkillData>
-        {
-            new SkillData("corte", "Corte", SkillKind.Physical, 120, 2.5f, 0.5f),
-            new SkillData("giro_de_lamina", "Giro de Lâmina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f),
-            new SkillData("lanca_de_forca", "Lança de Força", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40),
-            new SkillData("explosao_arcana", "Explosão Arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f, mpCost: 90),
-        };
+        [SerializeField] private List<SkillData> skills = PlayerRules.StarterSkills();
 
         [Header("Vida e mana")]
-        [SerializeField] private float mpRegenPerSecond = 20f;
-        [SerializeField] private float respawnSeconds = 4f;
+        [SerializeField] private float mpRegenPerSecond = PlayerRules.MpRegenPerSecond;
+        [SerializeField] private float respawnSeconds = PlayerRules.RespawnSeconds;
 
         [Header("SP")]
-        [SerializeField] private int maxSp = 2000;
-        [SerializeField] private int startingSp = 1000;
+        [SerializeField] private int maxSp = PlayerRules.MaxSp;
+        [SerializeField] private int startingSp = PlayerRules.StartingSp;
         [Tooltip("SP ganho por acerto fora do combo.")]
-        [SerializeField] private int spPerHit = 60;
+        [SerializeField] private int spPerHit = PlayerRules.SpPerHit;
 
         [Header("Dano (fórmula em Game.Shared.Combat.DamageFormula)")]
         [Tooltip("Ataque extra somado ao do nível (equipamento virá depois).")]
         [SerializeField] private int attackBonus;
-        [SerializeField, Range(0f, 1f)] private float critChance = 0.1f;
-        [SerializeField] private float critMultiplier = 1.5f;
-        [SerializeField] private int finisherBaseDamage = 400;
-        [SerializeField] private float finisherRange = 3f;
+        [SerializeField, Range(0f, 1f)] private float critChance = (float)PlayerRules.CritChance;
+        [SerializeField] private float critMultiplier = (float)PlayerRules.CritMultiplier;
+        [SerializeField] private int finisherBaseDamage = PlayerRules.FinisherBaseDamage;
+        [SerializeField] private float finisherRange = PlayerRules.FinisherRange;
 
         [Header("Combo")]
         [SerializeField] private ComboTuning comboTuning = new ComboTuning();
@@ -76,7 +71,7 @@ namespace Game.Client.Combat
         public float RespawnRemaining => IsDead ? Mathf.Max(0, _respawnAt - Time.time) : 0f;
 
         /// <summary>Raio do corpo do jogador, para o alcance dos monstros.</summary>
-        public float BodyRadius => 0.4f;
+        public float BodyRadius => PlayerRules.BodyRadius;
         public ResourcePool Hp { get; private set; }
         public ResourcePool Mp { get; private set; }
         public ResourcePool Sp { get; private set; }

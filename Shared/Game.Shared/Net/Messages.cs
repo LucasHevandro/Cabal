@@ -28,6 +28,7 @@ namespace Game.Shared.Net
         PositionCorrection = 110,
         Notice = 111,
         Pong = 112,
+        AreaWarning = 113,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -85,16 +86,22 @@ namespace Game.Shared.Net
         public float Z;
         public float Yaw;
 
+        /// <summary>O jogador começou uma esquiva (o servidor limita pela recarga).</summary>
+        public bool Dodging;
+
         public void Write(PacketWriter w)
         {
             w.WriteUInt(Sequence);
             w.WriteFloat(X);
             w.WriteFloat(Z);
             w.WriteFloat(Yaw);
+            w.WriteBool(Dodging);
         }
 
-        public static MoveInput Read(PacketReader r) =>
-            new MoveInput { Sequence = r.ReadUInt(), X = r.ReadFloat(), Z = r.ReadFloat(), Yaw = r.ReadFloat() };
+        public static MoveInput Read(PacketReader r) => new MoveInput
+        {
+            Sequence = r.ReadUInt(), X = r.ReadFloat(), Z = r.ReadFloat(), Yaw = r.ReadFloat(), Dodging = r.ReadBool(),
+        };
     }
 
     /// <summary>
@@ -514,6 +521,31 @@ namespace Game.Shared.Net
         public static Pong Read(PacketReader r) => new Pong { ClientTime = r.ReadDouble(), ServerTime = r.ReadDouble() };
     }
 
+    /// <summary>Círculo de aviso no chão: quem estiver dentro quando acabar o tempo leva o golpe.</summary>
+    public sealed class AreaWarning : INetMessage
+    {
+        public MessageType Type => MessageType.AreaWarning;
+        public int SourceId;
+        public float X;
+        public float Z;
+        public float Radius;
+        public float Seconds;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteInt(SourceId);
+            w.WriteFloat(X);
+            w.WriteFloat(Z);
+            w.WriteFloat(Radius);
+            w.WriteFloat(Seconds);
+        }
+
+        public static AreaWarning Read(PacketReader r) => new AreaWarning
+        {
+            SourceId = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(), Radius = r.ReadFloat(), Seconds = r.ReadFloat(),
+        };
+    }
+
     /// <summary>Converte mensagens em bytes e de volta.</summary>
     public static class NetCodec
     {
@@ -551,6 +583,7 @@ namespace Game.Shared.Net
                 MessageType.PositionCorrection => PositionCorrection.Read(reader),
                 MessageType.Notice => Notice.Read(reader),
                 MessageType.Pong => Pong.Read(reader),
+                MessageType.AreaWarning => AreaWarning.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             if (reader.Remaining != 0) throw new ProtocolException($"{type}: sobraram {reader.Remaining} bytes.");

@@ -29,8 +29,11 @@ public class ProtocolTests
     [Fact]
     public void Mensagens_do_cliente_voltam_iguais()
     {
-        var move = RoundTrip(new MoveInput { Sequence = 42, X = 1.5f, Z = -3.25f, Yaw = 270f });
-        Assert.Equal((42u, 1.5f, -3.25f, 270f), (move.Sequence, move.X, move.Z, move.Yaw));
+        var move = RoundTrip(new MoveInput { Sequence = 42, X = 1.5f, Z = -3.25f, Yaw = 270f, Dodging = true });
+        Assert.Equal((42u, 1.5f, -3.25f, 270f, true), (move.Sequence, move.X, move.Z, move.Yaw, move.Dodging));
+
+        var area = RoundTrip(new AreaWarning { SourceId = 3, X = 1, Z = 2, Radius = 4, Seconds = 1.6f });
+        Assert.Equal((3, 4f, 1.6f), (area.SourceId, area.Radius, area.Seconds));
 
         var skill = RoundTrip(new UseSkill { Slot = 2, TargetId = 77, ClientTime = 123.456 });
         Assert.Equal((2, 77, 123.456), (skill.Slot, skill.TargetId, skill.ClientTime));
