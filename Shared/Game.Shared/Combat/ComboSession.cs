@@ -50,6 +50,9 @@ namespace Game.Shared.Combat
         /// <summary>Configuração em uso.</summary>
         public ComboConfig Config => _config;
 
+        /// <summary>Instante em que o ciclo atual da barra começou (o servidor envia ao cliente para desenhar).</summary>
+        public double CycleStart => _cycleStart;
+
         /// <summary>Início da janela-alvo na barra.</summary>
         public double WindowStart => _config.WindowCenter - WindowWidth / 2;
 

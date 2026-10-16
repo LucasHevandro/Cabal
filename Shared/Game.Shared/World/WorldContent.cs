@@ -69,7 +69,7 @@ namespace Game.Shared.World
             Spawn(-10, 36, 5, 7, new MonsterData
             {
                 Id = "coelho_saltador", Name = "Coelho Saltador", Level = 2, MaxHp = 350, AttackDamage = 25,
-                AttackPower = 5, Defense = 20, AttackRange = 1.2f, MoveSpeed = 3.5f, Aggressive = false,
+                AttackPower = 5, Defense = 20, AttackRange = 1.2f, MoveSpeed = 3.5f, BodyRadius = 0.35f, Aggressive = false,
                 XpReward = 30, RespawnSeconds = 6,
                 Drops = new DropTable(3, 8,
                     new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 0.6, 1, 2),
@@ -99,7 +99,7 @@ namespace Game.Shared.World
             Spawn(54, 92, 4, 8, new MonsterData
             {
                 Id = "aranha_da_mata", Name = "Aranha da Mata", Level = 16, MaxHp = 2600, AttackDamage = 150,
-                AttackPower = 55, Defense = 80, AttackRange = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 4f,
+                AttackPower = 55, Defense = 80, AttackRange = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 4f, BodyRadius = 0.8f,
                 AggroRadius = 10, XpReward = 300, RespawnSeconds = 10,
                 Drops = new DropTable(40, 90,
                     new DropEntry("seda", "Seda de aranha", ItemRarity.Common, 0.5, 1, 2),
@@ -112,7 +112,7 @@ namespace Game.Shared.World
             {
                 Id = "golem_de_pedra", Name = "Golem de Pedra", Level = 22, MaxHp = 6000, AttackDamage = 240,
                 AttackPower = 80, Defense = 260, AttackRange = 2.2f, AttackCooldownSeconds = 3f,
-                AttackWindupSeconds = 1.0f, MoveSpeed = 2.2f, AggroRadius = 7, XpReward = 700, RespawnSeconds = 15,
+                AttackWindupSeconds = 1.0f, MoveSpeed = 2.2f, BodyRadius = 0.8f, AggroRadius = 7, XpReward = 700, RespawnSeconds = 15,
                 Drops = new DropTable(80, 160,
                     new DropEntry("fragmento_pedra", "Fragmento de pedra viva", ItemRarity.Common, 0.6, 1, 3),
                     new DropEntry("nucleo_medio", "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.08)),
@@ -135,7 +135,7 @@ namespace Game.Shared.World
                 {
                     Id = "guardiao_das_ruinas", Name = "Guardião das Ruínas", Level = 30, MaxHp = 60000,
                     AttackDamage = 380, AttackPower = 140, Defense = 280, AttackRange = 3.2f,
-                    AttackCooldownSeconds = 2.4f, AttackWindupSeconds = 0.9f, MoveSpeed = 3.5f, AggroRadius = 14,
+                    AttackCooldownSeconds = 2.4f, AttackWindupSeconds = 0.9f, MoveSpeed = 3.5f, BodyRadius = 1.1f, AggroRadius = 14,
                     LeashRadius = 30, WanderRadius = 0, XpReward = 15000, RespawnSeconds = 120,
                     Drops = new DropTable(2000, 4000,
                         new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.6, 1, 3),

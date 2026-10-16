@@ -22,15 +22,15 @@ public class ServerHostTests
 
         public Task SendAsync(INetMessage message) => _stream.WriteAsync(NetCodec.Encode(message)).AsTask();
 
-        /// <summary>Lê mensagens até chegar uma do tipo pedido (ou estourar o tempo).</summary>
-        public async Task<T> ReceiveAsync<T>(TimeSpan? timeout = null) where T : INetMessage
+        /// <summary>Lê mensagens até chegar uma do tipo pedido que satisfaça o filtro (ou estourar o tempo).</summary>
+        public async Task<T> ReceiveAsync<T>(Func<T, bool>? filter = null, TimeSpan? timeout = null) where T : INetMessage
         {
             using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
             while (true)
             {
                 while (_frames.TryRead(out var type, out var payload))
                 {
-                    if (NetCodec.Decode(type, payload) is T match) return match;
+                    if (NetCodec.Decode(type, payload) is T match && (filter == null || filter(match))) return match;
                 }
                 var read = await _stream.ReadAsync(_buffer, cts.Token);
                 if (read == 0) throw new IOException("Servidor fechou a conexão.");
@@ -55,6 +55,8 @@ public class ServerHostTests
 
         Assert.True(welcome.PlayerId > 0);
         Assert.Contains(snapshot.Entities, e => e.Id == welcome.PlayerId);
+        // Os coelhos dos Campos do Vento ficam a menos de 60 m da vila: aparecem já no primeiro snapshot.
+        Assert.True(snapshot.Entities.Count > 1);
     }
 
     [Fact]
@@ -71,9 +73,9 @@ public class ServerHostTests
         await bia.ConnectAsync(host.Port);
         await bia.SendAsync(new Hello { Name = "Bia" });
 
-        Assert.Equal("Ana", (await bia.ReceiveAsync<EntitySpawned>()).Name);
-        Assert.Equal("Bia", (await ana.ReceiveAsync<EntitySpawned>()).Name);
-        var snapshot = await bia.ReceiveAsync<Snapshot>();
+        Assert.Equal(anaId, (await bia.ReceiveAsync<EntitySpawned>(e => e.Name == "Ana")).Id);
+        Assert.Equal(EntityKind.Player, (await ana.ReceiveAsync<EntitySpawned>(e => e.Name == "Bia")).Kind);
+        var snapshot = await bia.ReceiveAsync<Snapshot>(s => s.Entities.Any(e => e.Id == anaId));
         Assert.Contains(snapshot.Entities, e => e.Id == anaId);
     }
 

@@ -1,10 +1,13 @@
 using Game.Server.World;
 using Game.Shared.Net;
+using Game.Shared.World;
 
 namespace Game.Server.Tests;
 
 public class GameWorldTests
 {
+    private static readonly SpawnDefinition[] NoMonsters = Array.Empty<SpawnDefinition>();
+
     private sealed class FakeOutbox : IOutbox
     {
         public List<(int PlayerId, INetMessage Message)> Sent { get; } = new();
@@ -19,7 +22,7 @@ public class GameWorldTests
     public void Quem_entra_recebe_boas_vindas()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
 
         var player = world.AddPlayer("Ana", now: 5);
 
@@ -33,20 +36,36 @@ public class GameWorldTests
     public void Jogadores_veem_uns_aos_outros()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
-
         var bia = world.AddPlayer("Bia", 1);
 
-        Assert.Equal("Ana", Assert.Single(outbox.To<EntitySpawned>(bia.Id)).Name);
-        Assert.Equal("Bia", Assert.Single(outbox.To<EntitySpawned>(ana.Id)).Name);
+        world.Tick(1.05);
+
+        // Cada um conhece a si mesmo e ao outro.
+        Assert.Contains(outbox.To<EntitySpawned>(bia.Id), e => e.Name == "Ana");
+        Assert.Contains(outbox.To<EntitySpawned>(ana.Id), e => e.Name == "Bia");
+    }
+
+    [Fact]
+    public void Jogadores_veem_uns_aos_outros_so_uma_vez()
+    {
+        var outbox = new FakeOutbox();
+        var world = new GameWorld(outbox, NoMonsters);
+        var ana = world.AddPlayer("Ana", 0);
+        var bia = world.AddPlayer("Bia", 1);
+        world.Tick(1.05);
+        world.Tick(1.10);
+
+        Assert.Single(outbox.To<EntitySpawned>(bia.Id), e => e.Name == "Ana");
+        Assert.Single(outbox.To<EntitySpawned>(ana.Id), e => e.Name == "Bia");
     }
 
     [Fact]
     public void Id_eh_informado_antes_das_boas_vindas()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var sentBeforeCallback = -1;
 
         world.AddPlayer("Ana", 0, _ => sentBeforeCallback = outbox.Sent.Count);
@@ -58,7 +77,7 @@ public class GameWorldTests
     public void Movimento_valido_aparece_no_snapshot()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
 
         world.Handle(ana.Id, new MoveInput { Sequence = 1, X = 3, Z = 0, Yaw = 90 }, now: 1);
@@ -73,7 +92,7 @@ public class GameWorldTests
     public void Teleporte_eh_recusado_e_corrigido()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
 
         world.Handle(ana.Id, new MoveInput { Sequence = 1, X = 100, Z = 0 }, now: 0.1);
@@ -87,7 +106,7 @@ public class GameWorldTests
     public void Movimento_antigo_eh_ignorado()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
         world.Handle(ana.Id, new MoveInput { Sequence = 5, X = 2, Z = 0 }, now: 1);
 
@@ -100,9 +119,10 @@ public class GameWorldTests
     public void Quem_sai_some_para_os_outros()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
         var bia = world.AddPlayer("Bia", 0);
+        world.Tick(0.05);
 
         world.RemovePlayer(ana.Id);
 
@@ -114,7 +134,7 @@ public class GameWorldTests
     public void Ping_responde_com_o_horario_do_servidor()
     {
         var outbox = new FakeOutbox();
-        var world = new GameWorld(outbox);
+        var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
 
         world.Handle(ana.Id, new Ping { ClientTime = 1.25 }, now: 9.5);
@@ -126,7 +146,7 @@ public class GameWorldTests
     [Fact]
     public void Nome_vazio_ou_longo_eh_ajustado()
     {
-        var world = new GameWorld(new FakeOutbox());
+        var world = new GameWorld(new FakeOutbox(), NoMonsters);
 
         Assert.Equal("Aventureiro", world.AddPlayer("   ", 0).Name);
         Assert.Equal(20, world.AddPlayer(new string('x', 50), 0).Name.Length);

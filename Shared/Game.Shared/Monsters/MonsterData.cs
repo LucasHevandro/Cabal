@@ -28,6 +28,9 @@ namespace Game.Shared.Monsters
 
         public float MoveSpeed = 3f;
 
+        /// <summary>Raio do corpo: o alcance das skills é medido até esta borda.</summary>
+        public float BodyRadius = 0.5f;
+
         /// <summary>Agressivo ataca quem chegar perto; passivo só depois de apanhar.</summary>
         public bool Aggressive = true;
 
