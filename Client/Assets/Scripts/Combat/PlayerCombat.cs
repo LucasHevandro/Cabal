@@ -17,13 +17,18 @@ namespace Game.Client.Combat
     public sealed class PlayerCombat : MonoBehaviour
     {
         [Header("Skills (teclas 1 a 4)")]
-        [SerializeField] private List<SkillDefinition> skills = new List<SkillDefinition>
+        [SerializeField] private List<SkillData> skills = new List<SkillData>
         {
-            new SkillDefinition("Corte", SkillKind.Physical, 120, 2.5f, 0.5f),
-            new SkillDefinition("Giro de Lâmina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f),
-            new SkillDefinition("Lança de Força", SkillKind.Magical, 160, 12f, 1.5f),
-            new SkillDefinition("Explosão Arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f),
+            new SkillData("corte", "Corte", SkillKind.Physical, 120, 2.5f, 0.5f),
+            new SkillData("giro_de_lamina", "Giro de Lâmina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f),
+            new SkillData("lanca_de_forca", "Lança de Força", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40),
+            new SkillData("explosao_arcana", "Explosão Arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f, mpCost: 90),
         };
+
+        [Header("Vida e mana")]
+        [SerializeField] private int maxHp = 3000;
+        [SerializeField] private int maxMp = 600;
+        [SerializeField] private float mpRegenPerSecond = 20f;
 
         [Header("SP")]
         [SerializeField] private int maxSp = 2000;
@@ -51,12 +56,15 @@ namespace Game.Client.Combat
         private TargetSelector _selector;
         private PlayerMotor _motor;
         private OrbitCamera _camera;
-        private float[] _readyAt;
+        private SkillCooldowns _cooldowns;
         private float _unlockMovementAt;
+        private float _mpRegenCarry;
 
         public ComboSession Combo { get; private set; }
+        public ResourcePool Hp { get; private set; }
+        public ResourcePool Mp { get; private set; }
         public ResourcePool Sp { get; private set; }
-        public IReadOnlyList<SkillDefinition> Skills => skills;
+        public IReadOnlyList<SkillData> Skills => skills;
         public Targetable Target => _selector != null ? _selector.Current : null;
 
         /// <summary>Última nota do combo e quando aconteceu (para o HUD).</summary>
@@ -74,15 +82,18 @@ namespace Game.Client.Combat
         /// <summary>Maior corrente feita nesta sessão de jogo.</summary>
         public int BestChain { get; private set; }
 
-        public float CooldownRemaining(int index) => Mathf.Max(0, _readyAt[index] - Time.time);
+        public float CooldownRemaining(int index) => (float)_cooldowns.Remaining(index, Time.time);
 
         private void Awake()
         {
             _selector = GetComponent<TargetSelector>();
             _motor = GetComponent<PlayerMotor>();
+            foreach (var skill in skills) skill.Validate();
+            Hp = new ResourcePool(maxHp);
+            Mp = new ResourcePool(maxMp);
             Sp = new ResourcePool(maxSp, startingSp);
             Combo = new ComboSession(comboTuning.ToConfig());
-            _readyAt = new float[skills.Count];
+            _cooldowns = new SkillCooldowns(skills.Count);
         }
 
         private void Start()
@@ -96,6 +107,7 @@ namespace Game.Client.Combat
             if (_motor != null) _motor.MovementLocked = now < _unlockMovementAt;
 
             if (Combo.Tick(now)) OnComboEnded("Tempo esgotado");
+            RegenerateMp();
 
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
@@ -169,34 +181,31 @@ namespace Game.Client.Combat
             if (index >= skills.Count) return;
             var skill = skills[index];
             var target = Target;
+            double? distance = target != null && target.IsAlive ? DistanceToEdge(target) : (double?)null;
 
-            if (target == null || !target.IsAlive)
+            switch (SkillRules.Check(skill, index, _cooldowns, Mp, distance, Time.time))
             {
-                ShowMessage("Selecione um alvo (Tab ou clique)");
-                return;
-            }
-
-            if (Time.time < _readyAt[index])
-            {
-                // Como no CABAL: usar skill em recarga durante o combo quebra a corrente.
-                if (Combo.State == ComboState.Active)
-                {
-                    Combo.Cancel();
-                    OnComboEnded($"{skill.name} em recarga");
-                }
-                else
-                {
-                    ShowMessage($"{skill.name} em recarga");
-                    SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
-                }
-                return;
-            }
-
-            if (!InRange(target, skill.range))
-            {
-                ShowMessage("Fora de alcance");
-                SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
-                return;
+                case SkillUseCheck.NoTarget:
+                    ShowMessage("Selecione um alvo (Tab ou clique)");
+                    return;
+                case SkillUseCheck.OnCooldown:
+                    // Como no CABAL: usar skill em recarga durante o combo quebra a corrente.
+                    if (Combo.State == ComboState.Active)
+                    {
+                        Combo.Cancel();
+                        OnComboEnded($"{skill.Name} em recarga");
+                    }
+                    else
+                    {
+                        Refuse($"{skill.Name} em recarga");
+                    }
+                    return;
+                case SkillUseCheck.OutOfRange:
+                    Refuse("Fora de alcance");
+                    return;
+                case SkillUseCheck.NotEnoughMp:
+                    Refuse($"MP insuficiente ({Mp.Current}/{skill.MpCost})");
+                    return;
             }
 
             var multiplier = 1.0;
@@ -204,7 +213,7 @@ namespace Game.Client.Combat
             ComboGrade? grade = null;
             if (inCombo)
             {
-                var result = Combo.Press(now, skill.kind);
+                var result = Combo.Press(now, skill.Kind);
                 LastGrade = result.Grade;
                 LastGradeAt = Time.unscaledTime;
                 if (result.ComboEnded)
@@ -225,12 +234,12 @@ namespace Game.Client.Combat
                 }
             }
 
-            _readyAt[index] = Time.time + skill.cooldown;
-            _unlockMovementAt = Time.time + skill.lockSeconds;
+            SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
+            _unlockMovementAt = Time.time + skill.LockSeconds;
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
             // Skills mágicas viajam como projétil; o dano (já decidido agora) é aplicado na chegada.
-            if (skill.kind == SkillKind.Magical && CombatFx.Instance != null)
+            if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
             {
                 SoundPlayer.Play(SoundId.Cast, 0.6f);
                 var origin = transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
@@ -246,7 +255,7 @@ namespace Game.Client.Combat
         }
 
         /// <summary>O golpe chega ao alvo: dano, faíscas, som, hit stop e tremida.</summary>
-        private void LandSkill(SkillDefinition skill, Targetable target, double multiplier, bool inCombo, ComboGrade? grade)
+        private void LandSkill(SkillData skill, Targetable target, double multiplier, bool inCombo, ComboGrade? grade)
         {
             var totalHits = DealSkillDamage(skill, target, multiplier, grade);
             if (!inCombo && totalHits > 0) Sp.Add(spPerHit);
@@ -257,14 +266,14 @@ namespace Game.Client.Combat
             if (_camera != null) _camera.Shake(shakeAmplitude * (excellent ? 2f : 1f), 0.12f);
         }
 
-        private int DealSkillDamage(SkillDefinition skill, Targetable mainTarget, double multiplier, ComboGrade? grade)
+        private int DealSkillDamage(SkillData skill, Targetable mainTarget, double multiplier, ComboGrade? grade)
         {
             _hitBuffer.Clear();
-            if (skill.areaRadius > 0)
+            if (skill.AreaRadius > 0)
             {
                 foreach (var candidate in Targetable.All)
                 {
-                    if (candidate.IsAlive && Vector3.Distance(candidate.transform.position, mainTarget.transform.position) <= skill.areaRadius)
+                    if (candidate.IsAlive && Vector3.Distance(candidate.transform.position, mainTarget.transform.position) <= skill.AreaRadius)
                         _hitBuffer.Add(candidate);
                 }
             }
@@ -275,7 +284,7 @@ namespace Game.Client.Combat
 
             foreach (var target in _hitBuffer)
             {
-                var hit = RollDamage(skill.baseDamage, multiplier, target);
+                var hit = RollDamage(skill.BaseDamage, multiplier, target);
                 var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
                 var color = DamageColor(grade, hit.Critical);
                 DamageNumbers.Spawn(target.HeadPosition, hit.Critical ? $"{dealt}!" : dealt.ToString(),
@@ -302,10 +311,25 @@ namespace Game.Client.Combat
                 new DamageInput(skillBaseDamage, attackPower, multiplier, critChance, critMultiplier, target.Defense),
                 _random);
 
-        private bool InRange(Targetable target, float range)
+        private bool InRange(Targetable target, float range) => DistanceToEdge(target) <= range;
+
+        /// <summary>Distância até a borda do alvo, como as regras do Shared esperam.</summary>
+        private double DistanceToEdge(Targetable target) =>
+            Vector3.Distance(transform.position, target.transform.position) - target.Radius;
+
+        private void RegenerateMp()
         {
-            var distance = Vector3.Distance(transform.position, target.transform.position) - target.Radius;
-            return distance <= range;
+            _mpRegenCarry += mpRegenPerSecond * Time.deltaTime;
+            var whole = Mathf.FloorToInt(_mpRegenCarry);
+            if (whole <= 0) return;
+            _mpRegenCarry -= whole;
+            Mp.Add(whole);
+        }
+
+        private void Refuse(string message)
+        {
+            ShowMessage(message);
+            SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
         }
 
         private void OnComboEnded(string reason)

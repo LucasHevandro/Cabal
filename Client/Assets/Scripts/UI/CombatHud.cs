@@ -24,6 +24,7 @@ namespace Game.Client.UI
         private static readonly Color BarBack = new Color(0.12f, 0.12f, 0.14f, 0.9f);
         private static readonly Color SpColor = new Color(0.95f, 0.75f, 0.2f);
         private static readonly Color HpColor = new Color(0.85f, 0.25f, 0.25f);
+        private static readonly Color MpColor = new Color(0.25f, 0.45f, 0.95f);
         private static readonly Color WindowColor = new Color(0.25f, 0.75f, 0.35f, 0.85f);
         private static readonly Color ExcellentColor = new Color(1f, 0.9f, 0.3f, 0.95f);
         private static readonly Color PhysicalColor = new Color(0.95f, 0.55f, 0.25f);
@@ -51,6 +52,7 @@ namespace Game.Client.UI
             DrawTargetFrame();
             DrawComboBar();
             DrawSpBar();
+            DrawPlayerFrame();
             DrawSkillBar();
             DrawGradePopup();
             DrawMessage();
@@ -148,6 +150,21 @@ namespace Game.Client.UI
             GUI.Label(rect, $"SP {combat.Sp.Current} / {combat.Sp.Max}", _small.WithCenter());
         }
 
+        private void DrawPlayerFrame()
+        {
+            var rect = new Rect(40, VirtualHeight - 150, 380, 96);
+            Box(rect, Panel);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), "<b>Você</b>", _label);
+
+            var hpRect = new Rect(rect.x + 16, rect.y + 38, rect.width - 32, 20);
+            Bar(hpRect, (float)combat.Hp.Current / Mathf.Max(1, combat.Hp.Max), HpColor);
+            GUI.Label(hpRect, $"HP {combat.Hp.Current} / {combat.Hp.Max}", _small.WithCenter());
+
+            var mpRect = new Rect(rect.x + 16, rect.y + 64, rect.width - 32, 20);
+            Bar(mpRect, (float)combat.Mp.Current / Mathf.Max(1, combat.Mp.Max), MpColor);
+            GUI.Label(mpRect, $"MP {combat.Mp.Current} / {combat.Mp.Max}", _small.WithCenter());
+        }
+
         private void DrawSkillBar()
         {
             const float size = 150f;
@@ -163,14 +180,18 @@ namespace Game.Client.UI
                 var skill = skills[i];
                 Box(rect, Panel);
                 GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
-                GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.name, _small.WithCenter());
-                GUI.Label(new Rect(rect.x + 8, rect.y + 86, rect.width - 16, 24),
-                    skill.kind == SkillKind.Physical ? "físico" : "mágico", _small.WithCenter());
+                GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.Name, _small.WithCenter());
+                var kindText = skill.Kind == SkillKind.Physical ? "físico" : "mágico";
+                if (skill.MpCost > 0) kindText += $" · {skill.MpCost} MP";
+                GUI.Label(new Rect(rect.x + 8, rect.y + 86, rect.width - 16, 24), kindText, _small.WithCenter());
+
+                // Sem mana: escurece a skill inteira.
+                if (!combat.Mp.Has(skill.MpCost)) Box(rect, new Color(0.1f, 0.1f, 0.4f, 0.5f));
 
                 var remaining = combat.CooldownRemaining(i);
                 if (remaining > 0)
                 {
-                    var fraction = Mathf.Clamp01(remaining / Mathf.Max(0.01f, skill.cooldown));
+                    var fraction = Mathf.Clamp01(remaining / Mathf.Max(0.01f, skill.CooldownSeconds));
                     Box(new Rect(rect.x, rect.y + rect.height * (1 - fraction), rect.width, rect.height * fraction), new Color(0, 0, 0, 0.6f));
                     GUI.Label(rect, $"<b>{remaining:0.0}</b>", _big.WithCenter());
                 }
