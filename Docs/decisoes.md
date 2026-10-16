@@ -14,3 +14,16 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
 
 - O sistema de combo é construído e validado **offline primeiro** (Fase 1), antes de qualquer código de rede.
 - **Motivo:** o combo é o pilar do jogo; se não for divertido, o resto não importa.
+
+## 2026-10-16 — Rede: TCP próprio em vez de FishNet/Mirror
+
+- **Transporte:** TCP com protocolo binário próprio (mensagens com prefixo de tamanho), definido no `Shared`.
+- **Servidor:** aplicação .NET de console (`Server/`), sem Unity. Usa as mesmas regras do `Shared`
+  (combo, skills, dano, IA dos monstros, drops).
+- **Autoridade:** o servidor decide combate, dano, monstros, XP e drops. O movimento do jogador é enviado pelo
+  cliente e validado no servidor (velocidade máxima); correção por teleporte se passar do limite.
+- **Motivo:** FishNet e Mirror rodam só dentro do Unity, o que obrigaria o servidor a ser um Unity headless e
+  impediria usar o `Shared` em .NET puro. TCP próprio funciona igual nos dois lados, sem dependências, e é o
+  modelo usado por MMOs do gênero. Para 20 a 50 jogadores por mapa a latência do TCP é aceitável.
+- **Revisar se:** o combate em rede parecer travado com 150 ms de latência simulada (Fase 3), ou o número de
+  jogadores por mapa crescer muito — nesse caso, avaliar UDP (ex.: LiteNetLib) mantendo o mesmo protocolo.
