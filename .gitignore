@@ -55,3 +55,6 @@ Desktop.ini
 appsettings.Development.json
 *.pfx
 *.key
+
+# ===== Backups do banco (Tools/backup-db.ps1) =====
+backups/
