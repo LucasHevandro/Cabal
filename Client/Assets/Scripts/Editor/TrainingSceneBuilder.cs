@@ -1,5 +1,6 @@
 using System.IO;
 using Game.Client.Combat;
+using Game.Client.Fx;
 using Game.Client.Player;
 using Game.Client.UI;
 using UnityEditor;
@@ -43,6 +44,12 @@ namespace Game.Client.Editor
             CreateDummy("Boneco de treino A", new Vector3(0, 0, 6), dummy, ring);
             CreateDummy("Boneco de treino B", new Vector3(-4.5f, 0, 9), dummy, ring);
             CreateDummy("Boneco de treino C", new Vector3(4.5f, 0, 9), dummy, ring);
+
+            var effects = new GameObject("Efeitos");
+            effects.AddComponent<CombatFx>().SetMaterials(
+                MaterialFor("Particula", Color.white, "Universal Render Pipeline/Particles/Unlit"),
+                MaterialFor("Projetil", new Color(0.45f, 0.65f, 1f), "Universal Render Pipeline/Unlit"));
+            effects.AddComponent<SoundPlayer>();
 
             var hud = new GameObject("HUD");
             hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());
@@ -151,15 +158,21 @@ namespace Game.Client.Editor
             return primitive;
         }
 
-        private static Material MaterialFor(string name, Color color)
+        private static Material MaterialFor(string name, Color color, string shaderName = "Universal Render Pipeline/Lit")
         {
             Directory.CreateDirectory(MaterialsFolder);
             var path = $"{MaterialsFolder}/{name}.mat";
+            var shader = Shader.Find(shaderName);
+            if (shader == null) throw new System.InvalidOperationException($"Shader não encontrado: {shaderName}");
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
-                material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                material = new Material(shader);
                 AssetDatabase.CreateAsset(material, path);
+            }
+            else if (material.shader != shader)
+            {
+                material.shader = shader;
             }
             material.SetColor("_BaseColor", color);
             EditorUtility.SetDirty(material);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Client.Fx;
 using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Combat;
@@ -130,9 +131,11 @@ namespace Game.Client.Combat
             if (!Sp.TrySpend(cost))
             {
                 ShowMessage($"SP insuficiente ({Sp.Current}/{cost})");
+                SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
                 return;
             }
             Combo.TryStart(now);
+            SoundPlayer.Play(SoundId.ComboStart, 0.8f, 0f);
             ShowMessage("Combo! Aperte as skills quando o marcador estiver na janela");
         }
 
@@ -152,6 +155,8 @@ namespace Game.Client.Combat
             var hit = RollDamage(finisherBaseDamage, multiplier, target);
             var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
             DamageNumbers.Spawn(target.HeadPosition, $"FINAL {dealt}", new Color(1f, 0.45f, 0.1f), 38f);
+            SoundPlayer.Play(SoundId.Finisher, 1f, 0f);
+            if (CombatFx.Instance != null) CombatFx.Instance.Sparks(target.CenterPosition, new Color(1f, 0.5f, 0.15f), 45);
 
             BestChain = Mathf.Max(BestChain, chain);
             HitStop.Trigger(0.12f);
@@ -182,6 +187,7 @@ namespace Game.Client.Combat
                 else
                 {
                     ShowMessage($"{skill.name} em recarga");
+                    SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
                 }
                 return;
             }
@@ -189,38 +195,69 @@ namespace Game.Client.Combat
             if (!InRange(target, skill.range))
             {
                 ShowMessage("Fora de alcance");
+                SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
                 return;
             }
 
             var multiplier = 1.0;
             var inCombo = Combo.State == ComboState.Active;
+            ComboGrade? grade = null;
             if (inCombo)
             {
                 var result = Combo.Press(now, skill.kind);
                 LastGrade = result.Grade;
                 LastGradeAt = Time.unscaledTime;
+                if (result.ComboEnded)
+                {
+                    OnComboEnded("Fora da janela");
+                }
+                else
+                {
+                    grade = result.Grade;
+                    multiplier = result.DamageMultiplier;
+                    SoundPlayer.Play(grade == ComboGrade.Excellent ? SoundId.Excellent : SoundId.Good, 0.7f, 0.02f);
+                }
                 if (result.Route != null)
                 {
                     LastRoute = result.Route;
                     LastRouteAt = Time.unscaledTime;
+                    SoundPlayer.Play(SoundId.Route, 0.7f, 0f);
                 }
-                if (result.ComboEnded) OnComboEnded("Fora da janela");
-                else multiplier = result.DamageMultiplier;
             }
 
             _readyAt[index] = Time.time + skill.cooldown;
             _unlockMovementAt = Time.time + skill.lockSeconds;
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
-            var totalHits = DealSkillDamage(skill, target, multiplier, inCombo);
+            // Skills mágicas viajam como projétil; o dano (já decidido agora) é aplicado na chegada.
+            if (skill.kind == SkillKind.Magical && CombatFx.Instance != null)
+            {
+                SoundPlayer.Play(SoundId.Cast, 0.6f);
+                var origin = transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
+                CombatFx.Instance.LaunchProjectile(origin, target.transform, Vector3.up * 1.1f, ProjectileColor(grade), () =>
+                {
+                    if (target != null) LandSkill(skill, target, multiplier, inCombo, grade);
+                });
+            }
+            else
+            {
+                LandSkill(skill, target, multiplier, inCombo, grade);
+            }
+        }
+
+        /// <summary>O golpe chega ao alvo: dano, faíscas, som, hit stop e tremida.</summary>
+        private void LandSkill(SkillDefinition skill, Targetable target, double multiplier, bool inCombo, ComboGrade? grade)
+        {
+            var totalHits = DealSkillDamage(skill, target, multiplier, grade);
             if (!inCombo && totalHits > 0) Sp.Add(spPerHit);
 
-            var excellent = inCombo && LastGrade == ComboGrade.Excellent && Combo.State == ComboState.Active;
+            var excellent = grade == ComboGrade.Excellent;
+            SoundPlayer.Play(excellent ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
             HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f));
             if (_camera != null) _camera.Shake(shakeAmplitude * (excellent ? 2f : 1f), 0.12f);
         }
 
-        private int DealSkillDamage(SkillDefinition skill, Targetable mainTarget, double multiplier, bool inCombo)
+        private int DealSkillDamage(SkillDefinition skill, Targetable mainTarget, double multiplier, ComboGrade? grade)
         {
             _hitBuffer.Clear();
             if (skill.areaRadius > 0)
@@ -240,18 +277,25 @@ namespace Game.Client.Combat
             {
                 var hit = RollDamage(skill.baseDamage, multiplier, target);
                 var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
+                var color = DamageColor(grade, hit.Critical);
                 DamageNumbers.Spawn(target.HeadPosition, hit.Critical ? $"{dealt}!" : dealt.ToString(),
-                    DamageColor(inCombo, hit.Critical), hit.Critical ? 32f : 26f);
+                    color, hit.Critical ? 32f : 26f);
+                if (CombatFx.Instance != null)
+                    CombatFx.Instance.Sparks(target.CenterPosition, color, grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
             }
             return _hitBuffer.Count;
         }
 
-        private Color DamageColor(bool inCombo, bool critical)
+        private static Color DamageColor(ComboGrade? grade, bool critical)
         {
             if (critical) return new Color(1f, 0.55f, 0.15f);
-            if (!inCombo) return Color.white;
-            return LastGrade == ComboGrade.Excellent ? new Color(1f, 0.88f, 0.25f) : new Color(0.6f, 0.9f, 1f);
+            if (grade == ComboGrade.Excellent) return new Color(1f, 0.88f, 0.25f);
+            if (grade == ComboGrade.Good) return new Color(0.6f, 0.9f, 1f);
+            return Color.white;
         }
+
+        private static Color ProjectileColor(ComboGrade? grade) =>
+            grade == ComboGrade.Excellent ? new Color(1f, 0.85f, 0.3f) : new Color(0.45f, 0.65f, 1f);
 
         private DamageResult RollDamage(int skillBaseDamage, double multiplier, Targetable target) =>
             DamageFormula.Calculate(
@@ -271,6 +315,7 @@ namespace Game.Client.Combat
             {
                 LastGrade = ComboGrade.Miss;
                 LastGradeAt = Time.unscaledTime;
+                SoundPlayer.Play(SoundId.Miss, 0.7f, 0f);
             }
             ShowMessage($"Combo encerrado: {reason} ({Combo.HitCount} acertos)");
         }
