@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Shared.Combat
 {
@@ -10,10 +11,13 @@ namespace Game.Shared.Combat
     /// a cada ciclo um marcador percorre a barra de 0 a 1. Apertar dentro da janela-alvo continua a corrente
     /// e começa um novo ciclo; apertar fora, ou deixar o marcador passar da janela, encerra o combo.
     /// A cada acerto a janela encolhe e a barra acelera, até estabilizar.
+    /// Se o tipo de cada skill for informado, sequências de tipos formam rotas (<see cref="ComboRoute"/>)
+    /// que dão bônus de dano ao golpe que as completa.
     /// </summary>
     public sealed class ComboSession
     {
         private readonly ComboConfig _config;
+        private readonly List<SkillKind> _chainKinds = new List<SkillKind>();
         private double _cycleStart;
 
         /// <summary>Estado atual.</summary>
@@ -33,6 +37,12 @@ namespace Game.Shared.Combat
 
         /// <summary>Bônus acumulado que o finalizador converte em dano (0 = nenhum).</summary>
         public double ChainBonus { get; private set; }
+
+        /// <summary>Tipos das skills acertadas na corrente atual, do mais antigo para o mais recente.</summary>
+        public IReadOnlyList<SkillKind> ChainKinds => _chainKinds;
+
+        /// <summary>Quantas rotas foram completadas na corrente atual.</summary>
+        public int RoutesCompleted { get; private set; }
 
         /// <summary>Motivo do fim do último combo.</summary>
         public ComboEndReason LastEndReason { get; private set; } = ComboEndReason.None;
@@ -80,8 +90,11 @@ namespace Game.Shared.Combat
             return Math.Max(0, (now - _cycleStart) / BarDurationSeconds);
         }
 
-        /// <summary>Registra o aperto de uma skill no instante <paramref name="now"/>.</summary>
-        public ComboHitResult Press(double now)
+        /// <summary>
+        /// Registra o aperto de uma skill no instante <paramref name="now"/>. Informe <paramref name="kind"/>
+        /// para que a skill conte nas rotas de combo; sem ele, a sequência de rotas recomeça.
+        /// </summary>
+        public ComboHitResult Press(double now, SkillKind? kind = null)
         {
             if (State != ComboState.Active) return ComboHitResult.NotActive;
 
@@ -113,6 +126,13 @@ namespace Game.Shared.Combat
             }
             ChainBonus = Math.Min(ChainBonus, _config.MaxChainBonus);
 
+            var route = RegisterKind(kind);
+            if (route != null)
+            {
+                RoutesCompleted++;
+                multiplier *= 1 + route.DamageBonus;
+            }
+
             if (HitCount <= _config.StabilizeAfterHits)
             {
                 WindowWidth = Math.Max(_config.MinWindowWidth, WindowWidth * _config.WindowShrinkFactor);
@@ -120,7 +140,7 @@ namespace Game.Shared.Combat
             }
 
             _cycleStart = now;
-            return new ComboHitResult(grade, multiplier, HitCount, comboEnded: false, wasActive: true);
+            return new ComboHitResult(grade, multiplier, HitCount, comboEnded: false, wasActive: true, route);
         }
 
         /// <summary>
@@ -164,9 +184,35 @@ namespace Game.Shared.Combat
             LastEndReason = reason;
         }
 
+        /// <summary>
+        /// Guarda o tipo do golpe e devolve a rota completada por ele: a mais longa que casar com o fim
+        /// da corrente; empate fica com o maior bônus.
+        /// </summary>
+        private ComboRoute? RegisterKind(SkillKind? kind)
+        {
+            if (!kind.HasValue)
+            {
+                _chainKinds.Clear();
+                return null;
+            }
+
+            _chainKinds.Add(kind.Value);
+            ComboRoute? best = null;
+            foreach (var route in _config.Routes)
+            {
+                if (!route.MatchesEndOf(_chainKinds)) continue;
+                if (best == null || route.Pattern.Count > best.Pattern.Count ||
+                    (route.Pattern.Count == best.Pattern.Count && route.DamageBonus > best.DamageBonus))
+                    best = route;
+            }
+            return best;
+        }
+
         private void ResetChain()
         {
             HitCount = 0;
+            RoutesCompleted = 0;
+            _chainKinds.Clear();
             ExcellentCount = 0;
             ChainBonus = 0;
             WindowWidth = _config.InitialWindowWidth;

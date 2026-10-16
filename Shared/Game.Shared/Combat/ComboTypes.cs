@@ -60,14 +60,19 @@ namespace Game.Shared.Combat
         /// <summary>Verdadeiro se havia combo ativo quando o aperto aconteceu.</summary>
         public bool WasActive { get; }
 
-        /// <summary>Cria um resultado.</summary>
-        public ComboHitResult(ComboGrade grade, double damageMultiplier, int hitCount, bool comboEnded, bool wasActive)
+        /// <summary>Rota de combo fechada por este aperto, ou nulo se nenhuma.</summary>
+        public ComboRoute? Route { get; }
+
+        /// <summary>Cria um resultado. <paramref name="damageMultiplier"/> já inclui o bônus da rota.</summary>
+        public ComboHitResult(ComboGrade grade, double damageMultiplier, int hitCount, bool comboEnded, bool wasActive,
+            ComboRoute? route = null)
         {
             Grade = grade;
             DamageMultiplier = damageMultiplier;
             HitCount = hitCount;
             ComboEnded = comboEnded;
             WasActive = wasActive;
+            Route = route;
         }
 
         /// <summary>Resultado para um aperto sem combo ativo.</summary>

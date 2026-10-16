@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Shared.Combat
 {
@@ -65,6 +66,9 @@ namespace Game.Shared.Combat
         /// </summary>
         public double GraceSeconds { get; set; } = 0.0;
 
+        /// <summary>Rotas de combo reconhecidas. Lista vazia desliga as rotas.</summary>
+        public List<ComboRoute> Routes { get; set; } = ComboRoute.CreateDefaults();
+
         /// <summary>Configuração padrão.</summary>
         public static ComboConfig Default => new ComboConfig();
 
@@ -91,6 +95,7 @@ namespace Game.Shared.Combat
             Require(MaxChainBonus >= 0, nameof(MaxChainBonus), "não pode ser negativo");
             Require(MinHitsForFinisher >= 1, nameof(MinHitsForFinisher), "deve ser pelo menos 1");
             Require(GraceSeconds >= 0, nameof(GraceSeconds), "não pode ser negativo");
+            Require(Routes != null && !Routes.Contains(null!), nameof(Routes), "não pode ser nula nem ter itens nulos");
         }
 
         private static void Require(bool condition, string name, string message)
