@@ -28,7 +28,9 @@ namespace Game.Client.Combat
         [Header("Vida e mana")]
         [SerializeField] private int maxHp = 3000;
         [SerializeField] private int maxMp = 600;
+        [SerializeField] private int defense = 60;
         [SerializeField] private float mpRegenPerSecond = 20f;
+        [SerializeField] private float respawnSeconds = 4f;
 
         [Header("SP")]
         [SerializeField] private int maxSp = 2000;
@@ -59,8 +61,21 @@ namespace Game.Client.Combat
         private SkillCooldowns _cooldowns;
         private float _unlockMovementAt;
         private float _mpRegenCarry;
+        private Vector3 _spawnPoint;
+        private float _respawnAt;
+
+        /// <summary>O jogador local (o protótipo tem um só).</summary>
+        public static PlayerCombat Local { get; private set; }
 
         public ComboSession Combo { get; private set; }
+        public int Defense => defense;
+        public bool IsDead { get; private set; }
+
+        /// <summary>Segundos até renascer (0 se vivo).</summary>
+        public float RespawnRemaining => IsDead ? Mathf.Max(0, _respawnAt - Time.time) : 0f;
+
+        /// <summary>Raio do corpo do jogador, para o alcance dos monstros.</summary>
+        public float BodyRadius => 0.4f;
         public ResourcePool Hp { get; private set; }
         public ResourcePool Mp { get; private set; }
         public ResourcePool Sp { get; private set; }
@@ -94,6 +109,13 @@ namespace Game.Client.Combat
             Sp = new ResourcePool(maxSp, startingSp);
             Combo = new ComboSession(comboTuning.ToConfig());
             _cooldowns = new SkillCooldowns(skills.Count);
+            _spawnPoint = transform.position;
+            Local = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Local == this) Local = null;
         }
 
         private void Start()
@@ -104,9 +126,16 @@ namespace Game.Client.Combat
         private void Update()
         {
             var now = Time.time;
-            if (_motor != null) _motor.MovementLocked = now < _unlockMovementAt;
+            if (_motor != null) _motor.MovementLocked = IsDead || now < _unlockMovementAt;
+
+            if (IsDead)
+            {
+                if (now >= _respawnAt) Respawn();
+                return;
+            }
 
             if (Combo.Tick(now)) OnComboEnded("Tempo esgotado");
+            KeepComboOnTargetDeath();
             RegenerateMp();
 
             var keyboard = Keyboard.current;
@@ -316,6 +345,71 @@ namespace Game.Client.Combat
         /// <summary>Distância até a borda do alvo, como as regras do Shared esperam.</summary>
         private double DistanceToEdge(Targetable target) =>
             Vector3.Distance(transform.position, target.transform.position) - target.Radius;
+
+        /// <summary>
+        /// Recebe um golpe de monstro. Durante a esquiva o golpe erra.
+        /// Retorna o dano sofrido (0 se esquivou ou já estava morto).
+        /// </summary>
+        public int TakeHit(int amount, bool critical)
+        {
+            if (IsDead) return 0;
+            if (_motor != null && _motor.IsDodging)
+            {
+                DamageNumbers.Spawn(transform.position + Vector3.up * 2.2f, "Esquivou!", new Color(0.7f, 1f, 0.7f), 24f);
+                return 0;
+            }
+
+            var taken = -Hp.Add(-amount);
+            DamageNumbers.Spawn(transform.position + Vector3.up * 2.2f, critical ? $"-{taken}!" : $"-{taken}",
+                new Color(1f, 0.3f, 0.3f), critical ? 30f : 24f);
+            SoundPlayer.Play(SoundId.Hit, 0.7f);
+            if (_camera != null) _camera.Shake(shakeAmplitude * (critical ? 3f : 1.5f), 0.15f);
+
+            if (Hp.Current == 0) Die();
+            return taken;
+        }
+
+        private void Die()
+        {
+            IsDead = true;
+            _respawnAt = Time.time + respawnSeconds;
+            if (Combo.State == ComboState.Active) Combo.Cancel();
+            _selector.Select(null);
+            SoundPlayer.Play(SoundId.Miss, 1f, 0f);
+            ShowMessage("Você morreu");
+            transform.localScale = new Vector3(1f, 0.25f, 1f);
+        }
+
+        private void Respawn()
+        {
+            var controller = GetComponent<CharacterController>();
+            if (controller != null) controller.enabled = false;
+            transform.position = _spawnPoint;
+            if (controller != null) controller.enabled = true;
+            transform.localScale = Vector3.one;
+
+            Hp.Add(Hp.Max);
+            Mp.Add(Mp.Max);
+            IsDead = false;
+            ShowMessage("Você renasceu na cidade");
+        }
+
+        /// <summary>
+        /// Se o alvo morrer no meio do combo, pula para o próximo alvo perto para não quebrar a corrente;
+        /// sem outro alvo, o combo termina.
+        /// </summary>
+        private void KeepComboOnTargetDeath()
+        {
+            if (Combo.State != ComboState.Active) return;
+            if (Target != null && Target.IsAlive) return;
+
+            _selector.SelectNext();
+            if (Target == null || !Target.IsAlive)
+            {
+                Combo.Cancel();
+                OnComboEnded("Sem alvo");
+            }
+        }
 
         private void RegenerateMp()
         {

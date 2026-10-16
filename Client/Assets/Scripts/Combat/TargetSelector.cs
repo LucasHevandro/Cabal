@@ -34,7 +34,7 @@ namespace Game.Client.Combat
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Select(null);
             if (mouse != null && mouse.leftButton.wasPressedThisFrame) SelectUnderMouse(mouse);
 
-            if (Current != null && !Current.isActiveAndEnabled) Select(null);
+            if (Current != null && (!Current.isActiveAndEnabled || !Current.IsAlive)) Select(null);
         }
 
         public void Select(Targetable target)

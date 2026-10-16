@@ -44,15 +44,22 @@ namespace Game.Client.Combat
         /// <summary>Ponto central do corpo.</summary>
         public Vector3 CenterPosition => transform.position + Vector3.up * (height * 0.5f);
 
-        public void Configure(string newName, int newMaxHp, float newHeight, float newRadius, GameObject ring)
+        /// <summary>Nível mostrado na plaquinha (0 = não mostrar).</summary>
+        public int Level { get; set; }
+
+        public void Configure(string newName, int newMaxHp, float newHeight, float newRadius, GameObject ring, int newDefense = 100)
         {
             displayName = newName;
             maxHp = newMaxHp;
             height = newHeight;
             radius = newRadius;
             selectionRing = ring;
+            defense = newDefense;
             _hp = new ResourcePool(maxHp);
         }
+
+        /// <summary>Volta com a vida cheia (renascer, voltar para casa).</summary>
+        public void RestoreFullHealth() => Hp.Add(Hp.Max);
 
         public void SetSelected(bool selected)
         {
