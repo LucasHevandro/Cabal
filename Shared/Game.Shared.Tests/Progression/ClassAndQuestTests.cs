@@ -1,0 +1,243 @@
+using System.Collections.Generic;
+using System.Linq;
+using Game.Shared.Accounts;
+using Game.Shared.Combat;
+using Game.Shared.Items;
+using Game.Shared.Progression;
+using Game.Shared.World;
+using Xunit;
+
+namespace Game.Shared.Tests.Progression;
+
+public class ClassTests
+{
+    private static bool None(string _) => false;
+    private static bool All(string _) => true;
+
+    [Theory]
+    [InlineData(CharacterClass.Blade)]
+    [InlineData(CharacterClass.Arcanist)]
+    public void CadaClasseTemOitoSkillsUnicasEValidas(CharacterClass characterClass)
+    {
+        var skills = ClassCatalog.SkillsFor(characterClass);
+        Assert.Equal(ClassCatalog.HotbarSize, skills.Count);
+        Assert.Equal(skills.Count, skills.Select(s => s.Skill.Id).Distinct().Count());
+        foreach (var s in skills)
+        {
+            Assert.True(s.Skill.BaseDamage > 0 && s.Skill.Range > 0 && s.Skill.CooldownSeconds > 0, s.Skill.Id);
+            Assert.InRange(s.RequiredLevel, 1, LevelCurve.MaxLevel);
+            if (!string.IsNullOrEmpty(s.RequiredQuestId)) Assert.NotNull(QuestCatalog.Find(s.RequiredQuestId));
+        }
+        // Ordenadas por nível de liberação (é a ordem da barra).
+        Assert.Equal(skills.Select(s => s.RequiredLevel).OrderBy(l => l), skills.Select(s => s.RequiredLevel));
+    }
+
+    [Fact]
+    public void ClassesTemIdentidadePropria()
+    {
+        var blade = ClassCatalog.SkillsFor(CharacterClass.Blade);
+        var arcanist = ClassCatalog.SkillsFor(CharacterClass.Arcanist);
+        Assert.True(blade.Count(s => s.Skill.Kind == SkillKind.Physical) > blade.Count / 2);
+        Assert.True(arcanist.Count(s => s.Skill.Kind == SkillKind.Magical) > arcanist.Count / 2);
+        Assert.True(arcanist.Average(s => s.Skill.Range) > blade.Average(s => s.Skill.Range)); // Arcanista ataca de longe
+        Assert.NotEqual(ClassCatalog.RouteFor(CharacterClass.Blade).Name, ClassCatalog.RouteFor(CharacterClass.Arcanist).Name);
+    }
+
+    [Fact]
+    public void InicioTemAsSkillsDoNivelUm()
+    {
+        Assert.NotEmpty(ClassCatalog.UnlockedSkills(CharacterClass.Blade, 1, None));
+        Assert.NotEmpty(ClassCatalog.UnlockedSkills(CharacterClass.Arcanist, 1, None));
+    }
+
+    [Fact]
+    public void SkillDeRankPedeNivelEMissao()
+    {
+        Assert.False(ClassCatalog.CanUse(CharacterClass.Blade, "fenda_sismica", 12, None));
+        Assert.False(ClassCatalog.CanUse(CharacterClass.Blade, "fenda_sismica", 11, All));
+        Assert.True(ClassCatalog.CanUse(CharacterClass.Blade, "fenda_sismica", 12, id => id == ClassCatalog.RankTwoQuestId));
+        Assert.False(ClassCatalog.CanUse(CharacterClass.Blade, "faisca", 30, All)); // skill da outra classe
+        Assert.Equal(8, ClassCatalog.UnlockedSkills(CharacterClass.Arcanist, 30, All).Count());
+    }
+
+    [Fact]
+    public void ComboEsperaAMissao()
+    {
+        Assert.False(ClassCatalog.ComboUnlocked(None));
+        Assert.True(ClassCatalog.ComboUnlocked(id => id == ClassCatalog.ComboQuestId));
+    }
+
+    [Fact]
+    public void RotaDaClasseEntraNoCombo()
+    {
+        var config = ClassCatalog.ComboConfigFor(CharacterClass.Blade);
+        config.Validate();
+        Assert.Contains(config.Routes, r => r.Name == ClassCatalog.RouteFor(CharacterClass.Blade).Name);
+        Assert.True(config.Routes.Count > ComboRoute.CreateDefaults().Count);
+    }
+
+    [Fact]
+    public void SkillMagicaUsaPoderMagico()
+    {
+        var stats = new StatBlock { AttackPower = 100, MagicPower = 300 };
+        Assert.Equal(100, ClassCatalog.PowerFor(SkillKind.Physical, stats));
+        Assert.Equal(300, ClassCatalog.PowerFor(SkillKind.Magical, stats));
+    }
+
+    [Fact]
+    public void DespertarEncheComComboBemFeitoEDuraUmTempo()
+    {
+        var awakening = new AwakeningState();
+        Assert.False(awakening.TryActivate(0));
+
+        awakening.AddFromGrade(ComboGrade.Miss, 0);
+        Assert.Equal(0, awakening.Gauge);
+        for (var i = 0; i < AwakeningState.MaxGauge / AwakeningState.ExcellentGain; i++)
+            awakening.AddFromGrade(ComboGrade.Excellent, 0);
+        Assert.True(awakening.IsFull);
+
+        Assert.True(awakening.TryActivate(1));
+        Assert.Equal(0, awakening.Gauge);
+        Assert.Equal(1 + AwakeningState.DamageBonus, awakening.DamageMultiplier(5));
+        awakening.AddFromGrade(ComboGrade.Excellent, 5); // não enche enquanto está ativo
+        Assert.Equal(0, awakening.Gauge);
+        Assert.Equal(1, awakening.DamageMultiplier(1 + AwakeningState.DurationSeconds));
+    }
+}
+
+public class QuestTests
+{
+    private long _uid;
+    private long NewUid() => ++_uid;
+
+    [Fact]
+    public void CatalogoCobreDoUmAoTrintaEReferenciasExistem()
+    {
+        var quests = QuestCatalog.All;
+        Assert.InRange(quests.Count, 5, 8);
+        Assert.Equal(quests.Count, quests.Select(q => q.Id).Distinct().Count());
+        Assert.Equal(1, quests.First().MinLevel);
+        Assert.Equal(LevelCurve.MaxLevel, quests.Max(q => q.MinLevel));
+
+        var monsters = new HashSet<string>(WorldContent.Spawns().Select(s => s.Data.Id));
+        foreach (var quest in quests)
+        {
+            Assert.NotNull(NpcCatalog.Find(quest.GiverNpcId));
+            if (!string.IsNullOrEmpty(quest.PreviousQuestId))
+                Assert.True(QuestCatalog.Find(quest.PreviousQuestId)!.MinLevel <= quest.MinLevel, quest.Id);
+            foreach (var (itemId, _) in quest.RewardItems) Assert.NotNull(ItemCatalog.Find(itemId));
+            foreach (var o in quest.Objectives)
+            {
+                if (o.Kind == QuestObjectiveKind.Kill) Assert.Contains(o.TargetId, monsters);
+                if (o.Kind == QuestObjectiveKind.Collect) Assert.NotNull(ItemCatalog.Find(o.TargetId));
+                if (o.Kind == QuestObjectiveKind.Talk) Assert.NotNull(NpcCatalog.Find(o.TargetId));
+            }
+            // A missão ajuda, mas não substitui caçar: no máximo ~2 níveis de XP.
+            Assert.True(quest.RewardXp <= 2 * LevelCurve.XpToNext(quest.MinLevel) || quest.MinLevel >= LevelCurve.MaxLevel, quest.Id);
+        }
+        Assert.NotNull(QuestCatalog.Find(ClassCatalog.ComboQuestId));
+        Assert.NotNull(QuestCatalog.Find(ClassCatalog.RankTwoQuestId));
+        Assert.NotNull(QuestCatalog.Find(ClassCatalog.RankThreeQuestId));
+    }
+
+    [Fact]
+    public void NpcsFicamNaVila()
+    {
+        var village = WorldContent.Zones().First();
+        foreach (var npc in NpcCatalog.All)
+            Assert.True(npc.X * npc.X + npc.Z * npc.Z < village.Radius * village.Radius, npc.Id);
+        Assert.True(NpcCatalog.InRange(NpcCatalog.All[0], NpcCatalog.All[0].X + 3, NpcCatalog.All[0].Z));
+        Assert.False(NpcCatalog.InRange(NpcCatalog.All[0], NpcCatalog.All[0].X + 5, NpcCatalog.All[0].Z));
+    }
+
+    [Fact]
+    public void AceitarRespeitaNivelEOrdem()
+    {
+        var log = new QuestLog();
+        Assert.NotNull(log.Accept(ClassCatalog.ComboQuestId, 5)); // pede "primeiros_passos" antes
+        Assert.Null(log.Accept("primeiros_passos", 1));
+        Assert.NotNull(log.Accept("primeiros_passos", 1));        // já aceita
+        Assert.DoesNotContain(log.AvailableFrom(NpcCatalog.Elder, 30), q => q.Id == "primeiros_passos");
+    }
+
+    [Fact]
+    public void FalarEEntregarDaRecompensa()
+    {
+        var log = new QuestLog();
+        var bag = new ItemContainer();
+        log.Accept("primeiros_passos", 1);
+        Assert.NotNull(log.TurnIn("primeiros_passos", bag, NewUid, out _));
+
+        Assert.Single(log.OnTalk(NpcCatalog.Smith));
+        Assert.Empty(log.OnTalk(NpcCatalog.Smith)); // já contou
+        Assert.Null(log.TurnIn("primeiros_passos", bag, NewUid, out var reward));
+        Assert.Equal(150, reward.Xp);
+        Assert.Equal(5, bag.Count("pocao_hp_p"));
+        Assert.True(log.IsCompleted("primeiros_passos"));
+        Assert.NotNull(log.Accept("primeiros_passos", 1)); // não repete
+    }
+
+    [Fact]
+    public void MatarEColetarContamEConsomem()
+    {
+        var log = Ready("pele_e_presa");
+        var bag = new ItemContainer();
+        for (var i = 0; i < 20; i++) log.OnKill("lobo_cinzento");
+        Assert.Equal(12, log.ProgressOf("pele_e_presa")!.Counts[0]); // não passa do pedido
+        Assert.False(QuestLog.IsReady(log.ProgressOf("pele_e_presa")!, bag));
+
+        bag.TryAdd("pele_lobo", 8, NewUid);
+        Assert.True(QuestLog.IsReady(log.ProgressOf("pele_e_presa")!, bag));
+        Assert.Null(log.TurnIn("pele_e_presa", bag, NewUid, out _));
+        Assert.Equal(2, bag.Count("pele_lobo"));
+        Assert.Equal(3, bag.Count(ItemCatalog.CoreLow));
+        Assert.Equal(1, bag.Count("pedra_vigor"));
+    }
+
+    [Fact]
+    public void BolsaCheiaNaoPerdeNada()
+    {
+        var log = new QuestLog();
+        log.Accept("primeiros_passos", 1);
+        log.OnTalk(NpcCatalog.Smith);
+        var bag = new ItemContainer(1);
+        bag.TryAdd("espada_ferro", 1, NewUid);
+
+        Assert.NotNull(log.TurnIn("primeiros_passos", bag, NewUid, out _));
+        Assert.True(log.IsActive("primeiros_passos"));
+        Assert.Equal(1, bag.Count("espada_ferro"));
+        Assert.Equal(0, bag.Count("pocao_hp_p"));
+    }
+
+    [Fact]
+    public void AbandonarLiberaParaAceitarDeNovo()
+    {
+        var log = new QuestLog();
+        Assert.Null(log.Accept("primeiros_passos", 30));
+        Assert.Single(log.Active);
+        Assert.True(log.Abandon("primeiros_passos"));
+        Assert.Empty(log.Active);
+    }
+
+    [Fact]
+    public void RestaurarIgnoraMissoesDesconhecidas()
+    {
+        var log = new QuestLog();
+        log.Restore(new[] { "primeiros_passos", "nao_existe" },
+            new[] { new QuestProgress(ClassCatalog.ComboQuestId, new[] { 4 }), new QuestProgress("nao_existe") });
+        Assert.Equal(new[] { "primeiros_passos" }, log.Completed);
+        Assert.Equal(4, log.ProgressOf(ClassCatalog.ComboQuestId)!.Counts[0]);
+        Assert.Single(log.Active);
+    }
+
+    /// <summary>Diário com as anteriores concluídas e a missão aceita.</summary>
+    private static QuestLog Ready(string questId)
+    {
+        var quest = QuestCatalog.Get(questId);
+        var previous = QuestCatalog.All.TakeWhile(q => q.Id != questId).Select(q => q.Id);
+        var log = new QuestLog();
+        log.Restore(previous, new QuestProgress[0]);
+        Assert.Null(log.Accept(questId, quest.MinLevel));
+        return log;
+    }
+}

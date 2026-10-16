@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Generic;
+using Game.Shared.Accounts;
+using Game.Shared.Combat;
+using Game.Shared.Items;
+
+namespace Game.Shared.Progression
+{
+    /// <summary>Skill de uma classe com o que é preciso para liberá-la.</summary>
+    public sealed class ClassSkill
+    {
+        public SkillData Skill { get; }
+        public int RequiredLevel { get; }
+
+        /// <summary>Missão de rank que libera a skill (vazio = só o nível).</summary>
+        public string RequiredQuestId { get; }
+
+        public ClassSkill(SkillData skill, int requiredLevel, string requiredQuestId = "")
+        {
+            Skill = skill;
+            RequiredLevel = requiredLevel;
+            RequiredQuestId = requiredQuestId;
+        }
+
+        public bool IsUnlocked(int level, Func<string, bool> questCompleted) =>
+            level >= RequiredLevel && (string.IsNullOrEmpty(RequiredQuestId) || questCompleted(RequiredQuestId));
+    }
+
+    /// <summary>
+    /// As duas classes do MVP: 8 skills cada, liberadas por nível e pelas missões de rank, e uma rota de combo
+    /// própria. Números provisórios até a planilha.
+    /// </summary>
+    public static class ClassCatalog
+    {
+        /// <summary>Missão que libera o combo (GDD: "rank de skill que libera o combo").</summary>
+        public const string ComboQuestId = "arte_do_combo";
+
+        /// <summary>Missões de rank que liberam as skills de nível médio e alto.</summary>
+        public const string RankTwoQuestId = "ameaca_na_mata";
+        public const string RankThreeQuestId = "as_ruinas";
+
+        public const int HotbarSize = 8;
+
+        /// <summary>Poder que soma no dano: skills físicas usam o ataque, mágicas usam o poder mágico.</summary>
+        public static int PowerFor(SkillKind kind, StatBlock stats) =>
+            kind == SkillKind.Magical ? stats.MagicPower : stats.AttackPower;
+
+        /// <summary>Skills já liberadas, na ordem da barra.</summary>
+        public static IEnumerable<SkillData> UnlockedSkills(CharacterClass characterClass, int level, Func<string, bool> questCompleted)
+        {
+            foreach (var skill in SkillsFor(characterClass))
+                if (skill.IsUnlocked(level, questCompleted)) yield return skill.Skill;
+        }
+
+        /// <summary>A skill pode ser usada por este personagem agora?</summary>
+        public static bool CanUse(CharacterClass characterClass, string skillId, int level, Func<string, bool> questCompleted)
+        {
+            foreach (var skill in SkillsFor(characterClass))
+                if (skill.Skill.Id == skillId) return skill.IsUnlocked(level, questCompleted);
+            return false;
+        }
+
+        /// <summary>O combo só fica disponível depois da missão de rank que o libera.</summary>
+        public static bool ComboUnlocked(Func<string, bool> questCompleted) => questCompleted(ComboQuestId);
+
+        public static IReadOnlyList<ClassSkill> SkillsFor(CharacterClass characterClass) =>
+            characterClass == CharacterClass.Arcanist ? Arcanist : Blade;
+
+        /// <summary>Rota de combo exclusiva da classe (soma-se às rotas gerais).</summary>
+        public static ComboRoute RouteFor(CharacterClass characterClass) => characterClass == CharacterClass.Arcanist
+            ? new ComboRoute("Sobrecarga", 0.20, SkillKind.Magical, SkillKind.Magical, SkillKind.Magical)
+            : new ComboRoute("Lâmina Rúnica", 0.20, SkillKind.Physical, SkillKind.Magical, SkillKind.Physical);
+
+        /// <summary>Configuração do combo da classe: rotas gerais + a rota da classe.</summary>
+        public static ComboConfig ComboConfigFor(CharacterClass characterClass, double graceSeconds = 0)
+        {
+            var config = new ComboConfig { GraceSeconds = graceSeconds };
+            config.Routes.Add(RouteFor(characterClass));
+            return config;
+        }
+
+        private static readonly IReadOnlyList<ClassSkill> Blade = new List<ClassSkill>
+        {
+            new ClassSkill(new SkillData("corte", "Corte", SkillKind.Physical, 120, 2.5f, 0.5f), 1),
+            new ClassSkill(new SkillData("giro_de_lamina", "Giro de Lâmina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f), 3),
+            new ClassSkill(new SkillData("golpe_runico", "Golpe Rúnico", SkillKind.Magical, 140, 3f, 1.5f, mpCost: 25), 5),
+            new ClassSkill(new SkillData("estocada_dupla", "Estocada Dupla", SkillKind.Physical, 200, 2.5f, 3f, mpCost: 20), 8),
+            new ClassSkill(new SkillData("fenda_sismica", "Fenda Sísmica", SkillKind.Physical, 260, 3f, 6f, areaRadius: 4f, mpCost: 40), 12, RankTwoQuestId),
+            new ClassSkill(new SkillData("lamina_flamejante", "Lâmina Flamejante", SkillKind.Magical, 300, 3f, 4f, mpCost: 50), 15, RankTwoQuestId),
+            new ClassSkill(new SkillData("tempestade_de_aco", "Tempestade de Aço", SkillKind.Physical, 380, 3f, 10f, areaRadius: 5f, mpCost: 80), 20, RankThreeQuestId),
+            new ClassSkill(new SkillData("execucao", "Execução", SkillKind.Physical, 600, 2.5f, 15f, mpCost: 100), 25, RankThreeQuestId),
+        };
+
+        private static readonly IReadOnlyList<ClassSkill> Arcanist = new List<ClassSkill>
+        {
+            new ClassSkill(new SkillData("faisca", "Faísca", SkillKind.Magical, 110, 12f, 0.5f, mpCost: 8), 1),
+            new ClassSkill(new SkillData("lanca_de_forca", "Lança de Força", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 30), 1),
+            new ClassSkill(new SkillData("golpe_de_cajado", "Golpe de Cajado", SkillKind.Physical, 100, 2.5f, 1f), 3),
+            new ClassSkill(new SkillData("explosao_arcana", "Explosão Arcana", SkillKind.Magical, 220, 10f, 5f, areaRadius: 4f, mpCost: 80), 5),
+            new ClassSkill(new SkillData("corrente_gelida", "Corrente Gélida", SkillKind.Magical, 280, 12f, 4f, mpCost: 60), 12, RankTwoQuestId),
+            new ClassSkill(new SkillData("meteoro", "Meteoro", SkillKind.Magical, 380, 12f, 8f, areaRadius: 5f, mpCost: 120), 15, RankTwoQuestId),
+            new ClassSkill(new SkillData("raio_duplo", "Raio Duplo", SkillKind.Magical, 450, 12f, 6f, mpCost: 100), 20, RankThreeQuestId),
+            new ClassSkill(new SkillData("cataclismo", "Cataclismo", SkillKind.Magical, 700, 12f, 20f, areaRadius: 6f, mpCost: 200), 25, RankThreeQuestId),
+        };
+    }
+
+    /// <summary>
+    /// Modo Despertar (GDD v0.1): uma barra que enche com acertos de combo bem feitos — premia a habilidade, não só
+    /// bater — e, cheia, pode ser ativada por alguns segundos de dano extra.
+    /// </summary>
+    public sealed class AwakeningState
+    {
+        public const int MaxGauge = 100;
+        public const int ExcellentGain = 10;
+        public const int GoodGain = 4;
+        public const double DurationSeconds = 10;
+        public const double DamageBonus = 0.30;
+
+        public int Gauge { get; private set; }
+        public double ActiveUntil { get; private set; } = double.NegativeInfinity;
+
+        public bool IsActive(double now) => now < ActiveUntil;
+        public bool IsFull => Gauge >= MaxGauge;
+
+        /// <summary>Multiplicador de dano agora (1 = sem bônus).</summary>
+        public double DamageMultiplier(double now) => IsActive(now) ? 1 + DamageBonus : 1;
+
+        /// <summary>Soma pelo acerto do combo (nada enche enquanto o Despertar está ativo).</summary>
+        public void AddFromGrade(ComboGrade grade, double now)
+        {
+            if (IsActive(now)) return;
+            var gain = grade == ComboGrade.Excellent ? ExcellentGain : grade == ComboGrade.Good ? GoodGain : 0;
+            Gauge = Math.Min(MaxGauge, Gauge + gain);
+        }
+
+        /// <summary>Ativa se a barra estiver cheia. Retorna falso se ainda não dá.</summary>
+        public bool TryActivate(double now)
+        {
+            if (!IsFull || IsActive(now)) return false;
+            Gauge = 0;
+            ActiveUntil = now + DurationSeconds;
+            return true;
+        }
+
+        /// <summary>Restaura do banco.</summary>
+        public void Restore(int gauge) => Gauge = Math.Max(0, Math.Min(MaxGauge, gauge));
+    }
+}

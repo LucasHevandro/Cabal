@@ -22,6 +22,14 @@ namespace Game.Shared.Items
 
         public int Size => _slots.Length;
 
+        /// <summary>Cópia independente (para testar uma operação antes de fazê-la de verdade).</summary>
+        public ItemContainer Clone()
+        {
+            var copy = new ItemContainer(_slots.Length);
+            for (var i = 0; i < _slots.Length; i++) copy._slots[i] = _slots[i]?.Clone();
+            return copy;
+        }
+
         public ItemInstance? this[int slot] => slot >= 0 && slot < _slots.Length ? _slots[slot] : null;
 
         public int FreeSlots
