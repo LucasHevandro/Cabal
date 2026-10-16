@@ -1,21 +1,15 @@
 using System.Collections.Generic;
 using Game.Client.Combat;
+using Game.Client.Net;
 using Game.Shared.Monsters;
 using UnityEngine;
 
 namespace Game.Client.Monsters
 {
-    /// <summary>Formato do corpo do monstro no protótipo (primitivas até existirem modelos).</summary>
-    public enum MonsterShape
-    {
-        Capsule,
-        Cube,
-        Sphere,
-    }
-
     /// <summary>
-    /// Cria um grupo de monstros iguais numa área ao iniciar o jogo. Cada monstro renasce sozinho no
-    /// próprio ponto depois de morrer (<see cref="MonsterData.RespawnSeconds"/>).
+    /// Modo offline: cria um grupo de monstros iguais numa área ao iniciar o jogo. Cada monstro renasce sozinho
+    /// no próprio ponto depois de morrer (<see cref="MonsterData.RespawnSeconds"/>).
+    /// No modo online não faz nada: os monstros vêm do servidor.
     /// </summary>
     public sealed class MonsterSpawner : MonoBehaviour
     {
@@ -55,6 +49,8 @@ namespace Game.Client.Monsters
 
         private void Start()
         {
+            if (GameMode.IsOnline) return;
+
             data.Validate();
             for (var i = 0; i < count; i++)
             {
@@ -68,61 +64,26 @@ namespace Game.Client.Monsters
 
         private MonsterController Spawn(Vector3 position)
         {
-            var height = 2f * bodyScale.y;
-            var bodyRadius = 0.5f * Mathf.Max(bodyScale.x, bodyScale.z);
-
             var root = new GameObject($"{data.Name} (Nv {data.Level})");
             root.transform.SetParent(transform, true);
             root.transform.position = position;
             root.transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
 
+            var parts = MonsterVisuals.Build(root.transform, shape, bodyScale, bodyMaterial, telegraphMaterial, ringMaterial);
+
             var controller = root.AddComponent<CharacterController>();
-            controller.height = height;
-            controller.radius = bodyRadius;
-            controller.center = new Vector3(0, height / 2f, 0);
-
-            var body = new GameObject("Corpo");
-            body.transform.SetParent(root.transform, false);
-            var mesh = Primitive(PrimitiveTypeFor(shape), "Malha", body.transform, bodyMaterial);
-            mesh.transform.localPosition = new Vector3(0, height / 2f, 0);
-            mesh.transform.localScale = shape == MonsterShape.Capsule ? bodyScale : new Vector3(bodyScale.x, bodyScale.y * 2f, bodyScale.z);
-            var eye = Primitive(PrimitiveType.Cube, "Frente", body.transform, telegraphMaterial);
-            eye.transform.localPosition = new Vector3(0, height * 0.75f, bodyRadius);
-            eye.transform.localScale = new Vector3(0.3f, 0.12f, 0.12f) * Mathf.Max(1f, bodyScale.x);
-
-            var ring = Primitive(PrimitiveType.Cylinder, "Anel de seleção", root.transform, ringMaterial);
-            ring.transform.localPosition = new Vector3(0, 0.02f, 0);
-            ring.transform.localScale = new Vector3(bodyRadius * 3.2f, 0.01f, bodyRadius * 3.2f);
-
-            var telegraph = Primitive(PrimitiveType.Cylinder, "Aviso de golpe", root.transform, telegraphMaterial);
-            telegraph.transform.localPosition = new Vector3(0, 0.03f, 0);
-            telegraph.SetActive(false);
+            controller.height = parts.Height;
+            controller.radius = parts.Radius;
+            controller.center = new Vector3(0, parts.Height / 2f, 0);
 
             var targetable = root.AddComponent<Targetable>();
-            targetable.Configure(data.Name, data.MaxHp, height + 0.3f, bodyRadius, ring, data.Defense);
+            targetable.Configure(data.Name, data.MaxHp, parts.Height + 0.3f, parts.Radius, parts.Ring, data.Defense);
             targetable.Level = data.Level;
 
             var monster = root.AddComponent<MonsterController>();
-            monster.Initialize(data, body, telegraph.transform);
+            monster.Initialize(data, parts.Body, parts.Telegraph);
             if (isBoss) root.AddComponent<BossAbilities>().SetWarningMaterial(telegraphMaterial);
             return monster;
-        }
-
-        private static PrimitiveType PrimitiveTypeFor(MonsterShape monsterShape) => monsterShape switch
-        {
-            MonsterShape.Cube => PrimitiveType.Cube,
-            MonsterShape.Sphere => PrimitiveType.Sphere,
-            _ => PrimitiveType.Capsule,
-        };
-
-        private static GameObject Primitive(PrimitiveType type, string name, Transform parent, Material material)
-        {
-            var primitive = GameObject.CreatePrimitive(type);
-            primitive.name = name;
-            Destroy(primitive.GetComponent<Collider>());
-            primitive.transform.SetParent(parent, false);
-            if (material != null) primitive.GetComponent<Renderer>().sharedMaterial = material;
-            return primitive;
         }
 
         private void OnDrawGizmosSelected()

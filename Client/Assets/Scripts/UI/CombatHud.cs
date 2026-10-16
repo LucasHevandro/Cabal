@@ -1,5 +1,6 @@
 using Game.Client.Combat;
 using Game.Client.Loot;
+using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.World;
 using Game.Shared.Combat;
@@ -91,6 +92,7 @@ namespace Game.Client.UI
             DrawMessage();
             DrawXpBar();
             DrawZone();
+            DrawNetwork();
             DrawAnnouncement();
             DrawDeathOverlay();
             if (_showInventory) DrawInventory();
@@ -203,6 +205,29 @@ namespace Game.Client.UI
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
             Box(rect, Panel);
             GUI.Label(rect, text, _center);
+        }
+
+        private void DrawNetwork()
+        {
+            var session = NetworkSession.Instance;
+            if (session == null) return;
+
+            string text;
+            var color = Color.white;
+            if (!string.IsNullOrEmpty(session.Error))
+            {
+                text = $"Desconectado: {session.Error}";
+                color = new Color(1f, 0.5f, 0.45f);
+            }
+            else if (session.State == NetClient.Status.Connecting) text = $"Conectando em {GameMode.Host}:{GameMode.Port}…";
+            else if (!session.IsWelcomed) text = "Entrando no mundo…";
+            else text = $"Online · {GameMode.PlayerName} · {session.Clock.LastRtt * 1000:0} ms";
+
+            var rect = new Rect(VirtualWidth - 460, 64, 440, 30);
+            Box(rect, Panel);
+            GUI.color = color;
+            GUI.Label(rect, text, _small.WithCenter());
+            GUI.color = Color.white;
         }
 
         private void DrawAnnouncement()

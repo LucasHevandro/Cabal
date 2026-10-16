@@ -8,6 +8,7 @@ for (var i = 0; i < args.Length - 1; i++)
     if (args[i] == "--port" && int.TryParse(args[i + 1], out var parsed)) port = parsed;
 }
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 void Log(string message) => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
 
 using var host = new ServerHost(port, Log);

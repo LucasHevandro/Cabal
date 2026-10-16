@@ -189,7 +189,8 @@ public sealed partial class GameWorld
         player.IsDead = false;
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);
-        player.Movement.Teleport(WorldContent.PlayerSpawnX, WorldContent.PlayerSpawnZ, now);
+        var (spawnX, spawnZ) = SpawnPointFor(player.Id);
+        player.Movement.Teleport(spawnX, spawnZ, now);
         player.StatsDirty = true;
         _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
         Notify(player, "Você renasceu na vila");

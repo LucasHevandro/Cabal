@@ -448,6 +448,9 @@ namespace Game.Client.Combat
             ShowMessage($"Combo encerrado: {reason} ({Combo.HitCount} acertos)");
         }
 
+        /// <summary>Mostra um aviso curto (usado também pelos avisos do servidor).</summary>
+        public void ShowNotice(string text) => ShowMessage(text);
+
         private void ShowMessage(string text)
         {
             Message = text;

@@ -1,0 +1,231 @@
+using System;
+using System.Collections.Generic;
+using Game.Client.Combat;
+using Game.Client.Monsters;
+using Game.Client.Player;
+using Game.Client.UI;
+using Game.Shared.Monsters;
+using Game.Shared.Net;
+using Game.Shared.World;
+using UnityEngine;
+using Ping = Game.Shared.Net.Ping;
+
+namespace Game.Client.Net
+{
+    /// <summary>
+    /// Modo online: conecta ao servidor, sincroniza o relógio, envia a posição do jogador e transforma o que chega
+    /// em objetos na cena (monstros e outros jogadores). As mensagens de combate são repassadas por
+    /// <see cref="MessageReceived"/> para quem cuida delas.
+    /// </summary>
+    public sealed class NetworkSession : MonoBehaviour
+    {
+        private const float MoveSendInterval = 0.05f;
+        private const float PingInterval = 1f;
+
+        [Header("Materiais (o construtor da cena preenche)")]
+        [SerializeField] private Material litTemplate;
+        [SerializeField] private Material telegraphMaterial;
+        [SerializeField] private Material ringMaterial;
+
+        private readonly Dictionary<int, NetEntityView> _views = new Dictionary<int, NetEntityView>();
+        private readonly Dictionary<string, Material> _materials = new Dictionary<string, Material>();
+        private readonly Dictionary<string, MonsterData> _monsterData = new Dictionary<string, MonsterData>();
+        private NetClient _client;
+        private PlayerMotor _motor;
+        private PlayerCombat _combat;
+        private bool _helloSent;
+        private uint _moveSequence;
+        private float _nextMoveAt;
+        private float _nextPingAt;
+        private int _lastDodgeCount;
+
+        public static NetworkSession Instance { get; private set; }
+
+        public ServerClock Clock { get; } = new ServerClock();
+        public int PlayerId { get; private set; }
+        public bool IsWelcomed => PlayerId != 0;
+        public NetClient.Status State => _client?.State ?? NetClient.Status.Idle;
+        public string Error { get; private set; } = "";
+        public IReadOnlyDictionary<int, NetEntityView> Views => _views;
+
+        /// <summary>Horário estimado do servidor agora.</summary>
+        public double ServerNow => Clock.ServerNow(LocalNow);
+
+        public static double LocalNow => Time.realtimeSinceStartupAsDouble;
+
+        /// <summary>Mensagens que esta classe não trata sozinha (combate, status, drops).</summary>
+        public event Action<INetMessage> MessageReceived;
+
+        public void SetMaterials(Material lit, Material telegraph, Material ring)
+        {
+            litTemplate = lit;
+            telegraphMaterial = telegraph;
+            ringMaterial = ring;
+        }
+
+        public NetEntityView FindView(int id) => _views.TryGetValue(id, out var view) ? view : null;
+
+        public void Send(INetMessage message) => _client?.Send(message);
+
+        private void Awake()
+        {
+            if (!GameMode.IsOnline)
+            {
+                enabled = false;
+                return;
+            }
+            Instance = this;
+            foreach (var spawn in WorldContent.Spawns()) _monsterData[spawn.Data.Id] = spawn.Data;
+        }
+
+        private void Start()
+        {
+            _combat = PlayerCombat.Local != null ? PlayerCombat.Local : FindAnyObjectByType<PlayerCombat>();
+            if (_combat != null) _motor = _combat.GetComponent<PlayerMotor>();
+            _client = new NetClient();
+            _client.Connect(GameMode.Host, GameMode.Port);
+        }
+
+        private void OnDestroy()
+        {
+            _client?.Dispose();
+            if (Instance == this) Instance = null;
+        }
+
+        private void Update()
+        {
+            if (_client == null) return;
+
+            if (_client.State == NetClient.Status.Connected && !_helloSent)
+            {
+                _helloSent = true;
+                _client.Send(new Hello { Name = GameMode.PlayerName });
+            }
+
+            while (_client.TryReceive(out var message)) Dispatch(message);
+
+            if (_client.State == NetClient.Status.Disconnected && string.IsNullOrEmpty(Error))
+                Error = string.IsNullOrEmpty(_client.Error) ? "Desconectado" : _client.Error;
+
+            if (!IsWelcomed || _client.State != NetClient.Status.Connected) return;
+
+            if (Time.unscaledTime >= _nextPingAt)
+            {
+                _nextPingAt = Time.unscaledTime + PingInterval;
+                _client.Send(new Ping { ClientTime = LocalNow });
+            }
+            SendMovement();
+        }
+
+        private void SendMovement()
+        {
+            if (_motor == null) return;
+            var dodged = _motor.DodgeCount != _lastDodgeCount;
+            if (!dodged && Time.unscaledTime < _nextMoveAt) return;
+            _lastDodgeCount = _motor.DodgeCount;
+            _nextMoveAt = Time.unscaledTime + MoveSendInterval;
+
+            var position = _motor.transform.position;
+            _client.Send(new MoveInput
+            {
+                Sequence = ++_moveSequence, X = position.x, Z = position.z, Yaw = _motor.transform.eulerAngles.y, Dodging = dodged,
+            });
+        }
+
+        private void Dispatch(INetMessage message)
+        {
+            switch (message)
+            {
+                case Welcome welcome:
+                    PlayerId = welcome.PlayerId;
+                    Clock.Seed(welcome.ServerTime, LocalNow);
+                    if (_motor != null) _motor.Teleport(new Vector3(welcome.SpawnX, 0, welcome.SpawnZ));
+                    _client.Send(new Ping { ClientTime = LocalNow });
+                    break;
+                case Reject reject:
+                    Error = reject.Reason;
+                    _client.Disconnect();
+                    break;
+                case Pong pong:
+                    Clock.AddSample(pong.ClientTime, pong.ServerTime, LocalNow);
+                    break;
+                case EntitySpawned spawned:
+                    if (spawned.Id != PlayerId) CreateView(spawned);
+                    break;
+                case EntityDespawned despawned:
+                    if (_views.TryGetValue(despawned.Id, out var view))
+                    {
+                        _views.Remove(despawned.Id);
+                        Destroy(view.gameObject);
+                    }
+                    break;
+                case Snapshot snapshot:
+                    foreach (var state in snapshot.Entities)
+                    {
+                        if (_views.TryGetValue(state.Id, out var entity)) entity.AddSample(snapshot.ServerTime, state);
+                    }
+                    MessageReceived?.Invoke(snapshot);
+                    break;
+                case PositionCorrection correction:
+                    if (_motor != null) _motor.Teleport(new Vector3(correction.X, 0, correction.Z));
+                    break;
+                case Notice notice:
+                    if (notice.Announcement) CombatHud.Announce(notice.Text);
+                    else if (_combat != null) _combat.ShowNotice(notice.Text);
+                    break;
+                default:
+                    MessageReceived?.Invoke(message);
+                    break;
+            }
+        }
+
+        private void CreateView(EntitySpawned spawned)
+        {
+            if (_views.ContainsKey(spawned.Id)) return;
+
+            var root = new GameObject(spawned.Kind == EntityKind.Player ? $"Jogador: {spawned.Name}" : $"{spawned.Name} (Nv {spawned.Level})");
+            root.transform.position = new Vector3(spawned.X, 0, spawned.Z);
+
+            MonsterParts parts;
+            MonsterData data = null;
+            if (spawned.Kind == EntityKind.Monster)
+            {
+                var look = MonsterVisuals.LookFor(spawned.TypeId);
+                parts = MonsterVisuals.Build(root.transform, look.Shape, look.Scale, MaterialFor(spawned.TypeId, look.Color),
+                    telegraphMaterial, ringMaterial);
+                _monsterData.TryGetValue(spawned.TypeId, out data);
+            }
+            else
+            {
+                parts = MonsterVisuals.Build(root.transform, MonsterShape.Capsule, new Vector3(0.8f, 1f, 0.8f),
+                    MaterialFor("outro_jogador", new Color(0.3f, 0.75f, 0.45f)), telegraphMaterial, ringMaterial);
+            }
+
+            // Colisor só para o clique de seleção (gatilho: não empurra o jogador).
+            var collider = root.AddComponent<CapsuleCollider>();
+            collider.isTrigger = true;
+            collider.height = parts.Height;
+            collider.radius = parts.Radius;
+            collider.center = new Vector3(0, parts.Height / 2f, 0);
+
+            var target = root.AddComponent<Targetable>();
+            target.Configure(spawned.Name, Mathf.Max(1, spawned.MaxHp), parts.Height + 0.3f, parts.Radius, parts.Ring,
+                data?.Defense ?? 0);
+            target.Level = spawned.Level;
+            target.NetworkId = spawned.Id;
+            target.IsSelectable = spawned.Kind == EntityKind.Monster;
+
+            var view = root.AddComponent<NetEntityView>();
+            view.Initialize(spawned, parts.Body, parts.Ring, parts.Telegraph, target, data);
+            _views.Add(spawned.Id, view);
+        }
+
+        private Material MaterialFor(string key, Color color)
+        {
+            if (_materials.TryGetValue(key, out var material)) return material;
+            material = litTemplate != null ? MonsterVisuals.Tinted(litTemplate, color) : null;
+            _materials[key] = material;
+            return material;
+        }
+    }
+}

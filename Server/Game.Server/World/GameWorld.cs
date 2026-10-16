@@ -70,18 +70,19 @@ public sealed partial class GameWorld
     public ServerPlayer AddPlayer(string name, double now, Action<int>? onIdAssigned = null)
     {
         var cleanName = string.IsNullOrWhiteSpace(name) ? "Aventureiro" : name.Trim();
+        var id = _nextEntityId++;
+        var (spawnX, spawnZ) = SpawnPointFor(id);
         var player = new ServerPlayer
         {
-            Id = _nextEntityId++,
+            Id = id,
             Name = cleanName.Length > 20 ? cleanName[..20] : cleanName,
-            Movement = new MovementValidator(WorldContent.PlayerSpawnX, WorldContent.PlayerSpawnZ, now),
+            Movement = new MovementValidator(spawnX, spawnZ, now),
         };
         onIdAssigned?.Invoke(player.Id);
 
         _outbox.Send(player.Id, new Welcome
         {
-            PlayerId = player.Id, ServerTime = now, TickRate = TickRate,
-            SpawnX = WorldContent.PlayerSpawnX, SpawnZ = WorldContent.PlayerSpawnZ,
+            PlayerId = player.Id, ServerTime = now, TickRate = TickRate, SpawnX = spawnX, SpawnZ = spawnZ,
         });
         _players.Add(player.Id, player);
         return player;
@@ -251,6 +252,14 @@ public sealed partial class GameWorld
         };
         monster.Brain.Revive(0);
         _monsters.Add(monster.Id, monster);
+    }
+
+    /// <summary>Ponto de nascimento na vila, espalhado num círculo de 3 m para jogadores não nascerem um dentro do outro.</summary>
+    public static (float X, float Z) SpawnPointFor(int playerId)
+    {
+        var angle = playerId * 2.39996f; // ângulo áureo: pontos bem distribuídos
+        var radius = 1.5f + playerId % 3 * 0.75f;
+        return (WorldContent.PlayerSpawnX + MathF.Cos(angle) * radius, WorldContent.PlayerSpawnZ + MathF.Sin(angle) * radius);
     }
 
     private static bool InRange(float ax, float az, float bx, float bz, float radius)

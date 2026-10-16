@@ -54,7 +54,7 @@ namespace Game.Client.Combat
             _candidates.Clear();
             foreach (var candidate in Targetable.All)
             {
-                if (!candidate.IsAlive) continue;
+                if (!candidate.IsAlive || !candidate.IsSelectable) continue;
                 if (Vector3.Distance(transform.position, candidate.transform.position) <= tabRange) _candidates.Add(candidate);
             }
             if (_candidates.Count == 0) return;
@@ -75,7 +75,7 @@ namespace Game.Client.Combat
             if (Physics.Raycast(ray, out var hit, 200f, ~0, QueryTriggerInteraction.Collide))
             {
                 var target = hit.collider.GetComponentInParent<Targetable>();
-                if (target != null) Select(target);
+                if (target != null && target.IsSelectable) Select(target);
             }
         }
     }

@@ -63,6 +63,19 @@ namespace Game.Client.Combat
         /// <summary>Volta com a vida cheia (renascer, voltar para casa).</summary>
         public void RestoreFullHealth() => Hp.Add(Hp.Max);
 
+        /// <summary>Falso para o que só mostra plaquinha mas não pode ser alvo (outros jogadores, sem PvP).</summary>
+        public bool IsSelectable { get; set; } = true;
+
+        /// <summary>Id da entidade no servidor (0 no modo offline).</summary>
+        public int NetworkId { get; set; }
+
+        /// <summary>Modo online: o servidor manda a vida; ajusta sem disparar eventos de dano.</summary>
+        public void SetHealth(int current, int max)
+        {
+            if (Hp.Max != max) Hp.SetMax(max);
+            Hp.Add(current - Hp.Current);
+        }
+
         public void SetSelected(bool selected)
         {
             if (selectionRing != null) selectionRing.SetActive(selected);

@@ -27,18 +27,26 @@ namespace Game.Client.Combat
 
         private void Awake()
         {
+            // Os bonecos são só do modo offline: online o servidor não sabe deles.
+            if (Game.Client.Net.GameMode.IsOnline)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
             _target = GetComponent<Targetable>();
             _restScale = transform.localScale;
         }
 
         private void OnEnable()
         {
+            if (_target == null) return;
             _target.Damaged += OnDamaged;
             _target.Died += OnDied;
         }
 
         private void OnDisable()
         {
+            if (_target == null) return;
             _target.Damaged -= OnDamaged;
             _target.Died -= OnDied;
         }

@@ -40,6 +40,18 @@ namespace Game.Client.Player
 
         public void SetCamera(Transform cam) => cameraTransform = cam;
 
+        /// <summary>Quantas esquivas já começaram (a rede avisa o servidor quando muda).</summary>
+        public int DodgeCount { get; private set; }
+
+        /// <summary>Move o jogador na hora, sem colisão (correção do servidor, renascer).</summary>
+        public void Teleport(Vector3 position)
+        {
+            _controller.enabled = false;
+            transform.position = new Vector3(position.x, transform.position.y, position.z);
+            _controller.enabled = true;
+            _verticalVelocity = 0;
+        }
+
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
@@ -60,6 +72,7 @@ namespace Game.Client.Player
                 _dodgeDirection = moveDirection.sqrMagnitude > 0.01f ? moveDirection : -transform.forward;
                 _dodgeEndsAt = Time.time + dodgeDuration;
                 _nextDodgeAt = Time.time + dodgeCooldown;
+                DodgeCount++;
             }
 
             Vector3 horizontal;

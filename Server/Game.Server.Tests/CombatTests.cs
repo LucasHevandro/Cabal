@@ -44,6 +44,7 @@ public class CombatTests
         var spawn = new SpawnDefinition { Data = data, CenterX = 0, CenterZ = monsterZ, Count = 1, Radius = 0, IsBoss = boss };
         var world = new GameWorld(outbox, new[] { spawn }, new FixedRandom(random));
         var player = world.AddPlayer("Ana", 0);
+        player.Movement.Teleport(0, 0, 0); // os testes medem distâncias a partir da origem
         return (world, outbox, player, world.Monsters.Single());
     }
 
@@ -202,6 +203,7 @@ public class CombatTests
         var outbox = new FakeOutbox();
         var world = new GameWorld(outbox, new[] { near, far }, new FixedRandom(0.5));
         var player = world.AddPlayer("Ana", 0);
+        player.Movement.Teleport(0, 0, 0);
 
         world.Tick(0.05);
 

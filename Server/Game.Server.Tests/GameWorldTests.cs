@@ -94,12 +94,13 @@ public class GameWorldTests
         var outbox = new FakeOutbox();
         var world = new GameWorld(outbox, NoMonsters);
         var ana = world.AddPlayer("Ana", 0);
+        var (startX, startZ) = (ana.Movement.X, ana.Movement.Z);
 
         world.Handle(ana.Id, new MoveInput { Sequence = 1, X = 100, Z = 0 }, now: 0.1);
 
         var correction = Assert.Single(outbox.To<PositionCorrection>(ana.Id));
-        Assert.Equal((0f, 0f), (correction.X, correction.Z));
-        Assert.Equal(0f, ana.Movement.X);
+        Assert.Equal((startX, startZ), (correction.X, correction.Z));
+        Assert.Equal(startX, ana.Movement.X);
     }
 
     [Fact]
@@ -141,6 +142,15 @@ public class GameWorldTests
 
         var pong = Assert.Single(outbox.To<Pong>(ana.Id));
         Assert.Equal((1.25, 9.5), (pong.ClientTime, pong.ServerTime));
+    }
+
+    [Fact]
+    public void Jogadores_nascem_espalhados_perto_da_vila()
+    {
+        var points = Enumerable.Range(1, 6).Select(GameWorld.SpawnPointFor).ToList();
+
+        Assert.Equal(points.Count, points.Distinct().Count());
+        foreach (var (x, z) in points) Assert.InRange(MathF.Sqrt(x * x + z * z), 1.4f, 3.1f);
     }
 
     [Fact]

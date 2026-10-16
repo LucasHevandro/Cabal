@@ -2,6 +2,7 @@ using System.IO;
 using Game.Client.Combat;
 using Game.Client.Fx;
 using Game.Client.Loot;
+using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
 using UnityEditor;
@@ -32,7 +33,8 @@ namespace Game.Client.Editor
             var ring = MaterialFor("AnelSelecao", new Color(1f, 0.85f, 0.2f));
 
             CreateLight();
-            WorldBuilder.Build(ring, MaterialFor("AvisoGolpe", new Color(0.9f, 0.15f, 0.1f), "Universal Render Pipeline/Unlit"));
+            var telegraph = MaterialFor("AvisoGolpe", new Color(0.9f, 0.15f, 0.1f), "Universal Render Pipeline/Unlit");
+            WorldBuilder.Build(ring, telegraph);
             CreatePillar(new Vector3(-7, 0, 3), pillar);
             CreatePillar(new Vector3(7, 0, 5), pillar);
 
@@ -50,6 +52,10 @@ namespace Game.Client.Editor
                 MaterialFor("Particula", Color.white, "Universal Render Pipeline/Particles/Unlit"),
                 MaterialFor("Projetil", new Color(0.45f, 0.65f, 1f), "Universal Render Pipeline/Unlit"));
             effects.AddComponent<SoundPlayer>();
+
+            var network = new GameObject("Rede");
+            network.AddComponent<NetworkSession>().SetMaterials(MaterialFor("BaseLit", Color.white), telegraph, ring);
+            network.AddComponent<ConnectMenu>();
 
             var hud = new GameObject("HUD");
             hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());

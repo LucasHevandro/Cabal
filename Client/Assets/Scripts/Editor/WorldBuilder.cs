@@ -21,19 +21,6 @@ namespace Game.Client.Editor
         private static readonly Vector3 Ruins = new Vector3(-45, 0, 125);
         private static readonly Vector3 BossArena = new Vector3(0, 0, 170);
 
-        /// <summary>Aparência de cada monstro no protótipo (os dados de jogo ficam no Shared).</summary>
-        private static readonly Dictionary<string, (MonsterShape Shape, Vector3 Scale, Color Color)> Looks =
-            new Dictionary<string, (MonsterShape, Vector3, Color)>
-            {
-                ["coelho_saltador"] = (MonsterShape.Sphere, new Vector3(0.7f, 0.5f, 0.7f), new Color(0.95f, 0.95f, 0.9f)),
-                ["lobo_cinzento"] = (MonsterShape.Capsule, new Vector3(0.8f, 0.7f, 1.3f), new Color(0.5f, 0.5f, 0.55f)),
-                ["javali_furioso"] = (MonsterShape.Cube, new Vector3(1.1f, 0.6f, 1.6f), new Color(0.45f, 0.3f, 0.18f)),
-                ["aranha_da_mata"] = (MonsterShape.Sphere, new Vector3(1.6f, 0.6f, 1.6f), new Color(0.2f, 0.3f, 0.12f)),
-                ["golem_de_pedra"] = (MonsterShape.Cube, new Vector3(1.6f, 1.3f, 1.6f), new Color(0.55f, 0.55f, 0.58f)),
-                ["espectro"] = (MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f), new Color(0.45f, 0.3f, 0.7f)),
-                ["guardiao_das_ruinas"] = (MonsterShape.Capsule, new Vector3(2.2f, 2.2f, 2.2f), new Color(0.6f, 0.15f, 0.12f)),
-            };
-
         private static readonly Dictionary<string, Color> ZoneTints = new Dictionary<string, Color>
         {
             ["Vila de Partida"] = new Color(0.55f, 0.5f, 0.42f),
@@ -67,7 +54,7 @@ namespace Game.Client.Editor
 
             foreach (var spawn in WorldContent.Spawns())
             {
-                if (!Looks.TryGetValue(spawn.Data.Id, out var look))
+                if (!MonsterVisuals.Looks.TryGetValue(spawn.Data.Id, out var look))
                     throw new System.InvalidOperationException($"Sem aparência definida para o monstro {spawn.Data.Id}.");
                 Spawner(world, new Vector3(spawn.CenterX, 0, spawn.CenterZ), spawn.Count, spawn.Radius, look.Shape,
                     look.Scale, look.Color, ring, telegraph, spawn.Data, spawn.IsBoss);
