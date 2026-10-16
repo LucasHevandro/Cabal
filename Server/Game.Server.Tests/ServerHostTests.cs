@@ -94,6 +94,40 @@ public class ServerHostTests
     }
 
     [Fact]
+    public async Task Latencia_simulada_atrasa_ida_e_volta()
+    {
+        using var host = new ServerHost(new ServerOptions { Port = 0, SimulatedLatencyMs = 100 });
+        host.Start();
+        using var client = new TestClient();
+        await client.ConnectAsync(host.Port);
+        await client.SendAsync(new Hello { Name = "Longe" });
+        await client.ReceiveAsync<Welcome>();
+
+        var sent = System.Diagnostics.Stopwatch.StartNew();
+        await client.SendAsync(new Ping { ClientTime = 1 });
+        await client.ReceiveAsync<Pong>();
+
+        Assert.InRange(sent.Elapsed.TotalMilliseconds, 195, 600);
+    }
+
+    [Fact]
+    public async Task Metricas_contam_ticks_e_envios()
+    {
+        using var host = new ServerHost(port: 0);
+        host.Start();
+        using var client = new TestClient();
+        await client.ConnectAsync(host.Port);
+        await client.SendAsync(new Hello { Name = "Teste" });
+        await client.ReceiveAsync<Snapshot>();
+        await Task.Delay(300);
+
+        var report = host.Metrics.Report(1, 0);
+
+        Assert.Contains("ticks", report);
+        Assert.Contains("KB/s", report);
+    }
+
+    [Fact]
     public async Task Ping_mede_ida_e_volta()
     {
         using var host = new ServerHost(port: 0);
