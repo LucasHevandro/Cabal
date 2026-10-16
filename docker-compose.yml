@@ -1,0 +1,26 @@
+# Banco do jogo para desenvolvimento local.
+#   Subir:   docker compose up -d
+#   Parar:   docker compose stop
+#   Backup:  powershell -File Tools/backup-db.ps1
+# A porta fica presa ao 127.0.0.1: só este PC acessa o banco.
+services:
+  postgres:
+    image: postgres:17
+    container_name: game-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: ${GAME_DB_PASSWORD:-game_dev_local}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - game-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U game -d game"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  game-db:
