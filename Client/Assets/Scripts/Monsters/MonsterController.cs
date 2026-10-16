@@ -34,8 +34,11 @@ namespace Game.Client.Monsters
         public MonsterState State => _brain?.State ?? MonsterState.Idle;
         public bool IsDead => _brain != null && _brain.State == MonsterState.Dead;
 
-        /// <summary>Disparado quando o monstro morre (para XP e drop).</summary>
+        /// <summary>Disparado quando este monstro morre.</summary>
         public event Action<MonsterController> Killed;
+
+        /// <summary>Disparado quando qualquer monstro morre (XP e drop do jogador).</summary>
+        public static event Action<MonsterController> AnyKilled;
 
         /// <summary>Monta o monstro. Chamado pelo <see cref="MonsterSpawner"/> logo depois de criar o objeto.</summary>
         public void Initialize(MonsterData data, GameObject body, Transform telegraph)
@@ -139,6 +142,7 @@ namespace Game.Client.Monsters
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(_target.CenterPosition, new Color(0.9f, 0.9f, 0.9f), 30);
             SetVisible(false);
             Killed?.Invoke(this);
+            AnyKilled?.Invoke(this);
         }
 
         private void Respawn()

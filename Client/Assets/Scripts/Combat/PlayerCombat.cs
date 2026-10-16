@@ -13,7 +13,7 @@ namespace Game.Client.Combat
     /// Combate do jogador no protótipo offline: skills nas teclas 1 a 4, combo na tecla Q e finalizador na F.
     /// As regras do combo vêm do <see cref="ComboSession"/> do Shared; aqui ficam entrada, efeitos e dano.
     /// </summary>
-    [RequireComponent(typeof(TargetSelector))]
+    [RequireComponent(typeof(TargetSelector), typeof(PlayerProgression))]
     public sealed class PlayerCombat : MonoBehaviour
     {
         [Header("Skills (teclas 1 a 4)")]
@@ -26,9 +26,6 @@ namespace Game.Client.Combat
         };
 
         [Header("Vida e mana")]
-        [SerializeField] private int maxHp = 3000;
-        [SerializeField] private int maxMp = 600;
-        [SerializeField] private int defense = 60;
         [SerializeField] private float mpRegenPerSecond = 20f;
         [SerializeField] private float respawnSeconds = 4f;
 
@@ -39,7 +36,8 @@ namespace Game.Client.Combat
         [SerializeField] private int spPerHit = 60;
 
         [Header("Dano (fórmula em Game.Shared.Combat.DamageFormula)")]
-        [SerializeField] private int attackPower = 80;
+        [Tooltip("Ataque extra somado ao do nível (equipamento virá depois).")]
+        [SerializeField] private int attackBonus;
         [SerializeField, Range(0f, 1f)] private float critChance = 0.1f;
         [SerializeField] private float critMultiplier = 1.5f;
         [SerializeField] private int finisherBaseDamage = 400;
@@ -56,6 +54,7 @@ namespace Game.Client.Combat
         private readonly List<Targetable> _hitBuffer = new List<Targetable>();
         private readonly IRandomSource _random = new SystemRandomSource();
         private TargetSelector _selector;
+        private PlayerProgression _progression;
         private PlayerMotor _motor;
         private OrbitCamera _camera;
         private SkillCooldowns _cooldowns;
@@ -68,7 +67,9 @@ namespace Game.Client.Combat
         public static PlayerCombat Local { get; private set; }
 
         public ComboSession Combo { get; private set; }
-        public int Defense => defense;
+        public int Defense => _progression.Stats.Defense;
+        public int AttackPower => _progression.Stats.AttackPower + attackBonus;
+        public int Level => _progression.Level;
         public bool IsDead { get; private set; }
 
         /// <summary>Segundos até renascer (0 se vivo).</summary>
@@ -102,10 +103,13 @@ namespace Game.Client.Combat
         private void Awake()
         {
             _selector = GetComponent<TargetSelector>();
+            _progression = GetComponent<PlayerProgression>();
             _motor = GetComponent<PlayerMotor>();
             foreach (var skill in skills) skill.Validate();
-            Hp = new ResourcePool(maxHp);
-            Mp = new ResourcePool(maxMp);
+            var stats = _progression.Stats;
+            Hp = new ResourcePool(stats.MaxHp);
+            Mp = new ResourcePool(stats.MaxMp);
+            _progression.LeveledUp += OnLeveledUp;
             Sp = new ResourcePool(maxSp, startingSp);
             Combo = new ComboSession(comboTuning.ToConfig());
             _cooldowns = new SkillCooldowns(skills.Count);
@@ -337,7 +341,7 @@ namespace Game.Client.Combat
 
         private DamageResult RollDamage(int skillBaseDamage, double multiplier, Targetable target) =>
             DamageFormula.Calculate(
-                new DamageInput(skillBaseDamage, attackPower, multiplier, critChance, critMultiplier, target.Defense),
+                new DamageInput(skillBaseDamage, AttackPower, multiplier, critChance, critMultiplier, target.Defense),
                 _random);
 
         private bool InRange(Targetable target, float range) => DistanceToEdge(target) <= range;
@@ -367,6 +371,17 @@ namespace Game.Client.Combat
 
             if (Hp.Current == 0) Die();
             return taken;
+        }
+
+        /// <summary>Subiu de nível: novos máximos de HP e MP, e volta cheio.</summary>
+        private void OnLeveledUp(int level)
+        {
+            var stats = _progression.Stats;
+            Hp.SetMax(stats.MaxHp);
+            Mp.SetMax(stats.MaxMp);
+            Hp.Add(Hp.Max);
+            Mp.Add(Mp.Max);
+            ShowMessage($"Nível {level}! HP {stats.MaxHp} · MP {stats.MaxMp} · ataque {stats.AttackPower} · defesa {stats.Defense}");
         }
 
         private void Die()

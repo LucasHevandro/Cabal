@@ -1,6 +1,10 @@
 using Game.Client.Combat;
+using Game.Client.Loot;
+using Game.Client.Player;
 using Game.Shared.Combat;
+using Game.Shared.Progression;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Game.Client.UI
 {
@@ -31,17 +35,35 @@ namespace Game.Client.UI
         private static readonly Color MagicalColor = new Color(0.45f, 0.6f, 1f);
         private static readonly Color RouteColor = new Color(0.85f, 0.65f, 1f);
 
+        private PlayerProgression _progression;
+        private PlayerLoot _loot;
+        private bool _showInventory;
+
         public void SetCombat(PlayerCombat playerCombat) => combat = playerCombat;
 
         private void Awake()
         {
             if (combat == null) combat = FindAnyObjectByType<PlayerCombat>();
+            if (combat != null)
+            {
+                _progression = combat.GetComponent<PlayerProgression>();
+                _loot = combat.GetComponent<PlayerLoot>();
+            }
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.iKey.wasPressedThisFrame) _showInventory = !_showInventory;
         }
 
         private void OnGUI()
         {
             if (combat == null || combat.Combo == null) return;
             EnsureStyles();
+
+            // Plaquinhas dos monstros ficam em coordenadas de tela, antes da escala do resto do HUD.
+            DrawNameplates();
 
             var scale = Mathf.Min(Screen.width / VirtualWidth, Screen.height / VirtualHeight);
             GUI.matrix = Matrix4x4.TRS(
@@ -56,6 +78,9 @@ namespace Game.Client.UI
             DrawSkillBar();
             DrawGradePopup();
             DrawMessage();
+            DrawXpBar();
+            DrawDeathOverlay();
+            if (_showInventory) DrawInventory();
 
             GUI.matrix = Matrix4x4.identity;
             GUI.color = Color.white;
@@ -69,7 +94,7 @@ namespace Game.Client.UI
                 "WASD andar · Shift correr · Espaço esquivar\n" +
                 "Botão direito girar câmera · Roda zoom\n" +
                 "Tab / clique: selecionar alvo · Esc limpar\n" +
-                "1–4 skills\n" +
+                "1–4 skills · E coletar itens · I inventário\n" +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +
                 "<b>Rotas de combo</b> (F = físico, M = mágico)\n" +
@@ -143,6 +168,85 @@ namespace Game.Client.UI
             }
         }
 
+        private void DrawXpBar()
+        {
+            if (_progression == null) return;
+            var progress = _progression.Progress;
+            var rect = new Rect(0, VirtualHeight - 14, VirtualWidth, 14);
+            var toNext = progress.XpToNext;
+            var fraction = toNext == 0 ? 1f : (float)progress.Xp / toNext;
+            Bar(rect, fraction, new Color(0.65f, 0.45f, 0.95f));
+            var text = progress.Level >= LevelCurve.MaxLevel
+                ? "Nível máximo"
+                : $"XP {progress.Xp} / {toNext} ({fraction * 100:0.0}%)";
+            GUI.Label(new Rect(0, VirtualHeight - 17, VirtualWidth, 20), text, _small.WithCenter());
+        }
+
+        private void DrawDeathOverlay()
+        {
+            if (!combat.IsDead) return;
+            Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0.3f, 0f, 0f, 0.35f));
+            ShadowLabel(new Rect(0, VirtualHeight / 2 - 80, VirtualWidth, 80), "<b>VOCÊ MORREU</b>", _big.WithCenter(),
+                new Color(1f, 0.4f, 0.35f), 1f);
+            GUI.Label(new Rect(0, VirtualHeight / 2, VirtualWidth, 30),
+                $"Renascendo na cidade em {combat.RespawnRemaining:0}…", _center);
+        }
+
+        private void DrawInventory()
+        {
+            var rect = new Rect(VirtualWidth - 440, 140, 400, 500);
+            Box(rect, Panel);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), "<b>Inventário</b> (I fecha)", _label);
+            if (_loot == null || _loot.Inventory.Count == 0)
+            {
+                GUI.Label(new Rect(rect.x + 16, rect.y + 50, rect.width - 32, 60),
+                    "Vazio. Derrote monstros e passe por cima dos itens (ou aperte E perto deles).", _small);
+                return;
+            }
+
+            var y = rect.y + 50;
+            foreach (var stack in _loot.Inventory)
+            {
+                var color = LootPickup.ColorFor(stack.Rarity);
+                Box(new Rect(rect.x + 16, y + 4, 16, 16), color);
+                GUI.color = color;
+                GUI.Label(new Rect(rect.x + 42, y, rect.width - 120, 26), stack.Name, _small);
+                GUI.color = Color.white;
+                GUI.Label(new Rect(rect.x, y, rect.width - 16, 26), $"x{stack.Quantity}", _small.WithAlignment(TextAnchor.UpperRight));
+                y += 28;
+                if (y > rect.yMax - 30) break;
+            }
+            GUI.Label(new Rect(rect.x + 16, rect.yMax - 30, rect.width, 24),
+                $"Monstros derrotados: {_loot.MonstersKilled}", _small);
+        }
+
+        /// <summary>Nome, nível e vida acima dos monstros vivos por perto.</summary>
+        private void DrawNameplates()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            var scale = Mathf.Clamp(Screen.height / VirtualHeight, 0.6f, 2f);
+
+            foreach (var target in Targetable.All)
+            {
+                if (target.Level <= 0 || !target.IsAlive) continue;
+                if ((target.transform.position - combat.transform.position).sqrMagnitude > 30f * 30f) continue;
+                var screen = cam.WorldToScreenPoint(target.HeadPosition + Vector3.up * 0.3f);
+                if (screen.z <= 0) continue;
+
+                var width = 140f * scale;
+                var x = screen.x - width / 2;
+                var y = Screen.height - screen.y - 30f * scale;
+                var selected = target == combat.Target;
+                GUI.color = selected ? new Color(1f, 0.9f, 0.4f) : Color.white;
+                _small.fontSize = Mathf.RoundToInt(14 * scale);
+                GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), $"{target.DisplayName} Nv {target.Level}", _small.WithCenter());
+                _small.fontSize = 16;
+                GUI.color = Color.white;
+                Bar(new Rect(x, y + 16 * scale, width, 6 * scale), (float)target.Hp.Current / Mathf.Max(1, target.Hp.Max), HpColor);
+            }
+        }
+
         private void DrawSpBar()
         {
             var rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight - 210, 660, 18);
@@ -154,7 +258,9 @@ namespace Game.Client.UI
         {
             var rect = new Rect(40, VirtualHeight - 150, 380, 96);
             Box(rect, Panel);
-            GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), "<b>Você</b>", _label);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), $"<b>Você</b> · Nv {combat.Level}", _label);
+            if (_loot != null)
+                GUI.Label(new Rect(rect.x, rect.y + 6, rect.width - 16, 26), $"{_loot.Alz:N0} Alz", _label.WithAlignment(TextAnchor.UpperRight));
 
             var hpRect = new Rect(rect.x + 16, rect.y + 38, rect.width - 32, 20);
             Bar(hpRect, (float)combat.Hp.Current / Mathf.Max(1, combat.Hp.Max), HpColor);

@@ -1,6 +1,7 @@
 using System.IO;
 using Game.Client.Combat;
 using Game.Client.Fx;
+using Game.Client.Loot;
 using Game.Client.Player;
 using Game.Client.UI;
 using UnityEditor;
@@ -107,7 +108,9 @@ namespace Game.Client.Editor
 
             root.AddComponent<PlayerMotor>();
             root.AddComponent<TargetSelector>();
+            root.AddComponent<PlayerProgression>();
             root.AddComponent<PlayerCombat>();
+            root.AddComponent<PlayerLoot>().SetLootMaterial(MaterialFor("Item", Color.white, "Universal Render Pipeline/Unlit"));
             return root;
         }
 
