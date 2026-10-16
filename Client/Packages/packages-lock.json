@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.projeto.game.shared": {
+      "version": "file:../../Shared/Game.Shared",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "2.0.0",
       "depth": 2,

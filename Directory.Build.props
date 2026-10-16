@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Saída de build (bin/obj) centralizada em artifacts/ na raiz.
+    Assim a pasta Shared/Game.Shared fica só com código-fonte e o Unity
+    pode usá-la como pacote local sem enxergar DLLs geradas.
+  -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+</Project>

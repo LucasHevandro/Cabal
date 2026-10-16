@@ -23,10 +23,9 @@ Client/crashlytics-build.properties
 Client/Assets/StreamingAssets/aa*
 Client/Assets/AddressableAssetsData/*/*.bin*
 
-# DLL gerada a partir de Shared/ (copiada pelo build, não versionada)
-Client/Assets/Plugins/Shared/
-
 # ===== .NET (Server/, Shared/, Tools/) =====
+# Saída de build centralizada (Directory.Build.props)
+artifacts/
 [Bb]in/
 [Oo]bj/
 *.user

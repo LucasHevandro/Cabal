@@ -1,0 +1,7 @@
+{
+  "name": "com.projeto.game.shared",
+  "version": "0.1.0",
+  "displayName": "Game Shared Rules",
+  "description": "Regras do jogo compartilhadas entre cliente e servidor (combo, recursos, fórmulas).",
+  "unity": "6000.0"
+}
