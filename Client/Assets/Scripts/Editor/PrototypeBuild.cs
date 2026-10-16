@@ -16,6 +16,9 @@ namespace Game.Client.Editor
         [MenuItem("Protótipo/Gerar build Windows")]
         public static void BuildWindows()
         {
+            // Jogo online: continua rodando sem foco (várias janelas abertas para teste, alt-tab durante a luta).
+            PlayerSettings.runInBackground = true;
+
             var options = new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Scenes/Treino.unity" },

@@ -17,6 +17,9 @@ namespace Game.Client.Loot
 
         public ItemDrop Drop { get; private set; }
 
+        /// <summary>Id do item no servidor (0 = item do modo offline).</summary>
+        public int NetworkId { get; set; }
+
         /// <summary>Itens no chão agora.</summary>
         public static IReadOnlyList<LootPickup> All => Active;
 

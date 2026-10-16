@@ -56,6 +56,7 @@ namespace Game.Client.Editor
             var network = new GameObject("Rede");
             network.AddComponent<NetworkSession>().SetMaterials(MaterialFor("BaseLit", Color.white), telegraph, ring);
             network.AddComponent<ConnectMenu>();
+            network.AddComponent<OnlineCombatBridge>().SetWarningMaterial(telegraph);
 
             var hud = new GameObject("HUD");
             hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());

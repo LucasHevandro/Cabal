@@ -37,8 +37,22 @@ dotnet test Game.slnx
 dotnet run --project Server/Game.Server -- --port 7777
 ```
 
-Por enquanto o servidor aceita conexões, valida o movimento e envia o estado dos jogadores. Monstros, combate e o
-cliente em rede estão sendo feitos na Fase 3; o protótipo no Unity ainda roda offline.
+O servidor decide monstros, combate (incluindo o timing do combo, com compensação de latência), XP, drops e o chefe.
+
+**Jogar online:** ligue o servidor, abra `Client/Builds/Windows/Prototipo.exe` e no menu inicial escolha
+**Conectar** (endereço `127.0.0.1:7777` para o mesmo PC; em outro PC da rede, o IP de quem roda o servidor).
+Para pular o menu:
+
+```bash
+Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Ana
+```
+
+**Teste automático online** (servidor ligado na porta 7777): conecta, luta contra coelhos pelo servidor e grava
+`saida-online/relatorio.txt` (SUCESSO ou FALHA) com screenshots.
+
+```bash
+Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinefight
+```
 
 **Protótipo de combate** (Unity 6000.6.6f1):
 

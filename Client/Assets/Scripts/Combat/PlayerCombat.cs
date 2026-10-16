@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Client.Fx;
+using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Combat;
@@ -7,6 +8,7 @@ using Game.Shared.Core;
 using Game.Shared.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Msg = Game.Shared.Net;
 
 namespace Game.Client.Combat
 {
@@ -95,6 +97,11 @@ namespace Game.Client.Combat
 
         public float CooldownRemaining(int index) => (float)_cooldowns.Remaining(index, Time.time);
 
+        /// <summary>Modo online e já dentro do mundo: o servidor decide dano, vida, morte e recursos.</summary>
+        private static bool Online => GameMode.IsOnline && NetworkSession.Instance != null && NetworkSession.Instance.IsWelcomed;
+
+        private static double ServerNow => NetworkSession.Instance != null ? NetworkSession.Instance.ServerNow : 0;
+
         private void Awake()
         {
             _selector = GetComponent<TargetSelector>();
@@ -129,13 +136,14 @@ namespace Game.Client.Combat
 
             if (IsDead)
             {
-                if (now >= _respawnAt) Respawn();
+                if (!GameMode.IsOnline && now >= _respawnAt) Respawn();
                 return;
             }
+            if (ConnectMenu.IsOpen) return;
 
             if (Combo.Tick(now)) OnComboEnded("Tempo esgotado");
             KeepComboOnTargetDeath();
-            RegenerateMp();
+            if (!GameMode.IsOnline) RegenerateMp();
 
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
@@ -175,6 +183,7 @@ namespace Game.Client.Combat
                 return;
             }
             Combo.TryStart(now);
+            if (Online) NetworkSession.Instance.Send(new Msg.StartCombo { TargetId = Target.NetworkId, ClientTime = ServerNow });
             SoundPlayer.Play(SoundId.ComboStart, 0.8f, 0f);
             ShowMessage("Combo! Aperte as skills quando o marcador estiver na janela");
         }
@@ -192,6 +201,12 @@ namespace Game.Client.Combat
             var chain = Combo.HitCount;
             Combo.TryFinish(out var multiplier);
             if (_motor != null) _motor.FacePoint(target.transform.position);
+            BestChain = Mathf.Max(BestChain, chain);
+            if (Online)
+            {
+                NetworkSession.Instance.Send(new Msg.Finisher { TargetId = target.NetworkId });
+                return;
+            }
             var hit = RollDamage(finisherBaseDamage, multiplier, target);
             var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
             DamageNumbers.Spawn(target.HeadPosition, $"FINAL {dealt}", new Color(1f, 0.45f, 0.1f), 38f);
@@ -265,6 +280,19 @@ namespace Game.Client.Combat
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
             if (_motor != null) _motor.FacePoint(target.transform.position);
+
+            if (Online)
+            {
+                // O servidor julga o mesmo instante do aperto (no relógio dele) e manda o resultado.
+                NetworkSession.Instance.Send(new Msg.UseSkill { Slot = (byte)index, TargetId = target.NetworkId, ClientTime = ServerNow });
+                if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
+                {
+                    SoundPlayer.Play(SoundId.Cast, 0.6f);
+                    var from = transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
+                    CombatFx.Instance.LaunchProjectile(from, target.transform, Vector3.up * 1.1f, ProjectileColor(grade), null);
+                }
+                return;
+            }
 
             // Skills mágicas viajam como projétil; o dano (já decidido agora) é aplicado na chegada.
             if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
@@ -381,8 +409,14 @@ namespace Game.Client.Combat
 
         private void Die()
         {
-            IsDead = true;
+            EnterDeath();
             _respawnAt = Time.time + respawnSeconds;
+        }
+
+        private void EnterDeath()
+        {
+            IsDead = true;
+            _respawnAt = float.PositiveInfinity;
             if (Combo.State == ComboState.Active) Combo.Cancel();
             _selector.Select(null);
             SoundPlayer.Play(SoundId.Miss, 1f, 0f);
@@ -390,18 +424,19 @@ namespace Game.Client.Combat
             transform.localScale = new Vector3(1f, 0.25f, 1f);
         }
 
+        private void LeaveDeath(string message)
+        {
+            transform.localScale = Vector3.one;
+            IsDead = false;
+            ShowMessage(message);
+        }
+
         private void Respawn()
         {
-            var controller = GetComponent<CharacterController>();
-            if (controller != null) controller.enabled = false;
-            transform.position = _spawnPoint;
-            if (controller != null) controller.enabled = true;
-            transform.localScale = Vector3.one;
-
+            if (_motor != null) _motor.Teleport(_spawnPoint);
             Hp.Add(Hp.Max);
             Mp.Add(Mp.Max);
-            IsDead = false;
-            ShowMessage("Você renasceu na cidade");
+            LeaveDeath("Você renasceu na cidade");
         }
 
         /// <summary>
@@ -446,6 +481,80 @@ namespace Game.Client.Combat
                 SoundPlayer.Play(SoundId.Miss, 0.7f, 0f);
             }
             ShowMessage($"Combo encerrado: {reason} ({Combo.HitCount} acertos)");
+        }
+
+        // ===== Modo online: o servidor manda, o cliente mostra =====
+
+        /// <summary>Recursos e vida decididos pelo servidor.</summary>
+        public void ApplyServerStats(Msg.PlayerStats stats)
+        {
+            _progression.ApplyServerProgress(stats.Level, stats.Xp);
+            Hp.SetMax(stats.MaxHp);
+            Hp.Add(stats.Hp - Hp.Current);
+            Mp.SetMax(stats.MaxMp);
+            Mp.Add(stats.Mp - Mp.Current);
+            Sp.SetMax(stats.MaxSp);
+            Sp.Add(stats.Sp - Sp.Current);
+
+            if (stats.Hp == 0 && !IsDead) EnterDeath();
+            else if (stats.Hp > 0 && IsDead) LeaveDeath("Você renasceu na vila");
+        }
+
+        /// <summary>O servidor é quem sabe se o combo continua; a previsão local se ajusta.</summary>
+        public void ReconcileCombo(Msg.ComboState state)
+        {
+            if (!state.Active && Combo.State == ComboState.Active)
+            {
+                Combo.Cancel();
+                var reason = (ComboEndReason)state.LastEndReason switch
+                {
+                    ComboEndReason.Missed => "fora da janela (servidor)",
+                    ComboEndReason.TimedOut => "tempo esgotado (servidor)",
+                    ComboEndReason.Finished => "finalizado",
+                    _ => "interrompido",
+                };
+                OnComboEnded(reason);
+            }
+        }
+
+        /// <summary>Resultado de um golpe do jogador (este ou outro) num monstro.</summary>
+        public void ShowServerHit(Msg.CombatEvent hit, Targetable target, bool mine)
+        {
+            if (target == null) return;
+            var grade = hit.Grade == 255 ? (ComboGrade?)null : (ComboGrade)hit.Grade;
+            var finisher = hit.Source == Msg.CombatSource.Finisher;
+            var color = finisher ? new Color(1f, 0.45f, 0.1f) : DamageColor(grade, hit.Critical);
+            if (!mine) color = Color.Lerp(color, Color.gray, 0.5f);
+
+            var text = finisher ? $"FINAL {hit.Damage}" : hit.Critical ? $"{hit.Damage}!" : hit.Damage.ToString();
+            DamageNumbers.Spawn(target.HeadPosition, text, color, finisher ? 38f : mine ? (hit.Critical ? 32f : 26f) : 20f);
+            if (CombatFx.Instance != null)
+                CombatFx.Instance.Sparks(target.CenterPosition, color, finisher ? 45 : grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
+            if (!mine) return;
+
+            if (!string.IsNullOrEmpty(hit.RouteName) && (LastRoute == null || LastRoute.Name != hit.RouteName || Time.unscaledTime - LastRouteAt > 0.5f))
+            {
+                // A rota já foi prevista localmente; só mostra se a previsão não mostrou.
+                ShowMessage($"Rota: {hit.RouteName}");
+            }
+            var heavy = finisher || grade == ComboGrade.Excellent;
+            SoundPlayer.Play(finisher ? SoundId.Finisher : heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
+            HitStop.Trigger(finisher ? 0.12f : hitStopSeconds + (heavy ? excellentHitStopBonus : 0f));
+            if (_camera != null) _camera.Shake(shakeAmplitude * (finisher ? 4f : heavy ? 2f : 1f), finisher ? 0.3f : 0.12f);
+        }
+
+        /// <summary>Golpe de monstro em mim, decidido pelo servidor (a vida chega em PlayerStats).</summary>
+        public void ShowIncomingHit(Msg.CombatEvent hit)
+        {
+            var head = transform.position + Vector3.up * 2.2f;
+            if (hit.Dodged)
+            {
+                DamageNumbers.Spawn(head, "Esquivou!", new Color(0.7f, 1f, 0.7f), 24f);
+                return;
+            }
+            DamageNumbers.Spawn(head, hit.Critical ? $"-{hit.Damage}!" : $"-{hit.Damage}", new Color(1f, 0.3f, 0.3f), hit.Critical ? 30f : 24f);
+            SoundPlayer.Play(hit.Source == Msg.CombatSource.BossArea ? SoundId.HitHeavy : SoundId.Hit, 0.7f);
+            if (_camera != null) _camera.Shake(shakeAmplitude * (hit.Critical ? 3f : 1.5f), 0.15f);
         }
 
         /// <summary>Mostra um aviso curto (usado também pelos avisos do servidor).</summary>

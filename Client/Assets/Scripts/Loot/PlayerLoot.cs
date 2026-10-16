@@ -2,12 +2,14 @@ using System.Collections.Generic;
 using Game.Client.Combat;
 using Game.Client.Fx;
 using Game.Client.Monsters;
+using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Combat;
 using Game.Shared.Loot;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Msg = Game.Shared.Net;
 
 namespace Game.Client.Loot
 {
@@ -37,6 +39,12 @@ namespace Game.Client.Loot
         private PlayerProgression _progression;
 
         public long Alz { get; private set; }
+
+        /// <summary>Itens no chão vindos do servidor, por id (modo online).</summary>
+        private readonly Dictionary<int, LootPickup> _netPickups = new Dictionary<int, LootPickup>();
+
+        /// <summary>Quando foi pedido por último cada item (para não repetir o pedido a cada quadro).</summary>
+        private readonly Dictionary<int, float> _requestedAt = new Dictionary<int, float>();
         public IReadOnlyList<Stack> Inventory => _inventory;
         public int MonstersKilled { get; private set; }
 
@@ -61,7 +69,9 @@ namespace Game.Client.Loot
                 var offset = pickup.transform.position - transform.position;
                 offset.y = 0;
                 var distance = offset.magnitude;
-                if (distance <= autoPickupRadius || (pressedE && distance <= keyPickupRadius)) Collect(pickup);
+                if (distance > autoPickupRadius && !(pressedE && distance <= keyPickupRadius)) continue;
+                if (pickup.NetworkId != 0) RequestPickup(pickup);
+                else Collect(pickup);
             }
         }
 
@@ -85,7 +95,45 @@ namespace Game.Client.Loot
             }
         }
 
-        private void SpawnPickup(ItemDrop drop, Vector3 position)
+        // ===== Modo online =====
+
+        /// <summary>Alz decidido pelo servidor (mostra quanto ganhou).</summary>
+        public void SetServerAlz(long alz)
+        {
+            var gained = alz - Alz;
+            Alz = alz;
+            if (gained > 0)
+                DamageNumbers.Spawn(transform.position + Vector3.up * 2.9f, $"+{gained} Alz", new Color(1f, 0.85f, 0.3f), 22f);
+        }
+
+        public void OnServerLootSpawned(Msg.LootSpawned message)
+        {
+            if (_netPickups.ContainsKey(message.LootId)) return;
+            var drop = new ItemDrop(message.ItemId, message.Name, (ItemRarity)message.Rarity, message.Quantity);
+            var pickup = SpawnPickup(drop, new Vector3(message.X, 0, message.Z));
+            pickup.NetworkId = message.LootId;
+            _netPickups.Add(message.LootId, pickup);
+        }
+
+        public void OnServerLootRemoved(Msg.LootRemoved message, int myPlayerId)
+        {
+            _requestedAt.Remove(message.LootId);
+            if (!_netPickups.TryGetValue(message.LootId, out var pickup)) return;
+            _netPickups.Remove(message.LootId);
+            if (message.PickedById == myPlayerId) AddToInventory(pickup.Drop);
+            Destroy(pickup.gameObject);
+        }
+
+        private void RequestPickup(LootPickup pickup)
+        {
+            var session = NetworkSession.Instance;
+            if (session == null) return;
+            if (_requestedAt.TryGetValue(pickup.NetworkId, out var at) && Time.unscaledTime - at < 0.5f) return;
+            _requestedAt[pickup.NetworkId] = Time.unscaledTime;
+            session.Send(new Msg.PickupLoot { LootId = pickup.NetworkId });
+        }
+
+        private LootPickup SpawnPickup(ItemDrop drop, Vector3 position)
         {
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cube.name = $"Drop: {drop.Name}";
@@ -103,14 +151,21 @@ namespace Game.Client.Loot
                 renderer.SetPropertyBlock(block);
             }
 
-            cube.AddComponent<LootPickup>().Initialize(drop);
+            var pickup = cube.AddComponent<LootPickup>();
+            pickup.Initialize(drop);
             if (drop.Rarity >= ItemRarity.Rare)
                 SoundPlayer.Play(SoundId.Excellent, 0.8f, 0f);
+            return pickup;
         }
 
         private void Collect(LootPickup pickup)
         {
-            var drop = pickup.Drop;
+            AddToInventory(pickup.Drop);
+            Destroy(pickup.gameObject);
+        }
+
+        private void AddToInventory(ItemDrop drop)
+        {
             var stack = _inventory.Find(s => s.ItemId == drop.ItemId);
             if (stack == null)
             {
@@ -121,7 +176,6 @@ namespace Game.Client.Loot
 
             DamageNumbers.Spawn(transform.position + Vector3.up * 2.4f, $"{drop.Name} x{drop.Quantity}", LootPickup.ColorFor(drop.Rarity), 20f);
             SoundPlayer.Play(SoundId.Good, 0.5f);
-            Destroy(pickup.gameObject);
         }
     }
 }

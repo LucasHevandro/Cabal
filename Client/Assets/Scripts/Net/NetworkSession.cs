@@ -75,6 +75,8 @@ namespace Game.Client.Net
                 return;
             }
             Instance = this;
+            // Online o jogo não pode pausar ao perder o foco: pararia de ler o servidor e "congelaria" o mundo.
+            Application.runInBackground = true;
             foreach (var spawn in WorldContent.Spawns()) _monsterData[spawn.Data.Id] = spawn.Data;
         }
 
