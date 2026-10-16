@@ -17,8 +17,10 @@ namespace Game.Client.DevTools
     {
         private const string Flag = "-autodemo";
         private const int HitsBeforeFinisher = 6;
+        private static readonly int[] SkillPattern = { 0, 0, 2 };
 
         private string _outputFolder;
+        private int _routesSeen;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -79,9 +81,15 @@ namespace Game.Client.DevTools
                     yield return null;
                 if (combat.Combo.State != ComboState.Active) break;
 
-                combat.RequestSkill(0);
-                Log($"Aperto {combat.Combo.HitCount}: {combat.LastGrade}, janela {combat.Combo.WindowWidth:0.000}, " +
-                    $"barra {combat.Combo.BarDurationSeconds:0.000}s, bônus {combat.Combo.ChainBonus:0.00}");
+                // Sequência 1, 1, 3 = físico, físico, mágico: deve fechar a rota "Tempestade".
+                var skill = SkillPattern[combat.Combo.HitCount % SkillPattern.Length];
+                var routeBefore = combat.LastRouteAt;
+                combat.RequestSkill(skill);
+                var route = combat.LastRouteAt > routeBefore ? $", rota {combat.LastRoute.Name}" : "";
+                if (route.Length > 0) _routesSeen++;
+                Log($"Aperto {combat.Combo.HitCount} (skill {skill + 1}): {combat.LastGrade}{route}, " +
+                    $"janela {combat.Combo.WindowWidth:0.000}, barra {combat.Combo.BarDurationSeconds:0.000}s, " +
+                    $"bônus {combat.Combo.ChainBonus:0.00}");
                 if (combat.Combo.HitCount == 3) Capture("2-durante-o-combo");
                 yield return null;
             }
@@ -99,10 +107,10 @@ namespace Game.Client.DevTools
             Capture("3-finalizador");
 
             var dealt = hpBefore - target.Hp.Current;
-            var ok = combat.Combo.LastEndReason == ComboEndReason.Finished && dealt > 0;
+            var ok = combat.Combo.LastEndReason == ComboEndReason.Finished && dealt > 0 && _routesSeen > 0;
             Finish(ok
-                ? $"SUCESSO: {HitsBeforeFinisher} acertos + finalizador, {dealt} de dano no alvo"
-                : $"FALHA: fim = {combat.Combo.LastEndReason}, dano {dealt}");
+                ? $"SUCESSO: {HitsBeforeFinisher} acertos, {_routesSeen} rotas + finalizador, {dealt} de dano no alvo"
+                : $"FALHA: fim = {combat.Combo.LastEndReason}, rotas {_routesSeen}, dano {dealt}");
         }
 
         private static void Teleport(Transform player, Vector3 position)

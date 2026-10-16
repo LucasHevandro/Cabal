@@ -17,6 +17,7 @@ namespace Game.Client.Combat
 
         [SerializeField] private string displayName = "Alvo";
         [SerializeField] private int maxHp = 5000;
+        [SerializeField] private int defense = 100;
         [SerializeField] private float height = 2f;
         [SerializeField] private float radius = 0.6f;
         [SerializeField] private GameObject selectionRing;
@@ -30,6 +31,7 @@ namespace Game.Client.Combat
         public event Action<Targetable> Died;
 
         public string DisplayName => displayName;
+        public int Defense => defense;
         public ResourcePool Hp => _hp ??= new ResourcePool(maxHp);
         public bool IsAlive => Hp.Current > 0;
 

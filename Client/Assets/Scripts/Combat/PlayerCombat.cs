@@ -18,10 +18,10 @@ namespace Game.Client.Combat
         [Header("Skills (teclas 1 a 4)")]
         [SerializeField] private List<SkillDefinition> skills = new List<SkillDefinition>
         {
-            new SkillDefinition("Corte", SkillKind.Fisico, 120, 2.5f, 0.5f),
-            new SkillDefinition("Giro de Lâmina", SkillKind.Fisico, 90, 2.5f, 2.0f, areaRadius: 3.5f),
-            new SkillDefinition("Lança de Força", SkillKind.Magico, 160, 12f, 1.5f),
-            new SkillDefinition("Explosão Arcana", SkillKind.Magico, 220, 10f, 5.0f, areaRadius: 4f),
+            new SkillDefinition("Corte", SkillKind.Physical, 120, 2.5f, 0.5f),
+            new SkillDefinition("Giro de Lâmina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f),
+            new SkillDefinition("Lança de Força", SkillKind.Magical, 160, 12f, 1.5f),
+            new SkillDefinition("Explosão Arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f),
         };
 
         [Header("SP")]
@@ -30,7 +30,8 @@ namespace Game.Client.Combat
         [Tooltip("SP ganho por acerto fora do combo.")]
         [SerializeField] private int spPerHit = 60;
 
-        [Header("Dano")]
+        [Header("Dano (fórmula em Game.Shared.Combat.DamageFormula)")]
+        [SerializeField] private int attackPower = 80;
         [SerializeField, Range(0f, 1f)] private float critChance = 0.1f;
         [SerializeField] private float critMultiplier = 1.5f;
         [SerializeField] private int finisherBaseDamage = 400;
@@ -45,6 +46,7 @@ namespace Game.Client.Combat
         [SerializeField] private float shakeAmplitude = 0.06f;
 
         private readonly List<Targetable> _hitBuffer = new List<Targetable>();
+        private readonly IRandomSource _random = new SystemRandomSource();
         private TargetSelector _selector;
         private PlayerMotor _motor;
         private OrbitCamera _camera;
@@ -59,6 +61,10 @@ namespace Game.Client.Combat
         /// <summary>Última nota do combo e quando aconteceu (para o HUD).</summary>
         public ComboGrade LastGrade { get; private set; }
         public float LastGradeAt { get; private set; } = float.NegativeInfinity;
+
+        /// <summary>Última rota de combo completada e quando (para o HUD).</summary>
+        public ComboRoute LastRoute { get; private set; }
+        public float LastRouteAt { get; private set; } = float.NegativeInfinity;
 
         /// <summary>Mensagem curta de feedback (ex.: "Fora de alcance") e quando apareceu.</summary>
         public string Message { get; private set; } = "";
@@ -143,8 +149,8 @@ namespace Game.Client.Combat
             var chain = Combo.HitCount;
             Combo.TryFinish(out var multiplier);
             if (_motor != null) _motor.FacePoint(target.transform.position);
-            var damage = RollDamage(finisherBaseDamage * multiplier, out var critical);
-            var dealt = target.ApplyDamage(damage, critical);
+            var hit = RollDamage(finisherBaseDamage, multiplier, target);
+            var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
             DamageNumbers.Spawn(target.HeadPosition, $"FINAL {dealt}", new Color(1f, 0.45f, 0.1f), 38f);
 
             BestChain = Mathf.Max(BestChain, chain);
@@ -190,9 +196,14 @@ namespace Game.Client.Combat
             var inCombo = Combo.State == ComboState.Active;
             if (inCombo)
             {
-                var result = Combo.Press(now);
+                var result = Combo.Press(now, skill.kind);
                 LastGrade = result.Grade;
                 LastGradeAt = Time.unscaledTime;
+                if (result.Route != null)
+                {
+                    LastRoute = result.Route;
+                    LastRouteAt = Time.unscaledTime;
+                }
                 if (result.ComboEnded) OnComboEnded("Fora da janela");
                 else multiplier = result.DamageMultiplier;
             }
@@ -227,10 +238,10 @@ namespace Game.Client.Combat
 
             foreach (var target in _hitBuffer)
             {
-                var damage = RollDamage(skill.baseDamage * multiplier, out var critical);
-                var dealt = target.ApplyDamage(damage, critical);
-                DamageNumbers.Spawn(target.HeadPosition, critical ? $"{dealt}!" : dealt.ToString(), DamageColor(inCombo, critical),
-                    critical ? 32f : 26f);
+                var hit = RollDamage(skill.baseDamage, multiplier, target);
+                var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
+                DamageNumbers.Spawn(target.HeadPosition, hit.Critical ? $"{dealt}!" : dealt.ToString(),
+                    DamageColor(inCombo, hit.Critical), hit.Critical ? 32f : 26f);
             }
             return _hitBuffer.Count;
         }
@@ -242,13 +253,10 @@ namespace Game.Client.Combat
             return LastGrade == ComboGrade.Excellent ? new Color(1f, 0.88f, 0.25f) : new Color(0.6f, 0.9f, 1f);
         }
 
-        private int RollDamage(double baseDamage, out bool critical)
-        {
-            critical = Random.value < critChance;
-            var variation = Random.Range(0.92f, 1.08f);
-            var value = baseDamage * variation * (critical ? critMultiplier : 1f);
-            return Mathf.Max(1, Mathf.RoundToInt((float)value));
-        }
+        private DamageResult RollDamage(int skillBaseDamage, double multiplier, Targetable target) =>
+            DamageFormula.Calculate(
+                new DamageInput(skillBaseDamage, attackPower, multiplier, critChance, critMultiplier, target.Defense),
+                _random);
 
         private bool InRange(Targetable target, float range)
         {

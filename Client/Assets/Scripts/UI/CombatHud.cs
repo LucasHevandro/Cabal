@@ -26,6 +26,9 @@ namespace Game.Client.UI
         private static readonly Color HpColor = new Color(0.85f, 0.25f, 0.25f);
         private static readonly Color WindowColor = new Color(0.25f, 0.75f, 0.35f, 0.85f);
         private static readonly Color ExcellentColor = new Color(1f, 0.9f, 0.3f, 0.95f);
+        private static readonly Color PhysicalColor = new Color(0.95f, 0.55f, 0.25f);
+        private static readonly Color MagicalColor = new Color(0.45f, 0.6f, 1f);
+        private static readonly Color RouteColor = new Color(0.85f, 0.65f, 1f);
 
         public void SetCombat(PlayerCombat playerCombat) => combat = playerCombat;
 
@@ -58,8 +61,8 @@ namespace Game.Client.UI
 
         private void DrawHelp()
         {
-            Box(new Rect(20, 20, 380, 196), Panel);
-            GUI.Label(new Rect(36, 30, 360, 186),
+            Box(new Rect(20, 20, 420, 270), Panel);
+            GUI.Label(new Rect(36, 30, 400, 260),
                 "<b>Controles</b>\n" +
                 "WASD andar · Shift correr · Espaço esquivar\n" +
                 "Botão direito girar câmera · Roda zoom\n" +
@@ -67,6 +70,9 @@ namespace Game.Client.UI
                 "1–4 skills\n" +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +
+                "<b>Rotas de combo</b> (F = físico, M = mágico)\n" +
+                "F→M ou M→F: Alternância +10%\n" +
+                "F F M: Tempestade +25% · M M F: Eco Arcano +25%\n\n" +
                 $"Melhor corrente: <b>{combat.BestChain}</b>", _small);
         }
 
@@ -122,6 +128,17 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), $"bônus +{combo.ChainBonus * 100:0}%", _label.WithAlignment(TextAnchor.MiddleRight));
             if (combo.CanFinish)
                 GUI.Label(new Rect(rect.x, rect.y + rect.height + 6, rect.width, 24), "F: finalizar", _center);
+
+            // Últimos tipos acertados na corrente, para o jogador planejar a próxima rota.
+            var kinds = combo.ChainKinds;
+            var shown = Mathf.Min(6, kinds.Count);
+            for (var i = 0; i < shown; i++)
+            {
+                var kind = kinds[kinds.Count - shown + i];
+                var chip = new Rect(rect.x + i * 30, rect.y + rect.height + 8, 26, 22);
+                Box(chip, kind == SkillKind.Physical ? PhysicalColor : MagicalColor);
+                GUI.Label(chip, kind == SkillKind.Physical ? "<b>F</b>" : "<b>M</b>", _small.WithCenter());
+            }
         }
 
         private void DrawSpBar()
@@ -148,7 +165,7 @@ namespace Game.Client.UI
                 GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.name, _small.WithCenter());
                 GUI.Label(new Rect(rect.x + 8, rect.y + 86, rect.width - 16, 24),
-                    skill.kind == SkillKind.Fisico ? "físico" : "mágico", _small.WithCenter());
+                    skill.kind == SkillKind.Physical ? "físico" : "mágico", _small.WithCenter());
 
                 var remaining = combat.CooldownRemaining(i);
                 if (remaining > 0)
@@ -176,10 +193,27 @@ namespace Game.Client.UI
 
             var pop = 1f + Mathf.Max(0, 0.15f - age) * 3f;
             _big.fontSize = Mathf.RoundToInt(56 * pop);
-            GUI.color = new Color(color.r, color.g, color.b, 1f - Mathf.Clamp01((age - 0.35f) / 0.25f));
-            GUI.Label(new Rect(0, VirtualHeight - 420, VirtualWidth, 80), $"<b>{text}</b>", _big.WithCenter());
-            GUI.color = Color.white;
+            ShadowLabel(new Rect(0, VirtualHeight - 490, VirtualWidth, 80), $"<b>{text}</b>", _big.WithCenter(),
+                color, 1f - Mathf.Clamp01((age - 0.35f) / 0.25f));
             _big.fontSize = 30;
+
+            var routeAge = Time.unscaledTime - combat.LastRouteAt;
+            if (combat.LastRoute != null && routeAge <= 0.9f)
+            {
+                ShadowLabel(new Rect(0, VirtualHeight - 412, VirtualWidth, 40),
+                    $"<b>{combat.LastRoute.Name.ToUpperInvariant()} +{combat.LastRoute.DamageBonus * 100:0}%</b>", _big.WithCenter(),
+                    RouteColor, 1f - Mathf.Clamp01((routeAge - 0.6f) / 0.3f));
+            }
+        }
+
+        /// <summary>Texto com sombra escura, legível sobre qualquer fundo.</summary>
+        private static void ShadowLabel(Rect rect, string text, GUIStyle style, Color color, float alpha)
+        {
+            GUI.color = new Color(0, 0, 0, alpha * 0.85f);
+            GUI.Label(new Rect(rect.x + 3, rect.y + 3, rect.width, rect.height), text, style);
+            GUI.color = new Color(color.r, color.g, color.b, alpha);
+            GUI.Label(rect, text, style);
+            GUI.color = Color.white;
         }
 
         private void DrawMessage()

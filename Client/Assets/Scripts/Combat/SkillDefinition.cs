@@ -1,15 +1,9 @@
 using System;
+using Game.Shared.Combat;
 using UnityEngine;
 
 namespace Game.Client.Combat
 {
-    /// <summary>Tipo de dano da skill (usado depois pelas rotas de combo).</summary>
-    public enum SkillKind
-    {
-        Fisico,
-        Magico,
-    }
-
     /// <summary>
     /// Definição de uma skill do protótipo. Mais adiante estes dados vêm da planilha de design via JSON.
     /// </summary>
@@ -17,7 +11,8 @@ namespace Game.Client.Combat
     public sealed class SkillDefinition
     {
         public string name = "Skill";
-        public SkillKind kind = SkillKind.Fisico;
+        [Tooltip("Físico ou mágico: a ordem dos tipos no combo forma as rotas.")]
+        public SkillKind kind = SkillKind.Physical;
 
         [Tooltip("Dano base antes de bônus de combo e crítico.")]
         public int baseDamage = 100;
