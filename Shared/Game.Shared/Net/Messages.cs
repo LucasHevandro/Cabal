@@ -41,7 +41,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 1;
+        public const int Version = 2;
         public const int DefaultPort = 7777;
     }
 
@@ -62,19 +62,36 @@ namespace Game.Shared.Net
 
     // ===== Cliente → servidor =====
 
+    /// <summary>
+    /// Primeira mensagem do cliente. Com conta: <see cref="Token"/> (da API de login) e <see cref="CharacterId"/>.
+    /// Sem token, só entra se o servidor estiver aceitando convidados (testes e bots), com <see cref="Name"/>.
+    /// </summary>
     public sealed class Hello : INetMessage
     {
         public MessageType Type => MessageType.Hello;
         public int ProtocolVersion = Protocol.Version;
         public string Name = "";
+        public string Token = "";
+        public int CharacterId;
 
         public void Write(PacketWriter w)
         {
             w.WriteInt(ProtocolVersion);
             w.WriteString(Name);
+            w.WriteString(Token);
+            w.WriteInt(CharacterId);
         }
 
-        public static Hello Read(PacketReader r) => new Hello { ProtocolVersion = r.ReadInt(), Name = r.ReadString() };
+        public static Hello Read(PacketReader r)
+        {
+            // A versão vem primeiro e nunca muda de lugar: o servidor sempre consegue recusar um cliente antigo com motivo.
+            var hello = new Hello { ProtocolVersion = r.ReadInt() };
+            if (hello.ProtocolVersion != Protocol.Version) return hello;
+            hello.Name = r.ReadString();
+            hello.Token = r.ReadString();
+            hello.CharacterId = r.ReadInt();
+            return hello;
+        }
     }
 
     /// <summary>Posição do jogador (o servidor valida a velocidade).</summary>
@@ -586,7 +603,9 @@ namespace Game.Shared.Net
                 MessageType.AreaWarning => AreaWarning.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
-            if (reader.Remaining != 0) throw new ProtocolException($"{type}: sobraram {reader.Remaining} bytes.");
+            // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.
+            var otherVersionHello = message is Hello hello && hello.ProtocolVersion != Protocol.Version;
+            if (reader.Remaining != 0 && !otherVersionHello) throw new ProtocolException($"{type}: sobraram {reader.Remaining} bytes.");
             return message;
         }
     }
