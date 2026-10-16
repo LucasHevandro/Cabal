@@ -13,6 +13,8 @@
     <AssemblyName>Game.Shared</AssemblyName>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Documentar o que não é óbvio; não exigir comentário em todo membro público. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
 </Project>
