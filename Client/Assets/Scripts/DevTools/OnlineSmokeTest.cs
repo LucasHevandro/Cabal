@@ -29,7 +29,8 @@ namespace Game.Client.DevTools
         {
             var args = Environment.GetCommandLineArgs();
             var index = Array.IndexOf(args, "-onlinetest");
-            if (index < 0 || !GameMode.IsOnline) return;
+            // Com -autologin o jogo só fica online depois do menu recarregar a cena: o teste sobrevive à troca e espera.
+            if (index < 0 || (!GameMode.IsOnline && string.IsNullOrEmpty(GameMode.AutoLoginAccount))) return;
 
             var test = new GameObject("OnlineSmokeTest").AddComponent<OnlineSmokeTest>();
             test._folder = index + 1 < args.Length ? args[index + 1] : Path.Combine(Application.persistentDataPath, "onlinetest");
@@ -43,7 +44,16 @@ namespace Game.Client.DevTools
         {
             Directory.CreateDirectory(_folder);
             _report = new StreamWriter(Path.Combine(_folder, "relatorio.txt"));
-            Log($"Teste online: {GameMode.PlayerName} -> {GameMode.Host}:{GameMode.Port}");
+
+            var loginGiveUp = Time.realtimeSinceStartup + 20f;
+            while (!GameMode.IsOnline && Time.realtimeSinceStartup < loginGiveUp) yield return null;
+            if (!GameMode.IsOnline)
+            {
+                Finish("FALHA: o login automático não terminou");
+                yield break;
+            }
+            yield return null; // deixa a cena recarregada iniciar
+            Log($"Teste online: {GameMode.PlayerName} (personagem {GameMode.CharacterId}) -> {GameMode.Host}:{GameMode.Port}");
 
             var giveUpAt = Time.realtimeSinceStartup + 15f;
             NetworkSession session = null;
@@ -72,6 +82,15 @@ namespace Game.Client.DevTools
                 else players++;
             }
             Log($"Entrou como id {session.PlayerId}; RTT {session.Clock.LastRtt * 1000:0} ms; offset {session.Clock.Offset:0.000} s");
+            if (PlayerCombat.Local != null)
+            {
+                var me = PlayerCombat.Local;
+                var progress = me.GetComponent<PlayerProgression>().Progress;
+                var bag = me.GetComponent<PlayerLoot>();
+                var count = 0;
+                foreach (var stack in bag.Inventory) count += stack.Quantity;
+                Log($"Personagem ao entrar: Nv {progress.Level}, XP {progress.Xp}, Alz {bag.Alz}, itens {count}, HP {me.Hp.Current}/{me.Hp.Max}");
+            }
             Log($"Vendo {monsters} monstros e {players} outros jogadores");
 
             // Seleciona o monstro mais perto para a foto mostrar o anel e a plaquinha.

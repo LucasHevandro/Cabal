@@ -50,6 +50,7 @@ public sealed class ServerPlayer
 
     /// <summary>Precisa reenviar <c>PlayerStats</c> / <c>ComboState</c> no próximo tick.</summary>
     public bool StatsDirty { get; set; } = true;
+    public bool InventoryDirty { get; set; } = true;
     public bool ComboDirty { get; set; } = true;
 
     public ServerPlayer()

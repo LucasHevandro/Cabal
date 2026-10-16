@@ -101,7 +101,7 @@ namespace Game.Client.Net
             if (_client.State == NetClient.Status.Connected && !_helloSent)
             {
                 _helloSent = true;
-                _client.Send(new Hello { Name = GameMode.PlayerName });
+                _client.Send(new Hello { Name = GameMode.PlayerName, Token = GameMode.Token, CharacterId = GameMode.CharacterId });
             }
 
             while (_client.TryReceive(out var message)) Dispatch(message);

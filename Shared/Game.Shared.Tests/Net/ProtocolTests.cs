@@ -93,6 +93,8 @@ public class ProtocolTests
         Assert.Equal(55, RoundTrip(new Welcome { PlayerId = 55, TickRate = 20 }).PlayerId);
         Assert.Equal("Versão antiga", RoundTrip(new Reject { Reason = "Versão antiga" }).Reason);
         Assert.Equal(7, RoundTrip(new EntityDespawned { Id = 7 }).Id);
+        var bag = RoundTrip(new Inventory { Items = { new InventoryStack { ItemId = "pele", Name = "Pele", Rarity = 1, Quantity = 3 } } });
+        Assert.Equal(("pele", 3), (bag.Items[0].ItemId, bag.Items[0].Quantity));
     }
 
     [Fact]

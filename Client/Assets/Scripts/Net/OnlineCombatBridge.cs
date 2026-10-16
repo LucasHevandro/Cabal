@@ -60,6 +60,9 @@ namespace Game.Client.Net
                 case LootRemoved removed:
                     if (_loot != null) _loot.OnServerLootRemoved(removed, _session.PlayerId);
                     break;
+                case Inventory inventory:
+                    if (_loot != null) _loot.SetServerInventory(inventory);
+                    break;
                 case AreaWarning area:
                     ShowAreaWarning(area);
                     break;

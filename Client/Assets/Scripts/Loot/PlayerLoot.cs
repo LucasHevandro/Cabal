@@ -106,6 +106,16 @@ namespace Game.Client.Loot
                 DamageNumbers.Spawn(transform.position + Vector3.up * 2.9f, $"+{gained} Alz", new Color(1f, 0.85f, 0.3f), 22f);
         }
 
+        /// <summary>Inventário completo vindo do servidor (substitui o local: o servidor é a fonte da verdade).</summary>
+        public void SetServerInventory(Msg.Inventory message)
+        {
+            _inventory.Clear();
+            foreach (var item in message.Items)
+            {
+                _inventory.Add(new Stack { ItemId = item.ItemId, Name = item.Name, Rarity = (ItemRarity)item.Rarity, Quantity = item.Quantity });
+            }
+        }
+
         public void OnServerLootSpawned(Msg.LootSpawned message)
         {
             if (_netPickups.ContainsKey(message.LootId)) return;

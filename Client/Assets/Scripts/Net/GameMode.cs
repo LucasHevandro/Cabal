@@ -17,12 +17,21 @@ namespace Game.Client.Net
         public static int Port { get; private set; } = Protocol.DefaultPort;
         public static string PlayerName { get; private set; } = "Aventureiro";
 
+        /// <summary>Token da API de login e personagem escolhido (vazio/0 = entra como convidado).</summary>
+        public static string Token { get; private set; } = "";
+        public static int CharacterId { get; private set; }
+
+        /// <summary>Login automático da linha de comando (<c>-autologin conta senha</c>), para testes.</summary>
+        public static string AutoLoginAccount { get; private set; } = "";
+        public static string AutoLoginPassword { get; private set; } = "";
+
         public static void SetOffline()
         {
             IsOnline = false;
             ChoiceMade = true;
         }
 
+        /// <summary>Entra como convidado (o servidor precisa estar com --guests).</summary>
         public static void SetOnline(string host, int port, string name)
         {
             IsOnline = true;
@@ -30,6 +39,23 @@ namespace Game.Client.Net
             Host = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();
             Port = port;
             PlayerName = string.IsNullOrWhiteSpace(name) ? "Aventureiro" : name.Trim();
+            Token = "";
+            CharacterId = 0;
+        }
+
+        /// <summary>Entra com conta, no personagem escolhido.</summary>
+        public static void SetOnlineCharacter(string host, int port, string token, int characterId, string characterName)
+        {
+            SetOnline(host, port, characterName);
+            Token = token;
+            CharacterId = characterId;
+        }
+
+        /// <summary>Endereço para o menu: só define onde conectar, sem escolher o modo ainda.</summary>
+        public static void SetServer(string host, int port)
+        {
+            Host = host;
+            Port = port;
         }
 
         /// <summary>Tenta ler "host:porta" (porta opcional).</summary>
@@ -54,6 +80,13 @@ namespace Game.Client.Net
             }
             for (var i = 0; i < args.Length; i++)
             {
+                if (args[i] == "-autologin" && i + 2 < args.Length)
+                {
+                    AutoLoginAccount = args[i + 1];
+                    AutoLoginPassword = args[i + 2];
+                }
+                if (args[i] == "-server" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var serverHost, out var serverPort))
+                    SetServer(serverHost, serverPort);
                 if (args[i] == "-offline") SetOffline();
                 if (args[i] == "-connect" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var host, out var port))
                     SetOnline(host, port, name);

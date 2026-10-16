@@ -29,6 +29,7 @@ namespace Game.Shared.Net
         Notice = 111,
         Pong = 112,
         AreaWarning = 113,
+        Inventory = 114,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -41,7 +42,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 2;
+        public const int Version = 3;
         public const int DefaultPort = 7777;
     }
 
@@ -563,6 +564,48 @@ namespace Game.Shared.Net
         };
     }
 
+    /// <summary>Uma pilha de itens no inventário.</summary>
+    public struct InventoryStack
+    {
+        public string ItemId;
+        public string Name;
+        public byte Rarity;
+        public int Quantity;
+    }
+
+    /// <summary>Inventário completo do jogador segundo o servidor (ao entrar e sempre que muda).</summary>
+    public sealed class Inventory : INetMessage
+    {
+        public MessageType Type => MessageType.Inventory;
+        public List<InventoryStack> Items = new List<InventoryStack>();
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteUShort((ushort)Items.Count);
+            foreach (var item in Items)
+            {
+                w.WriteString(item.ItemId);
+                w.WriteString(item.Name);
+                w.WriteByte(item.Rarity);
+                w.WriteInt(item.Quantity);
+            }
+        }
+
+        public static Inventory Read(PacketReader r)
+        {
+            var inventory = new Inventory();
+            var count = r.ReadUShort();
+            for (var i = 0; i < count; i++)
+            {
+                inventory.Items.Add(new InventoryStack
+                {
+                    ItemId = r.ReadString(), Name = r.ReadString(), Rarity = r.ReadByte(), Quantity = r.ReadInt(),
+                });
+            }
+            return inventory;
+        }
+    }
+
     /// <summary>Converte mensagens em bytes e de volta.</summary>
     public static class NetCodec
     {
@@ -601,6 +644,7 @@ namespace Game.Shared.Net
                 MessageType.Notice => Notice.Read(reader),
                 MessageType.Pong => Pong.Read(reader),
                 MessageType.AreaWarning => AreaWarning.Read(reader),
+                MessageType.Inventory => Inventory.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

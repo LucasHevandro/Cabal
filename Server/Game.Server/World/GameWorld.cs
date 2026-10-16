@@ -243,6 +243,14 @@ public sealed partial class GameWorld
             player.StatsDirty = false;
             _outbox.Send(player.Id, StatsMessage(player));
         }
+        if (player.InventoryDirty)
+        {
+            player.InventoryDirty = false;
+            var inventory = new Inventory();
+            foreach (var (itemId, stack) in player.Inventory)
+                inventory.Items.Add(new InventoryStack { ItemId = itemId, Name = stack.Name, Rarity = (byte)stack.Rarity, Quantity = stack.Quantity });
+            _outbox.Send(player.Id, inventory);
+        }
         if (player.ComboDirty)
         {
             player.ComboDirty = false;

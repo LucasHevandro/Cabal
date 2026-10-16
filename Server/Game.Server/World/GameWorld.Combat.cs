@@ -441,6 +441,7 @@ public sealed partial class GameWorld
         var drop = loot.Drop;
         var current = player.Inventory.TryGetValue(drop.ItemId, out var stack) ? stack.Quantity : 0;
         player.Inventory[drop.ItemId] = (drop.Name, drop.Rarity, current + drop.Quantity);
+        player.InventoryDirty = true;
         // O item sai do chão no mesmo passo em que entra no inventário: não existe momento com dois.
         RemoveLoot(loot, player.Id);
         if (player.CharacterId != 0)
