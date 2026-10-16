@@ -31,13 +31,23 @@ A biblioteca `Shared` mira **.NET Standard 2.1** para poder ser usada dentro do 
 dotnet test Game.slnx
 ```
 
-**Servidor** (porta padrão 7777; Ctrl+C desliga):
+**Banco de dados** (PostgreSQL no Docker; abra o Docker Desktop antes):
+
+```bash
+docker compose up -d
+```
+
+**Servidor** (jogo na porta 7777, API de login na 7778; Ctrl+C desliga e salva todos os personagens):
 
 ```bash
 dotnet run --project Server/Game.Server -- --port 7777
 ```
 
-O servidor decide monstros, combate (incluindo o timing do combo, com compensação de latência), XP, drops e o chefe.
+Sem Docker, `--db memory` usa um banco em memória (perde tudo ao desligar). `--guests` permite entrar sem conta
+(bots e testes automáticos; convidados não são salvos).
+
+O servidor decide monstros, combate (incluindo o timing do combo, com compensação de latência), XP, drops e o chefe,
+e salva os personagens a cada 10 s e ao sair.
 
 **Jogar online:** ligue o servidor, abra `Client/Builds/Windows/Prototipo.exe` e no menu inicial escolha
 **Conectar** (endereço `127.0.0.1:7777` para o mesmo PC; em outro PC da rede, o IP de quem roda o servidor).

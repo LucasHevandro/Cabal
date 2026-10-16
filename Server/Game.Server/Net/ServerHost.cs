@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using Game.Server.Accounts;
+using Game.Server.Persistence;
 using Game.Server.World;
 using Game.Shared.Net;
 
@@ -20,6 +22,12 @@ public sealed record ServerOptions
 
     /// <summary>De quantos em quantos segundos registrar as métricas (0 = nunca).</summary>
     public double StatsIntervalSeconds { get; init; }
+
+    /// <summary>Aceita Hello sem login (convidados não são salvos). Para bots e testes.</summary>
+    public bool AllowGuests { get; init; }
+
+    /// <summary>De quantos em quantos segundos salvar os personagens conectados.</summary>
+    public double SaveIntervalSeconds { get; init; } = 10;
 }
 
 /// <summary>
@@ -37,6 +45,8 @@ public sealed class ServerHost : IOutbox, IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly Action<string> _log;
     private readonly Random _jitter = new();
+    private readonly AuthService? _auth;
+    private readonly CharacterSaver? _saver;
     private int _nextConnectionId;
     private Thread? _loopThread;
 
@@ -55,11 +65,17 @@ public sealed class ServerHost : IOutbox, IDisposable
     /// <summary>Segundos desde que o servidor iniciou: o relógio do jogo.</summary>
     public double Now => _clock.Elapsed.TotalSeconds;
 
-    public ServerHost(int port, Action<string>? log = null) : this(new ServerOptions { Port = port }, log) { }
+    /// <summary>Servidor de teste: só convidados, sem banco.</summary>
+    public ServerHost(int port, Action<string>? log = null) : this(new ServerOptions { Port = port, AllowGuests = true }, log) { }
 
-    public ServerHost(ServerOptions options, Action<string>? log = null)
+    /// <summary>
+    /// <paramref name="auth"/> e <paramref name="saver"/> nulos = sem contas (só convidados, se permitido).
+    /// </summary>
+    public ServerHost(ServerOptions options, Action<string>? log = null, AuthService? auth = null, CharacterSaver? saver = null)
     {
         _options = options;
+        _auth = auth;
+        _saver = saver;
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
         World = new GameWorld(this);
@@ -84,7 +100,27 @@ public sealed class ServerHost : IOutbox, IDisposable
         _stop.Cancel();
         _listener.Stop();
         _loopThread?.Join(TimeSpan.FromSeconds(2));
+
+        // Com o loop parado, é seguro ler o mundo daqui: salva todo mundo antes de fechar as conexões.
+        SaveAll();
+        if (_saver != null)
+        {
+            _log($"Salvando {World.Players.Count(p => p.CharacterId != 0)} personagens antes de desligar...");
+            _saver.FlushAndStopAsync(TimeSpan.FromSeconds(15)).GetAwaiter().GetResult();
+        }
         foreach (var connection in _byPlayer.Values.ToList()) connection.Close();
+    }
+
+    /// <summary>Põe na fila de salvamento todos os personagens conectados (convidados não são salvos).</summary>
+    private void SaveAll()
+    {
+        if (_saver == null) return;
+        foreach (var player in World.Players)
+        {
+            if (player.CharacterId == 0) continue;
+            var (snapshot, logs) = World.CaptureForSave(player);
+            _saver.Enqueue(snapshot, logs);
+        }
     }
 
     public void Dispose() => Stop();
@@ -137,6 +173,12 @@ public sealed class ServerHost : IOutbox, IDisposable
             _lastInAt.Remove(connection.ConnectionId);
             _lastOutAt.Remove(connection.ConnectionId);
             if (connection.PlayerId == 0) return;
+            var leaving = World.FindPlayer(connection.PlayerId);
+            if (leaving != null && leaving.CharacterId != 0 && _saver != null)
+            {
+                var (snapshot, logs) = World.CaptureForSave(leaving);
+                _saver.Enqueue(snapshot, logs);
+            }
             _byPlayer.Remove(connection.PlayerId);
             World.RemovePlayer(connection.PlayerId);
         }));
@@ -147,6 +189,7 @@ public sealed class ServerHost : IOutbox, IDisposable
 
         if (connection.PlayerId == 0)
         {
+            if (connection.LoginPending) return; // esperando o banco: ignora o resto até entrar
             if (message is not Hello hello)
             {
                 Refuse(connection, "Envie Hello primeiro.");
@@ -158,17 +201,73 @@ public sealed class ServerHost : IOutbox, IDisposable
                 return;
             }
 
-            // A conexão é registrada assim que o id existe, antes das boas-vindas saírem.
-            var player = World.AddPlayer(hello.Name, now, id =>
+            if (string.IsNullOrEmpty(hello.Token))
             {
-                connection.PlayerId = id;
-                _byPlayer[id] = connection;
-            });
-            _log($"Conexão #{connection.ConnectionId} entrou como {player.Name} (id {player.Id})");
+                if (!_options.AllowGuests)
+                {
+                    Refuse(connection, "Entre com sua conta.");
+                    return;
+                }
+                Enter(connection, hello.Name, now, character: null);
+                return;
+            }
+
+            if (_auth == null)
+            {
+                Refuse(connection, "Este servidor não tem contas.");
+                return;
+            }
+
+            // Carrega o personagem do banco sem travar o loop; a entrada acontece de volta na thread do loop.
+            connection.LoginPending = true;
+            _ = ResolveAndEnterAsync(connection, hello);
             return;
         }
 
         World.Handle(connection.PlayerId, message, now);
+    }
+
+    private async Task ResolveAndEnterAsync(ClientConnection connection, Hello hello)
+    {
+        AuthResult<CharacterRecord> result;
+        try
+        {
+            result = await _auth!.ResolveCharacterAsync(hello.Token, hello.CharacterId);
+        }
+        catch (Exception ex)
+        {
+            _log($"Erro ao carregar personagem {hello.CharacterId}: {ex.GetBaseException().Message}");
+            result = AuthResult<CharacterRecord>.Fail("Servidor sem acesso ao banco. Tente de novo em instantes.", 503);
+        }
+
+        _inbox.Enqueue((connection, now =>
+        {
+            connection.LoginPending = false;
+            if (connection.IsClosed) return;
+            if (!result.Ok)
+            {
+                Refuse(connection, result.Error);
+                return;
+            }
+            if (World.IsCharacterOnline(result.Value!.Id))
+            {
+                Refuse(connection, "Esse personagem já está no jogo.");
+                return;
+            }
+            Enter(connection, result.Value.Name, now, result.Value);
+        }));
+    }
+
+    private void Enter(ClientConnection connection, string name, double now, CharacterRecord? character)
+    {
+        // A conexão é registrada assim que o id existe, antes das boas-vindas saírem.
+        var player = World.AddPlayer(name, now, id =>
+        {
+            connection.PlayerId = id;
+            _byPlayer[id] = connection;
+        }, character);
+        var kind = character == null ? "convidado" : $"personagem {character.Id}, nível {character.Level}";
+        _log($"Conexão #{connection.ConnectionId} entrou como {player.Name} (id {player.Id}, {kind})");
     }
 
     private void Refuse(ClientConnection connection, string reason)
@@ -184,6 +283,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         var tickSeconds = 1.0 / GameWorld.TickRate;
         var nextTick = Now;
         var nextStatsAt = Now + _options.StatsIntervalSeconds;
+        var nextSaveAt = Now + _options.SaveIntervalSeconds;
         while (!_stop.IsCancellationRequested)
         {
             var now = Now;
@@ -201,6 +301,12 @@ public sealed class ServerHost : IOutbox, IDisposable
                 Metrics.CountTick(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
                 nextTick += tickSeconds;
                 if (now - nextTick > 1) nextTick = now; // atrasou demais: não tenta compensar todos os ticks
+            }
+
+            if (_options.SaveIntervalSeconds > 0 && now >= nextSaveAt)
+            {
+                nextSaveAt = now + _options.SaveIntervalSeconds;
+                SaveAll();
             }
 
             if (_options.StatsIntervalSeconds > 0 && now >= nextStatsAt)

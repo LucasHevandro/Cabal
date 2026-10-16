@@ -1,3 +1,4 @@
+using Game.Server.Persistence;
 using Game.Shared.Combat;
 using Game.Shared.Core;
 using Game.Shared.Loot;
@@ -15,11 +16,15 @@ public sealed class ServerPlayer
 
     public int Id { get; init; }
     public string Name { get; init; } = "";
+
+    /// <summary>Id do personagem no banco; 0 = convidado (testes e bots, não é salvo).</summary>
+    public int CharacterId { get; init; }
+
     public required MovementValidator Movement { get; init; }
     public float Yaw { get; set; }
     public uint LastMoveSequence { get; set; }
 
-    public CharacterProgress Progress { get; } = new();
+    public CharacterProgress Progress { get; set; } = new();
     public CharacterStats Stats => CharacterStats.ForLevel(Progress.Level);
     public ResourcePool Hp { get; }
     public ResourcePool Mp { get; }
@@ -35,6 +40,9 @@ public sealed class ServerPlayer
     public double DodgeUntil { get; set; }
     public double NextDodgeAt { get; set; }
     public float MpRegenCarry { get; set; }
+
+    /// <summary>Movimentos de item e Alz desde o último salvamento (vão junto no próximo).</summary>
+    public List<ItemLogEntry> PendingLogs { get; } = new();
 
     /// <summary>Entidades e itens que este jogador já conhece (recebeu EntitySpawned/LootSpawned).</summary>
     public HashSet<int> KnownEntities { get; } = new();

@@ -21,6 +21,9 @@ public sealed class ClientConnection
     /// <summary>Id do jogador depois do Hello aceito (0 antes disso).</summary>
     public int PlayerId { get; set; }
 
+    /// <summary>Hello com conta recebido; esperando o personagem chegar do banco.</summary>
+    public bool LoginPending { get; set; }
+
     public bool IsClosed => _closed.IsCancellationRequested;
 
     public ClientConnection(int connectionId, TcpClient client)

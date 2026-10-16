@@ -3,7 +3,7 @@
 Como repetir (na raiz do repositório, depois de `dotnet build Game.slnx -c Release`):
 
 ```bash
-dotnet artifacts/bin/Game.Server/release/Game.Server.dll --port 7777 --stats 10 --latency 75 --jitter 10
+dotnet artifacts/bin/Game.Server/release/Game.Server.dll --port 7777 --db memory --guests --stats 10 --latency 75 --jitter 10
 dotnet artifacts/bin/Game.Bots/release/Game.Bots.dll --port 7777 --count 20 --seconds 75
 ```
 

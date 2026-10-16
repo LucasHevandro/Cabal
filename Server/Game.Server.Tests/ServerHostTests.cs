@@ -96,7 +96,7 @@ public class ServerHostTests
     [Fact]
     public async Task Latencia_simulada_atrasa_ida_e_volta()
     {
-        using var host = new ServerHost(new ServerOptions { Port = 0, SimulatedLatencyMs = 100 });
+        using var host = new ServerHost(new ServerOptions { Port = 0, SimulatedLatencyMs = 100, AllowGuests = true });
         host.Start();
         using var client = new TestClient();
         await client.ConnectAsync(host.Port);

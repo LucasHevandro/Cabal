@@ -1,4 +1,5 @@
 using System.Numerics;
+using Game.Server.Persistence;
 using Game.Shared.Combat;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
@@ -342,6 +343,14 @@ public sealed partial class GameWorld
         var loot = monster.Data.Drops.Roll(_random);
         killer.Alz += loot.Alz;
         killer.StatsDirty = true;
+        if (killer.CharacterId != 0)
+        {
+            var at = DateTimeOffset.UtcNow;
+            if (loot.Alz > 0)
+                killer.PendingLogs.Add(new ItemLogEntry(killer.CharacterId, at, "alz_monstro", null, 0, loot.Alz, $"{monster.Data.Id} (id {monster.Id})"));
+            if (levels > 0)
+                killer.PendingLogs.Add(new ItemLogEntry(killer.CharacterId, at, "nivel", null, 0, 0, $"nível {killer.Progress.Level}"));
+        }
         Notify(killer, $"+{xp} XP, +{loot.Alz} Alz");
 
         for (var i = 0; i < loot.Items.Count; i++)
@@ -432,7 +441,11 @@ public sealed partial class GameWorld
         var drop = loot.Drop;
         var current = player.Inventory.TryGetValue(drop.ItemId, out var stack) ? stack.Quantity : 0;
         player.Inventory[drop.ItemId] = (drop.Name, drop.Rarity, current + drop.Quantity);
+        // O item sai do chão no mesmo passo em que entra no inventário: não existe momento com dois.
         RemoveLoot(loot, player.Id);
+        if (player.CharacterId != 0)
+            player.PendingLogs.Add(new ItemLogEntry(player.CharacterId, DateTimeOffset.UtcNow, "coleta", drop.ItemId, drop.Quantity, 0,
+                $"item no chão {loot.Id}, dono {loot.OwnerId}"));
         Notify(player, $"{drop.Name} x{drop.Quantity}");
     }
 

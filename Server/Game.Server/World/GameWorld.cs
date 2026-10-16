@@ -1,4 +1,5 @@
 using System.Numerics;
+using Game.Server.Persistence;
 using Game.Shared.Combat;
 using Game.Shared.Core;
 using Game.Shared.Monsters;
@@ -66,18 +67,24 @@ public sealed partial class GameWorld
     /// <summary>
     /// Entra um jogador. <paramref name="onIdAssigned"/> roda antes de qualquer mensagem sair, para a rede saber para
     /// onde mandar. As entidades por perto chegam no primeiro tick.
+    /// Com <paramref name="character"/> (vindo do banco), volta exatamente como estava: nível, XP, recursos, Alz,
+    /// inventário e posição. Sem ele, é um convidado novo (não é salvo).
     /// </summary>
-    public ServerPlayer AddPlayer(string name, double now, Action<int>? onIdAssigned = null)
+    public ServerPlayer AddPlayer(string name, double now, Action<int>? onIdAssigned = null, CharacterRecord? character = null)
     {
         var cleanName = string.IsNullOrWhiteSpace(name) ? "Aventureiro" : name.Trim();
+        if (character != null) cleanName = character.Name;
         var id = _nextEntityId++;
         var (spawnX, spawnZ) = SpawnPointFor(id);
+        if (character != null && IsInsideWorld(character.X, character.Z)) (spawnX, spawnZ) = (character.X, character.Z);
         var player = new ServerPlayer
         {
             Id = id,
             Name = cleanName.Length > 20 ? cleanName[..20] : cleanName,
+            CharacterId = character?.Id ?? 0,
             Movement = new MovementValidator(spawnX, spawnZ, now),
         };
+        if (character != null) Restore(player, character);
         onIdAssigned?.Invoke(player.Id);
 
         _outbox.Send(player.Id, new Welcome
@@ -86,6 +93,25 @@ public sealed partial class GameWorld
         });
         _players.Add(player.Id, player);
         return player;
+    }
+
+    /// <summary>Verdadeiro se o personagem do banco já está no mundo (impede entrar duas vezes ao mesmo tempo).</summary>
+    public bool IsCharacterOnline(int characterId) => characterId != 0 && _players.Values.Any(p => p.CharacterId == characterId);
+
+    /// <summary>
+    /// Foto do estado para salvar, e os registros de itens desde o último salvamento (que saem da fila do jogador).
+    /// Morto salva com a vida cheia e na vila, para não voltar morto.
+    /// </summary>
+    public (CharacterSnapshot Snapshot, List<ItemLogEntry> Logs) CaptureForSave(ServerPlayer player)
+    {
+        var (x, z) = player.IsDead ? SpawnPointFor(player.Id) : (player.X, player.Z);
+        var snapshot = new CharacterSnapshot(
+            player.CharacterId, player.Progress.Level, player.Progress.Xp, player.Alz, x, z,
+            player.IsDead ? player.Hp.Max : player.Hp.Current, player.IsDead ? player.Mp.Max : player.Mp.Current, player.Sp.Current,
+            player.Inventory.Select(kv => new InventoryEntry(kv.Key, kv.Value.Name, kv.Value.Rarity, kv.Value.Quantity)).ToList());
+        var logs = player.PendingLogs.ToList();
+        player.PendingLogs.Clear();
+        return (snapshot, logs);
     }
 
     public void RemovePlayer(int playerId)
@@ -253,6 +279,27 @@ public sealed partial class GameWorld
         monster.Brain.Revive(0);
         _monsters.Add(monster.Id, monster);
     }
+
+    private static void Restore(ServerPlayer player, CharacterRecord character)
+    {
+        player.Progress = new Game.Shared.Progression.CharacterProgress(
+            Math.Clamp(character.Level, 1, Game.Shared.Progression.LevelCurve.MaxLevel), Math.Max(0, character.Xp));
+        var stats = player.Stats;
+        player.Hp.SetMax(stats.MaxHp);
+        player.Mp.SetMax(stats.MaxMp);
+        player.Hp.Add(Math.Clamp(character.Hp, 1, stats.MaxHp) - player.Hp.Current);
+        player.Mp.Add(Math.Clamp(character.Mp, 0, stats.MaxMp) - player.Mp.Current);
+        player.Sp.Add(Math.Clamp(character.Sp, 0, player.Sp.Max) - player.Sp.Current);
+        player.Alz = Math.Max(0, character.Alz);
+        foreach (var item in character.Inventory)
+        {
+            if (item.Quantity > 0) player.Inventory[item.ItemId] = (item.Name, item.Rarity, item.Quantity);
+        }
+    }
+
+    /// <summary>Posição salva dentro do chão do mapa (protege contra dados estragados).</summary>
+    private static bool IsInsideWorld(float x, float z) =>
+        !float.IsNaN(x) && !float.IsNaN(z) && x >= -130 && x <= 130 && z >= -70 && z <= 230;
 
     /// <summary>Ponto de nascimento na vila, espalhado num círculo de 3 m para jogadores não nascerem um dentro do outro.</summary>
     public static (float X, float Z) SpawnPointFor(int playerId)
