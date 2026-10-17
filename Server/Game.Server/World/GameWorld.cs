@@ -176,6 +176,11 @@ public sealed partial class GameWorld
             case PickupLoot pickup:
                 HandlePickup(player, pickup, now);
                 break;
+            // Durante a troca a bolsa não se mexe (só usar poção): a oferta aponta para posições da bolsa.
+            case ItemCommand command when player.TradeId != 0 && command.Action != ItemActionKind.Use:
+            case UpgradeItem or ApplyOption when player.TradeId != 0:
+                SystemChat(player, "Termine a troca antes de mexer na bolsa");
+                break;
             case ItemCommand command:
                 HandleItemCommand(player, command, now);
                 break;
@@ -184,6 +189,12 @@ public sealed partial class GameWorld
                 break;
             case ApplyOption option:
                 HandleApplyOption(player, option);
+                break;
+            case ShopCommand shop:
+                HandleShop(player, shop);
+                break;
+            case TradeCommand trade:
+                HandleTrade(player, trade, now);
                 break;
             case AllocateAttributes allocate:
                 HandleAllocate(player, allocate);
@@ -219,6 +230,7 @@ public sealed partial class GameWorld
         foreach (var player in _players.Values) TickPlayer(player, now, (float)dt);
         foreach (var monster in _monsters.Values) TickMonster(monster, now, (float)dt);
         ExpireLoot(now);
+        TickTrades();
 
         foreach (var player in _players.Values) SendView(player, now);
     }
@@ -318,6 +330,7 @@ public sealed partial class GameWorld
         }
         SendPartyState(player);
         SendSocialLists(player);
+        SendTradeState(player);
     }
 
     /// <summary>Manda a mensagem a todos os jogadores perto do ponto.</summary>

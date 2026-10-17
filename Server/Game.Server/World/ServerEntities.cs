@@ -95,6 +95,11 @@ public sealed class ServerPlayer
 
     public ChatRateLimiter ChatLimiter { get; } = new();
 
+    /// <summary>Troca aberta (0 = nenhuma), pedido de troca esperando resposta e se precisa reenviar o TradeState.</summary>
+    public int TradeId { get; set; }
+    public (int FromId, double ExpiresAt)? PendingTradeInvite { get; set; }
+    public bool TradeDirty { get; set; }
+
     /// <summary>Amigos e bloqueados (salvos com o personagem).</summary>
     public List<RelationRecord> Relations { get; } = new();
 

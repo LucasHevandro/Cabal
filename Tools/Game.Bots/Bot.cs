@@ -112,6 +112,7 @@ public sealed class BotStats
     public int ChatReceived;
     public int PartyChatReceived;
     public int SystemChat;
+    public int TradesCompleted;
 }
 
 /// <summary>
@@ -154,6 +155,16 @@ public sealed class Bot
 
     /// <summary>Aceita sozinho qualquer convite de grupo (modo --party).</summary>
     public bool AutoAcceptInvites { get; set; }
+
+    /// <summary>
+    /// Aceita pedidos de troca e oferece 2 poções; trava quando o outro já ofereceu algo e confirma com os dois travados
+    /// (modo --invite, para o teste da troca no cliente).
+    /// </summary>
+    public bool AutoTrade { get; set; }
+
+    private readonly List<InventoryStack> _bag = new();
+    private bool _offered;
+    private bool _wasTrading;
 
     /// <summary>Último estado do grupo recebido (vazio = sem grupo).</summary>
     public PartyState Party { get; private set; } = new();
@@ -210,6 +221,29 @@ public sealed class Bot
             character = (await created.Content.ReadFromJsonAsync<CharacterSummary>(Json))!;
         }
         return (token, character.Id);
+    }
+
+    private void HandleTrade(TradeState trade)
+    {
+        if (!trade.Active)
+        {
+            if (_wasTrading && _offered) Stats.TradesCompleted++;
+            _wasTrading = _offered = false;
+            return;
+        }
+        _wasTrading = true;
+        if (!AutoTrade) return;
+        if (!_offered)
+        {
+            _offered = true;
+            var potion = _bag.FirstOrDefault(i => i.ItemId == "pocao_hp_p" && i.Quantity > 0);
+            var command = new TradeCommand { Action = TradeActionKind.SetOffer };
+            if (potion.Quantity > 0) command.Items.Add(new Game.Shared.Economy.TradeItem(potion.Slot, potion.Uid, Math.Min(2, potion.Quantity)));
+            Connection.Send(command);
+            return;
+        }
+        if (!trade.MyLocked && trade.TheirItems.Count > 0) Connection.Send(new TradeCommand { Action = TradeActionKind.Lock });
+        else if (trade.MyLocked && trade.TheirLocked && !trade.MyConfirmed) Connection.Send(new TradeCommand { Action = TradeActionKind.Confirm });
     }
 
     public void AddFriend(string name) => Connection.Send(new SocialCommand { Action = RelationActionKind.AddFriend, TargetName = name });
@@ -387,6 +421,16 @@ public sealed class Bot
                 break;
             case PartyInvite invite:
                 if (AutoAcceptInvites) Connection.Send(new PartyCommand { Action = PartyActionKind.Accept, TargetId = invite.InviterId });
+                break;
+            case Inventory inventory:
+                _bag.Clear();
+                _bag.AddRange(inventory.Items.Where(i => i.Container == ItemContainerKind.Bag));
+                break;
+            case TradeInvite tradeInvite:
+                if (AutoTrade) Connection.Send(new TradeCommand { Action = TradeActionKind.Accept, TargetId = tradeInvite.FromId });
+                break;
+            case TradeState trade:
+                HandleTrade(trade);
                 break;
             case PartyState party:
                 Party = party;

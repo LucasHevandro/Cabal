@@ -42,7 +42,10 @@ for (var i = 0; i < count; i++)
     if (party) forest = i / 4 % 3 == 2;
     if (party) prey = forest ? new[] { "javali_furioso", "aranha_da_mata" } : new[] { "coelho_saltador", "lobo_cinzento" };
     var bot = forest ? new Bot($"Bot{i + 1:00}", 1000 + i, prey, 45, 85) : new Bot($"Bot{i + 1:00}", 1000 + i, prey, 0, 40);
+    // No --invite o primeiro bot fica parado perto da mercadora (sem caçar), para o cliente poder trocar com ele.
+    if (inviteName.Length > 0 && i == 0) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), 6.5f, -8);
     bot.AutoAcceptInvites = party && i % 4 != 0;
+    bot.AutoTrade = inviteName.Length > 0 && i == 0;
     try
     {
         if (accounts) await bot.StartAsync(host, port, $"bot{i + 1:00}", "senha12345");
@@ -151,6 +154,7 @@ if (party)
 }
 if (inviteName.Length > 0)
 {
+    Console.WriteLine($"Trocas concluídas pelo {bots[0].Name}: {bots[0].Stats.TradesCompleted}");
     Console.WriteLine(clientJoined ? $"{inviteName} entrou no grupo" : $"{inviteName} NÃO entrou no grupo");
     ok &= clientJoined;
 }
