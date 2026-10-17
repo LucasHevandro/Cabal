@@ -34,6 +34,29 @@ namespace Game.Client.Net
         private static Msg.TradeInvite _tradeInvite;
         private static float _tradeInviteUntil;
 
+        /// <summary>PvP (fila, duelo ou arena) e o desafio de duelo esperando resposta.</summary>
+        public static Msg.PvpState Pvp { get; private set; }
+
+        private static Msg.DuelInvite _duelInvite;
+        private static float _duelInviteUntil;
+
+        public static Msg.DuelInvite PendingDuelInvite => Time.unscaledTime < _duelInviteUntil ? _duelInvite : null;
+
+        public static void Apply(Msg.PvpState state)
+        {
+            Pvp = state;
+            Changed?.Invoke();
+        }
+
+        public static void Apply(Msg.DuelInvite invite)
+        {
+            _duelInvite = invite;
+            _duelInviteUntil = Time.unscaledTime + invite.Seconds;
+            Changed?.Invoke();
+        }
+
+        public static void ClearDuelInvite() => _duelInvite = null;
+
         /// <summary>Dungeon em que está (nulo ou inativo = fora) e o último ranking recebido.</summary>
         public static Msg.DungeonState Dungeon { get; private set; }
         public static Msg.DungeonInfo DungeonRanking { get; private set; }
@@ -71,6 +94,8 @@ namespace Game.Client.Net
             _tradeInvite = null;
             Dungeon = null;
             DungeonRanking = null;
+            Pvp = null;
+            _duelInvite = null;
         }
 
         public static void Apply(Msg.TradeState trade)

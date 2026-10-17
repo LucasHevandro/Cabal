@@ -38,6 +38,8 @@ namespace Game.Client.Net
             if (GetComponent<UI.SocialWindows>() == null) gameObject.AddComponent<UI.SocialWindows>();
             // Mapa da dungeon (montado quando o servidor manda entrar).
             if (GetComponent<World.DungeonView>() == null) gameObject.AddComponent<World.DungeonView>();
+            // Campo da arena e quem pode ser alvo no PvP.
+            if (GetComponent<World.ArenaView>() == null) gameObject.AddComponent<World.ArenaView>();
         }
 
         private void OnDestroy()
@@ -84,6 +86,9 @@ namespace Game.Client.Net
                     CharacterState.Apply(upgrade);
                     SoundPlayer.Play(upgrade.Outcome == 1 ? SoundId.Excellent : upgrade.Outcome == 0 ? SoundId.Error : SoundId.Miss, 0.8f, 0f);
                     break;
+                case DuelInvite duelInvite:
+                    CharacterState.Apply(duelInvite);
+                    break;
                 case DungeonInfo dungeonInfo:
                     CharacterState.Apply(dungeonInfo);
                     break;
@@ -106,8 +111,9 @@ namespace Game.Client.Net
                 _combat.ShowIncomingHit(hit);
                 return;
             }
+            // Monstros e, no PvP, outros jogadores.
             var view = _session.FindView(hit.TargetId);
-            if (view != null && view.Kind == EntityKind.Monster)
+            if (view != null && view.Target != null && (view.Kind == EntityKind.Monster || hit.AttackerId == _session.PlayerId))
                 _combat.ShowServerHit(hit, view.Target, hit.AttackerId == _session.PlayerId);
         }
 

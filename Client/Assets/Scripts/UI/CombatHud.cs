@@ -106,15 +106,16 @@ namespace Game.Client.UI
         private void DrawHelp()
         {
             var online = GameMode.IsOnline;
-            Box(new Rect(20, 20, 420, online ? 324 : 270), Panel);
-            GUI.Label(new Rect(36, 30, 400, online ? 314 : 260),
+            Box(new Rect(20, 20, 420, online ? 346 : 270), Panel);
+            GUI.Label(new Rect(36, 30, 400, online ? 336 : 260),
                 "<b>Controles</b>\n" +
                 "WASD andar · Shift correr · Espaço esquivar\n" +
                 "Botão direito girar câmera · Roda zoom\n" +
                 "Tab / clique: selecionar alvo · Esc limpar\n" +
                 (online
                     ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n" +
-                      "Enter chat · O amigos · /convidar nome forma grupo\n"
+                      "Enter chat · O amigos · /convidar nome forma grupo\n" +
+                      "/duelo nome desafia · /arena entra na fila 5v5\n"
                     : "1–4 skills · E coletar itens · I inventário\n") +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +
@@ -208,7 +209,8 @@ namespace Game.Client.UI
             var zone = ZoneArea.At(combat.transform.position);
             var levels = zone == null ? "" : zone.MinLevel == zone.MaxLevel ? $"{zone.MinLevel}" : $"{zone.MinLevel}–{zone.MaxLevel}";
             var dungeon = Net.CharacterState.Dungeon != null ? Game.Shared.Dungeon.DungeonCatalog.Find(Net.CharacterState.Dungeon.DungeonId) : null;
-            var text = dungeon != null ? $"<b>{dungeon.Name}</b>  Dungeon" : zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
+            var arena = Net.CharacterState.Pvp != null && Net.CharacterState.Pvp.Mode == Game.Shared.Net.PvpMode.Arena;
+            var text = arena ? "<b>Arena</b>  5 contra 5" : dungeon != null ? $"<b>{dungeon.Name}</b>  Dungeon" : zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
             Box(rect, Panel);
             GUI.Label(rect, text, _center);
@@ -241,7 +243,7 @@ namespace Game.Client.UI
         {
             var age = Time.unscaledTime - _announcementAt;
             if (age > 3.5f || string.IsNullOrEmpty(_announcement)) return;
-            ShadowLabel(new Rect(0, 130, VirtualWidth, 60), $"<b>{_announcement}</b>", _big.WithCenter(),
+            ShadowLabel(new Rect(0, 210, VirtualWidth, 60), $"<b>{_announcement}</b>", _big.WithCenter(),
                 new Color(1f, 0.55f, 0.3f), 1f - Mathf.Clamp01((age - 2.8f) / 0.7f));
         }
 

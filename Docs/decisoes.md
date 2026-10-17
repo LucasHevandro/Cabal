@@ -117,3 +117,24 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   no nível mínimo em cerca de 12, e um grupo bom (+7, mais combo) tira S. Dupla no nível 22 não termina (cerca de 17
   minutos): a dungeon é feita para grupo.
 - `--dungeon-test` deixa a Cripta fácil e sem nível mínimo, para bots e testes automáticos.
+
+## 2026-10-17 — PvP: duelo e arena 5v5
+
+- **Dano separado do PvE:** entre jogadores o golpe vale 35% e o bônus do Despertar vale pela metade. Os jogadores
+  têm bem menos vida que os monstros, e com o dano cheio uma luta acabaria em 2 ou 3 golpes. O combo, as rotas e a
+  esquiva funcionam igual (o timing continua sendo a habilidade que decide).
+- **Só bate em quem é hostil:** o adversário do duelo depois da contagem, ou o time inimigo na arena depois do
+  início. Fora disso, jogadores não podem ser alvo (não há PvP livre no mapa no MVP).
+- **Duelo:** convite e aceite a até 10 m, 3 s de contagem, até 3 minutos. Ninguém morre: o golpe que zeraria a vida
+  deixa 1 e encerra o duelo. Desistir ou se afastar mais de 30 m do ponto de início é perder.
+- **Arena:** fila única, sem grupo. Com 10 na fila forma uma partida, dividindo os times por nível em "cobra"
+  (A B B A...). Cada partida é uma faixa própria do mapa (ao sul, uma a cada 400 m), como as dungeons.
+  - **Pontos:** 3 pontos de captura. Tomar um ponto neutro leva 6 s com só um time dentro. Com os dois times dentro
+    o ponto fica disputado e para. Tomar o ponto do outro time leva o dobro (neutraliza e depois toma).
+  - **Placar:** cada ponto dominado dá 1 por segundo e cada abate dá 3. Vence quem chegar a 500 ou tiver mais pontos
+    no fim dos 10 minutos.
+  - **Durante a partida:** renasce na base em 6 s. Quem sai antes não ganha nada. Um time que fica vazio perde.
+  - **Prêmio:** 1.500 Alz para quem vence e 500 para quem perde (registro `arena`).
+- `--arena-size N` muda o tamanho do time para testes (1 contra 1).
+- **Revisar:** com o dano a 35%, uma luta 1 contra 1 de mesmo nível dura uns 20 a 30 golpes. Ajustar com gente de
+  verdade, e decidir se a arena terá ranking e moeda própria.

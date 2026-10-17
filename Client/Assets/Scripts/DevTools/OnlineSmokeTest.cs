@@ -27,6 +27,7 @@ namespace Game.Client.DevTools
         private bool _uiTour;
         private bool _social;
         private bool _dungeon;
+        private bool _arena;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -45,6 +46,7 @@ namespace Game.Client.DevTools
             test._uiTour = Array.IndexOf(args, "-onlineui") >= 0;
             test._social = Array.IndexOf(args, "-onlinesocial") >= 0;
             test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0;
+            test._arena = Array.IndexOf(args, "-onlinearena") >= 0;
             DontDestroyOnLoad(test.gameObject);
         }
 
@@ -150,6 +152,18 @@ namespace Game.Client.DevTools
             {
                 var outcome = new FightOutcome();
                 yield return DungeonRun(session, outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
+            }
+
+            if (_arena)
+            {
+                var outcome = new FightOutcome();
+                yield return ArenaRun(session, outcome);
                 if (!outcome.Ok)
                 {
                     Finish("FALHA: " + outcome.Message);
@@ -535,9 +549,51 @@ namespace Game.Client.DevTools
                 yield break;
             }
 
+            // Duelo: o bot aceita; depois da contagem, um golpe nele e desistimos (perde quem desiste).
+            social.Submit($"/duelo {inviter}");
+            yield return WaitFor(() => CharacterState.Pvp is { Mode: PvpMode.Duel }, 5f);
+            if (CharacterState.Pvp is not { Mode: PvpMode.Duel } duel)
+            {
+                outcome.Message = "o duelo não começou";
+                yield break;
+            }
+            yield return WaitFor(() => session.ServerNow >= CharacterState.Pvp.StartsAt + 0.2, 6f);
+            var opponent = session.FindView(duel.OpponentId);
+            var combat = PlayerCombat.Local;
+            var duelHit = false;
+            var duelGiveUp = Time.realtimeSinceStartup + 15f;
+            while (opponent != null && Time.realtimeSinceStartup < duelGiveUp && !duelHit)
+            {
+                var motorNow = combat.GetComponent<PlayerMotor>();
+                if (Distance(opponent, motorNow) > 1.8f)
+                {
+                    var direction = opponent.transform.position - motorNow.transform.position;
+                    direction.y = 0;
+                    motorNow.Teleport(motorNow.transform.position + direction.normalized * Mathf.Min(direction.magnitude - 1.7f, 6.5f * Time.deltaTime));
+                    yield return null;
+                    continue;
+                }
+                var selectorNow = combat.GetComponent<TargetSelector>();
+                if (selectorNow.Current != opponent.Target) selectorNow.Select(opponent.Target);
+                var before = opponent.Target.Hp.Current;
+                if (combat.CooldownRemaining(0) <= 0) combat.RequestSkill(0);
+                yield return new WaitForSecondsRealtime(0.4f);
+                duelHit = opponent.Target.Hp.Current < before;
+            }
+            Capture("18-duelo");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            session.Send(new DuelCommand { Action = DuelActionKind.Forfeit });
+            yield return WaitFor(() => CharacterState.Pvp is { Mode: PvpMode.None }, 5f);
+            if (!duelHit || CharacterState.Pvp is not { Mode: PvpMode.None })
+            {
+                outcome.Message = $"duelo: acertou {duelHit}, terminou {CharacterState.Pvp?.Mode == PvpMode.None}";
+                yield break;
+            }
+
             outcome.Ok = true;
             outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), " +
-                              "chat, filtro, amigos, bloqueio, denúncia, loja e troca ok";
+                              "chat, filtro, amigos, bloqueio, denúncia, loja, troca e duelo ok";
         }
 
         /// <summary>
@@ -644,6 +700,115 @@ namespace Game.Client.DevTools
             }
             outcome.Ok = true;
             outcome.Message = $"cripta vencida em {time}, medalha {medal}, ranking com {CharacterState.DungeonRanking.Ranking.Count} tempo(s), de volta ao portal";
+        }
+
+        /// <summary>
+        /// Arena (servidor com --guests --arena-size 1 e um bot com --arena): entra na fila, vai para a base, toma o
+        /// ponto livre, acerta o inimigo e sai da partida, conferindo a volta à vila.
+        /// </summary>
+        private IEnumerator ArenaRun(NetworkSession session, FightOutcome outcome)
+        {
+            var combat = PlayerCombat.Local;
+            var motor = combat.GetComponent<PlayerMotor>();
+            var selector = combat.GetComponent<TargetSelector>();
+            var social = UI.SocialWindows.Instance;
+
+            social.Submit("/arena");
+            yield return WaitFor(() => CharacterState.Pvp is { Mode: PvpMode.Arena }, 30f);
+            if (CharacterState.Pvp is not { Mode: PvpMode.Arena } pvp)
+            {
+                outcome.Message = "a partida da arena não começou (tem um bot na fila?)";
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(1f);
+            Capture("15-arena-base");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            yield return WaitFor(() => session.ServerNow >= CharacterState.Pvp.StartsAt, 15f);
+
+            // Procura o inimigo (alvo selecionável) e bate até derrubá-lo (o bot passivo não revida).
+            var hitEnemy = false;
+            var downed = false;
+            var giveUp = Time.realtimeSinceStartup + 150f;
+            while (Time.realtimeSinceStartup < giveUp && !downed)
+            {
+                NetEntityView enemy = null;
+                foreach (var view in session.Views.Values)
+                    if (view.Kind == EntityKind.Player && view.Target != null && view.Target.IsSelectable && !view.IsDead) enemy = view;
+                if (enemy == null)
+                {
+                    yield return null;
+                    continue;
+                }
+                if (Distance(enemy, motor) > 1.8f)
+                {
+                    var direction = enemy.transform.position - motor.transform.position;
+                    direction.y = 0;
+                    motor.Teleport(motor.transform.position + direction.normalized * Mathf.Min(direction.magnitude - 1.7f, 6.5f * Time.deltaTime));
+                    yield return null;
+                    continue;
+                }
+                if (selector.Current != enemy.Target) selector.Select(enemy.Target);
+                var before = enemy.Target.Hp.Current;
+                if (combat.CooldownRemaining(0) <= 0) combat.RequestSkill(0);
+                yield return new WaitForSecondsRealtime(0.4f);
+                hitEnemy |= enemy.Target.Hp.Current < before || enemy.IsDead;
+                downed = enemy.IsDead;
+            }
+            Capture("16-arena-luta");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            // Com o inimigo caído (renasce na base), toma o ponto livre mais perto.
+            bool OwnsAny()
+            {
+                foreach (var p in CharacterState.Pvp.Points) if (p.Owner == CharacterState.Pvp.Team) return true;
+                return false;
+            }
+            giveUp = Time.realtimeSinceStartup + 40f;
+            while (Time.realtimeSinceStartup < giveUp && !OwnsAny())
+            {
+                var state = CharacterState.Pvp;
+                var goal = Vector3.zero;
+                var best = float.MaxValue;
+                for (var i = 0; i < state.Points.Count; i++)
+                {
+                    if (state.Points[i].Owner == state.Team || state.Points[i].Contested) continue;
+                    var point = new Vector3(state.OriginX + Shared.Pvp.ArenaRules.Points[i].X, 0, state.OriginZ + Shared.Pvp.ArenaRules.Points[i].Z);
+                    // Evita o ponto onde o inimigo já está (a captura não anda com os dois times dentro).
+                    var occupied = false;
+                    foreach (var view in session.Views.Values)
+                        if (view.Kind == EntityKind.Player && view.Target != null && view.Target.IsSelectable &&
+                            (view.transform.position - point).magnitude < Shared.Pvp.ArenaRules.CaptureRadius + 2) occupied = true;
+                    var d = (point - motor.transform.position).magnitude + (occupied ? 1000 : 0);
+                    if (d < best)
+                    {
+                        best = d;
+                        goal = point;
+                    }
+                }
+                var step = goal - motor.transform.position;
+                step.y = 0;
+                if (best < float.MaxValue && step.magnitude > 1f)
+                    motor.Teleport(motor.transform.position + step.normalized * Mathf.Min(step.magnitude, 6.5f * Time.deltaTime));
+                yield return null;
+            }
+            var captured = OwnsAny();
+            Capture("17-arena-ponto");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            session.Send(new ArenaCommand { Action = ArenaActionKind.Leave });
+            yield return WaitFor(() => CharacterState.Pvp is { Mode: PvpMode.None }, 5f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            var home = Mathf.Abs(motor.transform.position.z) < 15 && Mathf.Abs(motor.transform.position.x) < 15;
+            if (!captured || !hitEnemy || !home)
+            {
+                outcome.Message = $"arena: capturou {captured}, acertou o inimigo {hitEnemy}, voltou à vila {home}";
+                yield break;
+            }
+            outcome.Ok = true;
+            outcome.Message = "arena: entrou pela fila, tomou um ponto, acertou o inimigo e voltou à vila";
         }
 
         private static int FirstSlotOf(string itemId)

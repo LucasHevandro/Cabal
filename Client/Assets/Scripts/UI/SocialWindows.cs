@@ -317,7 +317,7 @@ namespace Game.Client.UI
         {
             if (_party.Members.Count == 0) return;
             var x = 20f;
-            var y = 364f;
+            var y = 380f;
             var height = 38f + _party.Members.Count * 62f;
             var panel = new Rect(x, y, 320, height);
             Box(panel, new Color(0, 0, 0, 0.45f));
@@ -483,6 +483,13 @@ namespace Game.Client.UI
                     break;
                 case ChatInputKind.Report:
                     Relation(RelationActionKind.Report, input.Target, input.Text);
+                    break;
+                case ChatInputKind.DuelRequest:
+                    _session.Send(new DuelCommand { Action = DuelActionKind.Request, TargetName = input.Target });
+                    break;
+                case ChatInputKind.ArenaQueue:
+                    var inQueue = CharacterState.Pvp != null && CharacterState.Pvp.InQueue;
+                    _session.Send(new ArenaCommand { Action = inQueue ? ArenaActionKind.LeaveQueue : ArenaActionKind.Join });
                     break;
                 case ChatInputKind.TradeRequest:
                     _session.Send(new TradeCommand { Action = TradeActionKind.Request, TargetName = input.Target });

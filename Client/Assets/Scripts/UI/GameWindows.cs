@@ -206,7 +206,9 @@ namespace Game.Client.UI
             var shopOpen = npc != null && npc.Role == NpcRole.Merchant && !Trading;
             var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || Trading;
 
-            if (!inventoryShown && !_questLogOpen && Dungeon == null) DrawQuestTracker();
+            var pvp = CharacterState.Pvp;
+            var pvpBusy = pvp != null && (pvp.InQueue || pvp.Mode == Msg.PvpMode.Arena);
+            if (!inventoryShown && !_questLogOpen && Dungeon == null && !pvpBusy) DrawQuestTracker();
             if (inventoryShown) DrawInventory();
             if (warehouseOpen) DrawWarehouse();
             if (smithOpen) DrawSmith(npc);
@@ -216,6 +218,7 @@ namespace Game.Client.UI
             if (npc != null && npc.Role == NpcRole.QuestGiver) DrawQuestDialog(npc, dialog);
             if (npc != null && npc.Role == NpcRole.DungeonPortal) DrawPortal(npc);
             DrawDungeonHud();
+            DrawPvp();
             if (_attributesOpen) DrawAttributes();
             if (_questLogOpen) DrawQuestLog();
             DrawTalkPrompt();
