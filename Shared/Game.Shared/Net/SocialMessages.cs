@@ -21,7 +21,37 @@ namespace Game.Shared.Net
         Promote = 5,
     }
 
+    public enum RelationActionKind : byte
+    {
+        AddFriend = 0,
+        RemoveFriend = 1,
+        Block = 2,
+        Unblock = 3,
+
+        /// <summary>Denuncia <see cref="SocialCommand.TargetName"/>; <see cref="SocialCommand.Text"/> é o motivo.</summary>
+        Report = 4,
+    }
+
     // ===== Cliente → servidor =====
+
+    /// <summary>Amigos, bloqueio e denúncia, sempre pelo nome do personagem.</summary>
+    public sealed class SocialCommand : INetMessage
+    {
+        public MessageType Type => MessageType.SocialCommand;
+        public RelationActionKind Action;
+        public string TargetName = "";
+        public string Text = "";
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteByte((byte)Action);
+            w.WriteString(TargetName);
+            w.WriteString(Text);
+        }
+
+        public static SocialCommand Read(PacketReader r) =>
+            new SocialCommand { Action = (RelationActionKind)r.ReadByte(), TargetName = r.ReadString(), Text = r.ReadString() };
+    }
 
     public sealed class PartyCommand : INetMessage
     {
@@ -117,6 +147,50 @@ namespace Game.Shared.Net
                 });
             }
             return state;
+        }
+    }
+
+    public struct FriendInfo
+    {
+        public string Name;
+        public bool Online;
+
+        /// <summary>Nível e classe só quando online (0 = desconhecido).</summary>
+        public int Level;
+
+        public byte Class;
+    }
+
+    /// <summary>Lista de amigos (com quem está online) e de bloqueados. Chega ao entrar e quando muda.</summary>
+    public sealed class SocialLists : INetMessage
+    {
+        public MessageType Type => MessageType.SocialLists;
+        public List<FriendInfo> Friends = new List<FriendInfo>();
+        public List<string> Blocked = new List<string>();
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteUShort((ushort)Friends.Count);
+            foreach (var f in Friends)
+            {
+                w.WriteString(f.Name);
+                w.WriteBool(f.Online);
+                w.WriteInt(f.Level);
+                w.WriteByte(f.Class);
+            }
+            w.WriteUShort((ushort)Blocked.Count);
+            foreach (var name in Blocked) w.WriteString(name);
+        }
+
+        public static SocialLists Read(PacketReader r)
+        {
+            var lists = new SocialLists();
+            var friends = r.ReadUShort();
+            for (var i = 0; i < friends; i++)
+                lists.Friends.Add(new FriendInfo { Name = r.ReadString(), Online = r.ReadBool(), Level = r.ReadInt(), Class = r.ReadByte() });
+            var blocked = r.ReadUShort();
+            for (var i = 0; i < blocked; i++) lists.Blocked.Add(r.ReadString());
+            return lists;
         }
     }
 

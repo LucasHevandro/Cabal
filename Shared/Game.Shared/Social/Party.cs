@@ -41,6 +41,23 @@ namespace Game.Shared.Social
         }
     }
 
+    /// <summary>Amigos, bloqueados e denúncias.</summary>
+    public static class RelationRules
+    {
+        public const int MaxFriends = 50;
+        public const int MaxBlocked = 100;
+        public const int MaxReportReason = 200;
+
+        /// <summary>Quantas mensagens recentes do denunciado vão junto com a denúncia.</summary>
+        public const int ReportChatLines = 10;
+
+        /// <summary>Denunciar a mesma pessoa de novo só depois deste tempo.</summary>
+        public const double SameTargetCooldownSeconds = 600;
+
+        /// <summary>No máximo esta quantidade de denúncias por hora (evita usar a denúncia como spam).</summary>
+        public const int MaxReportsPerHour = 5;
+    }
+
     /// <summary>
     /// Um grupo: membros na ordem em que entraram e o líder. Só a regra; quem convida, avisa e manda mensagens é o servidor.
     /// </summary>

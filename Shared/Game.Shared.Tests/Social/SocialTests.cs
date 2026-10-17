@@ -103,6 +103,15 @@ public class ChatTests
         Assert.Equal(ChatInputKind.Invalid, ChatParser.Parse("/dançar", ChatChannel.Map).Kind);
         Assert.Equal(ChatInputKind.None, ChatParser.Parse("/g   ", ChatChannel.Map).Kind);
         Assert.Equal(ChatInputKind.Help, ChatParser.Parse("/ajuda", ChatChannel.Map).Kind);
+
+        Assert.Equal((ChatInputKind.FriendAdd, "Bia"), Pair(ChatParser.Parse("/amigo Bia", ChatChannel.Map)));
+        Assert.Equal((ChatInputKind.FriendRemove, "Bia"), Pair(ChatParser.Parse("/remover Bia", ChatChannel.Map)));
+        Assert.Equal((ChatInputKind.Block, "Bia"), Pair(ChatParser.Parse("/bloquear Bia", ChatChannel.Map)));
+        Assert.Equal((ChatInputKind.Unblock, "Bia"), Pair(ChatParser.Parse("/desbloquear Bia", ChatChannel.Map)));
+        var report = ChatParser.Parse("/denunciar Caio xingando no mapa", ChatChannel.Map);
+        Assert.Equal((ChatInputKind.Report, "Caio", "xingando no mapa"), (report.Kind, report.Target, report.Text));
+        Assert.Equal(ChatInputKind.Invalid, ChatParser.Parse("/denunciar Caio", ChatChannel.Map).Kind);
+        Assert.Equal(ChatInputKind.FriendsWindow, ChatParser.Parse("/amigos", ChatChannel.Map).Kind);
     }
 
     private static (ChatInputKind, string) Pair(ChatInput input) => (input.Kind, input.Target);
@@ -142,6 +151,18 @@ public class ChatTests
 
         var invite = RoundTrip(new PartyInvite { InviterId = 3, InviterName = "Caio", Seconds = 30 });
         Assert.Equal((3, "Caio", 30f), (invite.InviterId, invite.InviterName, invite.Seconds));
+
+        var social = RoundTrip(new SocialCommand { Action = RelationActionKind.Report, TargetName = "Caio", Text = "spam" });
+        Assert.Equal((RelationActionKind.Report, "Caio", "spam"), (social.Action, social.TargetName, social.Text));
+
+        var lists = RoundTrip(new SocialLists
+        {
+            Friends = { new FriendInfo { Name = "Bia", Online = true, Level = 12, Class = 1 }, new FriendInfo { Name = "Davi" } },
+            Blocked = { "Caio" },
+        });
+        Assert.Equal(("Bia", true, 12, (byte)1), (lists.Friends[0].Name, lists.Friends[0].Online, lists.Friends[0].Level, lists.Friends[0].Class));
+        Assert.False(lists.Friends[1].Online);
+        Assert.Equal(new[] { "Caio" }, lists.Blocked);
 
         var chat = RoundTrip(new ChatMessage { Channel = ChatChannel.Party, FromId = 3, FromName = "Caio", ToName = "x", Text = "bora" });
         Assert.Equal((ChatChannel.Party, 3, "Caio", "x", "bora"), (chat.Channel, chat.FromId, chat.FromName, chat.ToName, chat.Text));

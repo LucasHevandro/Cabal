@@ -22,6 +22,7 @@ namespace Game.Shared.Net
         ActivateAwakening = 14,
         PartyCommand = 15,
         ChatSend = 16,
+        SocialCommand = 17,
 
         // Servidor → cliente
         Welcome = 100,
@@ -46,6 +47,7 @@ namespace Game.Shared.Net
         PartyState = 119,
         PartyInvite = 120,
         ChatMessage = 121,
+        SocialLists = 122,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -58,7 +60,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 5;
+        public const int Version = 6;
         public const int DefaultPort = 7777;
     }
 
@@ -696,6 +698,8 @@ namespace Game.Shared.Net
                 MessageType.PartyState => PartyState.Read(reader),
                 MessageType.PartyInvite => PartyInvite.Read(reader),
                 MessageType.ChatMessage => ChatMessage.Read(reader),
+                MessageType.SocialCommand => SocialCommand.Read(reader),
+                MessageType.SocialLists => SocialLists.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

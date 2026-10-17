@@ -170,6 +170,17 @@ namespace Game.Shared.Social
         PartyLeave,
         PartyKick,
         PartyPromote,
+        FriendAdd,
+        FriendRemove,
+        Block,
+        Unblock,
+
+        /// <summary>Denúncia: <see cref="ChatInput.Target"/> é o nome e <see cref="ChatInput.Text"/> o motivo.</summary>
+        Report,
+
+        /// <summary>Abre ou fecha a janela de amigos.</summary>
+        FriendsWindow,
+
         Help,
 
         /// <summary>Comando errado; <see cref="ChatInput.Error"/> diz o porquê.</summary>
@@ -197,7 +208,8 @@ namespace Game.Shared.Social
     {
         public const string HelpText =
             "/m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · " +
-            "/convidar nome · /sair · /expulsar nome · /lider nome";
+            "/convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · " +
+            "/bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos";
 
         public static ChatInput Parse(string line, ChatChannel current, string lastWhisperFrom = "")
         {
@@ -237,6 +249,19 @@ namespace Game.Shared.Social
                 case "lider":
                 case "líder":
                     return first.Length == 0 ? Invalid("Use /lider nome") : Command(ChatInputKind.PartyPromote, first);
+                case "amigo":
+                    return first.Length == 0 ? Invalid("Use /amigo nome") : Command(ChatInputKind.FriendAdd, first);
+                case "remover":
+                    return first.Length == 0 ? Invalid("Use /remover nome") : Command(ChatInputKind.FriendRemove, first);
+                case "bloquear":
+                    return first.Length == 0 ? Invalid("Use /bloquear nome") : Command(ChatInputKind.Block, first);
+                case "desbloquear":
+                    return first.Length == 0 ? Invalid("Use /desbloquear nome") : Command(ChatInputKind.Unblock, first);
+                case "denunciar":
+                    if (first.Length == 0 || afterFirst.Length == 0) return Invalid("Use /denunciar nome motivo");
+                    return new ChatInput { Kind = ChatInputKind.Report, Target = first, Text = afterFirst };
+                case "amigos":
+                    return Command(ChatInputKind.FriendsWindow, "");
                 case "ajuda":
                 case "?":
                     return Command(ChatInputKind.Help, "");
