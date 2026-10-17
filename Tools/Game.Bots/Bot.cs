@@ -113,6 +113,12 @@ public sealed class BotStats
     public int PartyChatReceived;
     public int SystemChat;
     public int TradesCompleted;
+
+    // Dungeon
+    public int DungeonsCompleted;
+    public double DungeonSeconds;
+    public byte DungeonMedal;
+    public int DungeonMaxCombo;
 }
 
 /// <summary>
@@ -163,6 +169,16 @@ public sealed class Bot
     public bool AutoTrade { get; set; }
 
     private readonly List<InventoryStack> _bag = new();
+    private DungeonState? _dungeon;
+    private static readonly Game.Shared.Dungeon.DungeonDefinition Crypt = Game.Shared.Dungeon.DungeonCatalog.Crypt();
+
+    /// <summary>Último estado da dungeon (nulo ou inativo = fora).</summary>
+    public DungeonState? Dungeon => _dungeon is { Active: true } ? _dungeon : null;
+
+    public void EnterDungeon() =>
+        Connection.Send(new DungeonCommand { Action = DungeonActionKind.Enter, DungeonId = Game.Shared.Dungeon.DungeonCatalog.CryptId });
+
+    public void LeaveDungeon() => Connection.Send(new DungeonCommand { Action = DungeonActionKind.Leave });
     private bool _offered;
     private bool _wasTrading;
 
@@ -263,7 +279,13 @@ public sealed class Bot
 
         var serverNow = _clock.ServerNow(localNow);
         var target = NearestMonster();
-        if (target == null)
+        if (target == null && Dungeon is { } inside)
+        {
+            // Na dungeon, sem monstro à frente: avança para o meio da sala atual.
+            var room = Crypt.Rooms[Math.Min(inside.Room, Crypt.Rooms.Count - 1)];
+            Walk(inside.OriginX, inside.OriginZ + (room.StartZ + room.EndZ) / 2, 2f, dt);
+        }
+        else if (target == null)
         {
             // Nenhuma presa à vista (o servidor só manda o que está a até 60 m): anda para a zona de caça.
             Walk(_huntX, _huntZ, 2f, dt);
@@ -353,7 +375,13 @@ public sealed class Bot
         foreach (var (id, e) in _entities)
         {
             if (e.Kind != EntityKind.Monster || e.Dead) continue;
-            if (!_prey.Contains(e.TypeId)) continue;
+            if (Dungeon is { } inside)
+            {
+                // Na dungeon caça qualquer monstro, mas só os da sala aberta (os de trás do portão não dá para alcançar).
+                var room = Crypt.Rooms[Math.Min(inside.Room, Crypt.Rooms.Count - 1)];
+                if (!room.IsBossRoom && e.Z > inside.OriginZ + room.GateZ) continue;
+            }
+            else if (!_prey.Contains(e.TypeId)) continue;
             var d = (e.X - X) * (e.X - X) + (e.Z - Z) * (e.Z - Z);
             if (d < bestDistance)
             {
@@ -421,6 +449,16 @@ public sealed class Bot
                 break;
             case PartyInvite invite:
                 if (AutoAcceptInvites) Connection.Send(new PartyCommand { Action = PartyActionKind.Accept, TargetId = invite.InviterId });
+                break;
+            case DungeonState dungeon:
+                if (dungeon.Active && dungeon.Completed && _dungeon is { Completed: false })
+                {
+                    Stats.DungeonsCompleted++;
+                    Stats.DungeonSeconds = dungeon.ElapsedSeconds;
+                    Stats.DungeonMedal = dungeon.Medal;
+                    Stats.DungeonMaxCombo = dungeon.MaxCombo;
+                }
+                _dungeon = dungeon;
                 break;
             case Inventory inventory:
                 _bag.Clear();

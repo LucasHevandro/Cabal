@@ -128,6 +128,7 @@ public sealed partial class GameWorld
             {
                 multiplier = result.DamageMultiplier;
                 grade = (byte)result.Grade;
+                TrackCombo(player, result.HitCount);
                 var gauge = player.Awakening.Gauge;
                 player.Awakening.AddFromGrade(result.Grade, now);
                 if (player.Awakening.Gauge != gauge) player.SheetDirty = true;
@@ -190,7 +191,8 @@ public sealed partial class GameWorld
     private void DamagePlayerToMonster(ServerPlayer player, ServerMonster monster, DamageResult hit, byte source,
         byte grade, string routeName, double now)
     {
-        var dealt = -monster.Hp.Add(-hit.Amount);
+        // Escudo: o golpe acerta, mas não tira vida (o cliente mostra 0).
+        var dealt = monster.Invulnerable ? 0 : -monster.Hp.Add(-hit.Amount);
         monster.DamageBy[player.Id] = monster.DamageBy.GetValueOrDefault(player.Id) + dealt;
         monster.AggroPlayerId = player.Id;
         monster.Brain.Provoke();
@@ -209,11 +211,12 @@ public sealed partial class GameWorld
         player.IsDead = false;
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);
-        var (spawnX, spawnZ) = SpawnPointFor(player.Id);
+        var dungeon = DungeonRespawnPoint(player);
+        var (spawnX, spawnZ) = dungeon ?? SpawnPointFor(player.Id);
         player.Movement.Teleport(spawnX, spawnZ, now);
         player.StatsDirty = true;
         _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
-        Notify(player, "Você renasceu na vila");
+        Notify(player, dungeon != null ? "Você renasceu na entrada da cripta" : "Você renasceu na vila");
     }
 
     private void DamageMonsterToPlayer(ServerMonster monster, ServerPlayer player, int baseDamage, byte source, double now)
@@ -254,7 +257,7 @@ public sealed partial class GameWorld
     {
         if (monster.IsDead)
         {
-            if (now >= monster.RespawnAt) RespawnMonster(monster, now);
+            if (monster.InstanceId == 0 && now >= monster.RespawnAt) RespawnMonster(monster, now);
             return;
         }
 

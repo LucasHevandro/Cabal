@@ -27,6 +27,9 @@ public sealed record RelationRecord(RelationKind Kind, int OtherId, string Other
 public sealed record ReportRecord(
     int ReporterId, string ReporterName, int TargetId, string TargetName, string Reason, string ChatExcerpt, DateTimeOffset At);
 
+/// <summary>Uma dungeon concluída: tempo, medalha, combo máximo e quem estava no grupo (para o ranking).</summary>
+public sealed record DungeonRunRecord(string DungeonId, double Seconds, int Medal, int MaxCombo, string Members, DateTimeOffset At);
+
 public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level);
 
 /// <summary>Personagem como está no banco.</summary>
@@ -97,6 +100,11 @@ public interface IGameStore
 
     /// <summary>Denúncias, mais recentes primeiro (moderação e testes).</summary>
     Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100);
+
+    Task RecordDungeonRunAsync(DungeonRunRecord run);
+
+    /// <summary>Melhores tempos de uma dungeon (menor primeiro).</summary>
+    Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10);
 }
 
 /// <summary>

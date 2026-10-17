@@ -65,3 +65,19 @@ foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arca
     Console.WriteLine($"{(markdown ? "\n" : "")}Total: entra {income:N0}, sai {spent:N0} ({spent * 100.0 / Math.Max(1, income):0}% gasto), sobra {saved:N0} Alz no nível 30");
     Console.WriteLine();
 }
+
+// Dungeon: tempo estimado de grupos típicos (meta: grupo de 4 termina em menos de 15 minutos, S em até 8).
+Console.WriteLine(markdown ? "## Cripta Esquecida (estimativa)\n" : "== Cripta Esquecida (estimativa) ==");
+var crypt = Game.Shared.Dungeon.DungeonCatalog.Crypt();
+foreach (var (label, group) in new[]
+         {
+             ("4 no nível 22 (2 Lâminas, 2 Arcanistas)", new[] { (CharacterClass.Blade, 22), (CharacterClass.Blade, 22), (CharacterClass.Arcanist, 22), (CharacterClass.Arcanist, 22) }),
+             ("4 no nível 18 (mínimo)", new[] { (CharacterClass.Blade, 18), (CharacterClass.Blade, 18), (CharacterClass.Arcanist, 18), (CharacterClass.Arcanist, 18) }),
+             ("4 no nível 28", new[] { (CharacterClass.Blade, 28), (CharacterClass.Blade, 28), (CharacterClass.Arcanist, 28), (CharacterClass.Arcanist, 28) }),
+             ("2 no nível 22", new[] { (CharacterClass.Blade, 22), (CharacterClass.Arcanist, 22) }),
+         })
+{
+    var rooms = Game.Shared.Dungeon.DungeonEstimate.Run(crypt, group);
+    var parts = string.Join(" · ", rooms.Select(r => $"{r.Name} {Game.Shared.Dungeon.DungeonRules.FormatTime(r.Seconds)}"));
+    Console.WriteLine($"{(markdown ? "- " : "")}{label}: {Game.Shared.Dungeon.DungeonRules.FormatTime(Game.Shared.Dungeon.DungeonEstimate.TotalSeconds(rooms))} ({parts})");
+}

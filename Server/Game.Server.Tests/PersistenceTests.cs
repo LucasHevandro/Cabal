@@ -238,6 +238,8 @@ public class SaveAndLogTests
         public Task<IReadOnlyList<ItemLogEntry>> ItemLogAsync(int id, int max = 100) => _inner.ItemLogAsync(id, max);
         public Task<long> MaxItemUidAsync() => _inner.MaxItemUidAsync();
         public Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100) => _inner.ReportsAsync(max);
+        public Task RecordDungeonRunAsync(DungeonRunRecord run) => _inner.RecordDungeonRunAsync(run);
+        public Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10) => _inner.TopDungeonRunsAsync(dungeonId, max);
     }
 
     [Fact]

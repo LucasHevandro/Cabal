@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --db postgres  (padrão) banco PostgreSQL; conexão na variável GAME_DB ou a do docker-compose
 //   --db memory    banco em memória (tudo se perde ao desligar) — desenvolvimento sem Docker
 //   --guests       aceita entrar sem conta (bots e testes; convidados não são salvos)
+//   --dungeon-test dungeon fácil e sem nível mínimo (bots de nível 1 conseguem terminar)
 //   --stats N      métricas de desempenho a cada N segundos
 //   --latency N    (testes) atrasa cada mensagem N ms em cada sentido; --jitter N soma até N ms aleatórios
 var options = new ServerOptions();
@@ -33,6 +34,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--guests":
             options = options with { AllowGuests = true };
+            break;
+        case "--dungeon-test":
+            options = options with { DungeonTest = true };
             break;
         case "--stats" when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var stats):
             options = options with { StatsIntervalSeconds = stats };
@@ -85,6 +89,12 @@ await api.StartAsync();
 Log($"API de login em http://localhost:{apiPort}/api (em produção, use HTTPS na frente)");
 
 using var host = new ServerHost(options, Log, auth, saver);
+
+// Ranking da dungeon: carrega os melhores tempos e grava cada vitória (fora do loop do jogo).
+host.World.SeedRanking(await store.TopDungeonRunsAsync(Game.Shared.Dungeon.DungeonCatalog.CryptId));
+host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueWith(
+    t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
+if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");
 using var stop = new ManualResetEventSlim();
 Console.CancelKeyPress += (_, e) =>
 {

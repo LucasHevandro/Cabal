@@ -182,6 +182,7 @@ public sealed partial class GameWorld
         if (party == null || !party.Remove(player.Id)) return;
 
         PartyChat(party, message);
+        if (player.DungeonId != 0) ExitDungeon(player, "Você saiu do grupo e deixou a dungeon");
         if (!party.ShouldDisband) return;
         _parties.Remove(party.Id);
         foreach (var id in party.Members)

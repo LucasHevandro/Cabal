@@ -199,6 +199,27 @@ public sealed class EfGameStore : IGameStore
         return await db.Items.MaxAsync(i => (long?)i.Uid) ?? 0;
     }
 
+    public async Task RecordDungeonRunAsync(DungeonRunRecord run)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        db.DungeonRuns.Add(new DungeonRunEntity
+        {
+            DungeonId = run.DungeonId, Seconds = run.Seconds, Medal = run.Medal, MaxCombo = run.MaxCombo, Members = run.Members, At = run.At,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.DungeonRuns.AsNoTracking()
+            .Where(r => r.DungeonId == dungeonId)
+            .OrderBy(r => r.Seconds).ThenBy(r => r.Id)
+            .Take(max)
+            .Select(r => new DungeonRunRecord(r.DungeonId, r.Seconds, r.Medal, r.MaxCombo, r.Members, r.At))
+            .ToListAsync();
+    }
+
     public async Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -258,6 +279,7 @@ public sealed class InMemoryGameStore : IGameStore
     private readonly Dictionary<int, CharacterRecord> _characters = new();
     private readonly List<ItemLogEntry> _log = new();
     private readonly List<ReportRecord> _reports = new();
+    private readonly List<DungeonRunRecord> _runs = new();
     private int _nextAccountId = 1;
     private int _nextCharacterId = 1;
 
@@ -350,6 +372,21 @@ public sealed class InMemoryGameStore : IGameStore
     public Task<long> MaxItemUidAsync()
     {
         lock (_lock) return Task.FromResult(_characters.Values.SelectMany(c => c.Items).Select(i => i.Uid).DefaultIfEmpty(0).Max());
+    }
+
+    public Task RecordDungeonRunAsync(DungeonRunRecord run)
+    {
+        lock (_lock) _runs.Add(run);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10)
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<DungeonRunRecord> list = _runs.Where(r => r.DungeonId == dungeonId).OrderBy(r => r.Seconds).Take(max).ToList();
+            return Task.FromResult(list);
+        }
     }
 
     public Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100)

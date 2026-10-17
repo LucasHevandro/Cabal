@@ -100,6 +100,9 @@ public sealed class ServerPlayer
     public (int FromId, double ExpiresAt)? PendingTradeInvite { get; set; }
     public bool TradeDirty { get; set; }
 
+    /// <summary>Instância de dungeon em que está (0 = mundo aberto).</summary>
+    public int DungeonId { get; set; }
+
     /// <summary>Amigos e bloqueados (salvos com o personagem).</summary>
     public List<RelationRecord> Relations { get; } = new();
 
@@ -164,6 +167,13 @@ public sealed class ServerPlayer
 public sealed class ServerMonster
 {
     public int Id { get; init; }
+
+    /// <summary>Instância de dungeon (0 = mundo aberto). Monstro de dungeon não renasce.</summary>
+    public int InstanceId { get; init; }
+
+    /// <summary>Não recebe dano (escudo do chefe da cripta).</summary>
+    public bool Invulnerable { get; set; }
+
     public required SpawnDefinition Spawn { get; init; }
     public required MonsterBrain Brain { get; init; }
     public required ResourcePool Hp { get; init; }
@@ -202,6 +212,9 @@ public sealed class ServerLoot
     public float X { get; init; }
     public float Z { get; init; }
     public int OwnerId { get; init; }
+
+    /// <summary>Instância de dungeon onde caiu (0 = mundo aberto); some quando a instância fecha.</summary>
+    public int InstanceId { get; init; }
 
     /// <summary>Grupo do dono quando caiu (0 = sozinho): qualquer membro pode pegar.</summary>
     public int OwnerPartyId { get; init; }

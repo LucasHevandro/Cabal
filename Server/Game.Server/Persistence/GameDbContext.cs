@@ -52,6 +52,18 @@ public sealed class CharacterRelationEntity
     public string OtherName { get; set; } = "";
 }
 
+/// <summary>Dungeon concluída (ranking de tempos).</summary>
+public sealed class DungeonRunEntity
+{
+    public long Id { get; set; }
+    public string DungeonId { get; set; } = "";
+    public double Seconds { get; set; }
+    public int Medal { get; set; }
+    public int MaxCombo { get; set; }
+    public string Members { get; set; } = "";
+    public DateTimeOffset At { get; set; }
+}
+
 /// <summary>Denúncia de jogador, para a moderação olhar.</summary>
 public sealed class PlayerReportEntity
 {
@@ -115,6 +127,7 @@ public sealed class GameDbContext : DbContext
     public DbSet<ItemLogEntity> ItemLog => Set<ItemLogEntity>();
     public DbSet<CharacterRelationEntity> Relations => Set<CharacterRelationEntity>();
     public DbSet<PlayerReportEntity> Reports => Set<PlayerReportEntity>();
+    public DbSet<DungeonRunEntity> DungeonRuns => Set<DungeonRunEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -144,6 +157,14 @@ public sealed class GameDbContext : DbContext
             e.ToTable("character_relations");
             e.HasKey(r => new { r.CharacterId, r.Kind, r.OtherId });
             e.Property(r => r.OtherName).HasMaxLength(32);
+        });
+
+        model.Entity<DungeonRunEntity>(e =>
+        {
+            e.ToTable("dungeon_runs");
+            e.HasIndex(r => new { r.DungeonId, r.Seconds });
+            e.Property(r => r.DungeonId).HasMaxLength(64);
+            e.Property(r => r.Members).HasMaxLength(200);
         });
 
         model.Entity<PlayerReportEntity>(e =>

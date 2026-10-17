@@ -26,6 +26,9 @@ public sealed record ServerOptions
     /// <summary>Aceita Hello sem login (convidados não são salvos). Para bots e testes.</summary>
     public bool AllowGuests { get; init; }
 
+    /// <summary>Dungeon fácil (vida e dano baixos, sem nível mínimo) para os bots de nível 1 conseguirem terminar.</summary>
+    public bool DungeonTest { get; init; }
+
     /// <summary>De quantos em quantos segundos salvar os personagens conectados.</summary>
     public double SaveIntervalSeconds { get; init; } = 10;
 }
@@ -78,7 +81,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         _saver = saver;
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
-        World = new GameWorld(this, uids: auth?.Uids);
+        World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null);
     }
 
     private bool SimulatingLatency => _options.SimulatedLatencyMs > 0 || _options.SimulatedJitterMs > 0;

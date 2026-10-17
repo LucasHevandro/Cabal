@@ -35,6 +35,7 @@ public sealed partial class GameWorld
     private readonly IOutbox _outbox;
     private readonly IRandomSource _random;
     private readonly ItemUidAllocator _uids;
+    private readonly DungeonTuning _dungeonTuning;
     private readonly Dictionary<int, ServerPlayer> _players = new();
     private readonly Dictionary<int, ServerMonster> _monsters = new();
     private readonly Dictionary<int, ServerLoot> _loot = new();
@@ -48,9 +49,10 @@ public sealed partial class GameWorld
     /// os testes passam grupos próprios e uma fonte aleatória fixa.
     /// </summary>
     public GameWorld(IOutbox outbox, IEnumerable<SpawnDefinition>? spawns = null, IRandomSource? random = null,
-        ItemUidAllocator? uids = null)
+        ItemUidAllocator? uids = null, DungeonTuning? dungeonTuning = null)
     {
         _outbox = outbox;
+        _dungeonTuning = dungeonTuning ?? DungeonTuning.Normal;
         _random = random ?? new SystemRandomSource();
         _uids = uids ?? new ItemUidAllocator();
 
@@ -112,7 +114,9 @@ public sealed partial class GameWorld
     /// </summary>
     public (CharacterSnapshot Snapshot, List<ItemLogEntry> Logs) CaptureForSave(ServerPlayer player)
     {
-        var (x, z) = player.IsDead ? SpawnPointFor(player.Id) : (player.X, player.Z);
+        // Na dungeon (ou morto) salva fora: na volta aparece no portal ou na vila.
+        var (x, z) = player.DungeonId != 0 ? (NpcCatalog.Find(NpcCatalog.DungeonPortal)!.X, NpcCatalog.Find(NpcCatalog.DungeonPortal)!.Z + 2.5f)
+            : player.IsDead ? SpawnPointFor(player.Id) : (player.X, player.Z);
         var items = new List<ItemRecord>();
         foreach (var (slot, item) in player.Bag.Items()) items.Add(ToRecord(item, ItemContainerKind.Bag, slot));
         foreach (var (slot, item) in player.Warehouse.Items()) items.Add(ToRecord(item, ItemContainerKind.Warehouse, slot));
@@ -217,6 +221,9 @@ public sealed partial class GameWorld
             case SocialCommand social:
                 HandleRelation(player, social, now);
                 break;
+            case DungeonCommand dungeon:
+                HandleDungeon(player, dungeon, now);
+                break;
         }
     }
 
@@ -229,6 +236,7 @@ public sealed partial class GameWorld
 
         foreach (var player in _players.Values) TickPlayer(player, now, (float)dt);
         foreach (var monster in _monsters.Values) TickMonster(monster, now, (float)dt);
+        TickDungeons(now);
         ExpireLoot(now);
         TickTrades();
 
@@ -250,6 +258,8 @@ public sealed partial class GameWorld
         if (player.Movement.TryMove(move.X, move.Z, now))
         {
             player.Yaw = move.Yaw;
+            if (player.DungeonId != 0 && ClampToDungeon(player, now))
+                _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
             return;
         }
         _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
@@ -345,11 +355,12 @@ public sealed partial class GameWorld
     private void Notify(ServerPlayer player, string text, bool announcement = false) =>
         _outbox.Send(player.Id, new Notice { Text = text, Announcement = announcement });
 
-    private void CreateMonster(SpawnDefinition spawn, float x, float z)
+    private ServerMonster CreateMonster(SpawnDefinition spawn, float x, float z, int instanceId = 0)
     {
         var monster = new ServerMonster
         {
             Id = _nextEntityId++,
+            InstanceId = instanceId,
             Spawn = spawn,
             Brain = new MonsterBrain(spawn.Data, new Vector2(x, z), _random),
             Hp = new ResourcePool(spawn.Data.MaxHp),
@@ -361,6 +372,7 @@ public sealed partial class GameWorld
         };
         monster.Brain.Revive(0);
         _monsters.Add(monster.Id, monster);
+        return monster;
     }
 
     private void Restore(ServerPlayer player, CharacterRecord character)
@@ -439,6 +451,7 @@ public sealed partial class GameWorld
         var weapon = player.Class == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
         player.Equipment.Put(EquipSlot.Weapon, new ItemInstance { Uid = _uids.Next(), ItemId = weapon });
         player.Bag.TryAdd("pocao_hp_p", 5, _uids.Next);
+        player.Bag.TryAdd(Game.Shared.Dungeon.DungeonCatalog.CryptKey, 3, _uids.Next); // bots e testes entram na cripta
         player.RecalculateStats();
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);

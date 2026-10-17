@@ -173,6 +173,43 @@ namespace Game.Server.Persistence.Migrations
                     b.ToTable("character_relations", (string)null);
                 });
 
+            modelBuilder.Entity("Game.Server.Persistence.DungeonRunEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DungeonId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("MaxCombo")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Medal")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Members")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<double>("Seconds")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DungeonId", "Seconds");
+
+                    b.ToTable("dungeon_runs", (string)null);
+                });
+
             modelBuilder.Entity("Game.Server.Persistence.ItemInstanceEntity", b =>
                 {
                     b.Property<long>("Uid")

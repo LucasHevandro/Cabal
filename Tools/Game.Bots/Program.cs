@@ -7,6 +7,8 @@ using Game.Shared.Social;
 // Uso: Game.Bots [--host 127.0.0.1] [--port 7777] [--count 20] [--seconds 60] [--party] [--invite Nome]
 //   --party: os bots formam grupos de 4 (o primeiro de cada grupo convida, os outros aceitam) e conversam no chat.
 //   --invite Nome: o primeiro bot convida esse personagem (um cliente de verdade) e fala no grupo quando ele entra.
+//   --dungeon: grupos de 4 vão ao portal, o líder entra na Cripta e todos lutam até o chefe (servidor com
+//     --guests --dungeon-test, para bots de nível 1). Mede o tempo e a medalha de cada grupo.
 //   --accounts: cada bot entra com conta (bot01, bot02... senha senha12345), como jogador de verdade (amigos,
 //     bloqueio e denúncia só funcionam com conta); sem isso entram como convidados.
 var host = "127.0.0.1";
@@ -15,6 +17,8 @@ var count = 20;
 var seconds = 60.0;
 var party = args.Contains("--party");
 var accounts = args.Contains("--accounts");
+var dungeon = args.Contains("--dungeon");
+if (dungeon) party = true;
 var inviteName = "";
 for (var i = 0; i < args.Length - 1; i++)
 {
@@ -44,6 +48,8 @@ for (var i = 0; i < count; i++)
     var bot = forest ? new Bot($"Bot{i + 1:00}", 1000 + i, prey, 45, 85) : new Bot($"Bot{i + 1:00}", 1000 + i, prey, 0, 40);
     // No --invite o primeiro bot fica parado perto da mercadora (sem caçar), para o cliente poder trocar com ele.
     if (inviteName.Length > 0 && i == 0) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), 6.5f, -8);
+    // Na dungeon todos esperam no portal da Guardiã Selene.
+    if (dungeon) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), -5, -4);
     bot.AutoAcceptInvites = party && i % 4 != 0;
     bot.AutoTrade = inviteName.Length > 0 && i == 0;
     try
@@ -65,6 +71,8 @@ var invitesSent = false;
 var nextChatAt = last + 6;
 var clientJoined = false;
 var nextClientInviteAt = 0.0;
+var enterAt = new Dictionary<int, double>();
+var leaveAt = new Dictionary<string, double>();
 while (clock.Elapsed.TotalSeconds < seconds)
 {
     var now = clock.Elapsed.TotalSeconds;
@@ -86,6 +94,27 @@ while (clock.Elapsed.TotalSeconds < seconds)
     {
         nextClientInviteAt = now + 5;
         bots[0].Invite(inviteName);
+    }
+    // Dungeon: com o grupo completo perto do portal, o líder entra; depois de vencer, sai.
+    if (dungeon)
+    {
+        for (var i = 0; i < bots.Count; i += 4)
+        {
+            var leader = bots[i];
+            var group = bots.Skip(i).Take(4).ToList();
+            var ready = group.All(b => b.Party.Members.Count == group.Count && b.Dungeon == null &&
+                                      MathF.Abs(b.X + 5) < 4 && MathF.Abs(b.Z + 4) < 4);
+            if (ready && leader.Stats.DungeonsCompleted == 0 && now >= enterAt.GetValueOrDefault(i))
+            {
+                enterAt[i] = now + 3;
+                leader.EnterDungeon();
+            }
+            foreach (var b in group)
+                if (b.Dungeon is { Completed: true } && now >= leaveAt.GetValueOrDefault(b.Name, now + 4))
+                    b.LeaveDungeon();
+                else if (b.Dungeon is { Completed: true } && !leaveAt.ContainsKey(b.Name))
+                    leaveAt[b.Name] = now + 4;
+        }
     }
     if (party && now >= nextChatAt)
     {
@@ -151,6 +180,19 @@ if (party)
     Console.WriteLine($"Grupos: {grouped}/{bots.Count} bots no grupo certo | estados de grupo recebidos {bots.Sum(b => b.Stats.PartyStates)} | " +
                       $"chat recebido {bots.Sum(b => b.Stats.ChatReceived)} (grupo {bots.Sum(b => b.Stats.PartyChatReceived)}, sistema {bots.Sum(b => b.Stats.SystemChat)})");
     ok &= grouped == bots.Count && bots.Sum(b => b.Stats.PartyChatReceived) > 0;
+}
+if (dungeon)
+{
+    for (var i = 0; i < bots.Count; i += 4)
+    {
+        var leader = bots[i];
+        Console.WriteLine(leader.Stats.DungeonsCompleted > 0
+            ? $"Grupo {i / 4 + 1}: Cripta vencida em {Game.Shared.Dungeon.DungeonRules.FormatTime(leader.Stats.DungeonSeconds)}, " +
+              $"medalha {(Game.Shared.Dungeon.DungeonMedal)leader.Stats.DungeonMedal}, combo máximo {leader.Stats.DungeonMaxCombo}"
+            : $"Grupo {i / 4 + 1}: NÃO terminou a Cripta");
+    }
+    ok &= Enumerable.Range(0, (bots.Count + 3) / 4).All(g => bots[g * 4].Stats.DungeonsCompleted > 0 &&
+                                                          bots[g * 4].Stats.DungeonSeconds < Game.Shared.Dungeon.DungeonRules.TimeLimitSeconds);
 }
 if (inviteName.Length > 0)
 {
