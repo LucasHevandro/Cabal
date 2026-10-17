@@ -1,6 +1,7 @@
 using Game.Shared.Accounts;
 using Game.Shared.Items;
 using Game.Shared.Net;
+using Game.Shared.Text;
 
 namespace Game.Server.Persistence;
 
@@ -63,7 +64,10 @@ public sealed record ItemLogEntry(int CharacterId, DateTimeOffset At, string Kin
 /// <summary>Conta ou nome de personagem já existente.</summary>
 public sealed class StoreConflictException : Exception
 {
-    public StoreConflictException(string message) : base(message) { }
+    public StoreConflictException(LocalText text) : base(text.ToString()) => Text = text;
+
+    /// <summary>O motivo como texto traduzido (vai para o jogador).</summary>
+    public LocalText Text { get; }
 }
 
 /// <summary>

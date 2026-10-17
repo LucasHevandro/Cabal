@@ -4,15 +4,16 @@ using Game.Shared.Accounts;
 using Game.Shared.Items;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using Game.Shared.World;
 
 namespace Game.Server.Accounts;
 
 /// <summary>Resultado de uma operação de conta: o valor ou a mensagem de erro com o código HTTP correspondente.</summary>
-public readonly record struct AuthResult<T>(bool Ok, T? Value, string Error, int StatusCode)
+public readonly record struct AuthResult<T>(bool Ok, T? Value, LocalText Error, int StatusCode)
 {
-    public static AuthResult<T> Success(T value) => new(true, value, "", 200);
-    public static AuthResult<T> Fail(string error, int status = 400) => new(false, default, error, status);
+    public static AuthResult<T> Success(T value) => new(true, value, LocalText.Empty, 200);
+    public static AuthResult<T> Fail(LocalText error, int status = 400) => new(false, default, error, status);
 }
 
 /// <summary>
@@ -26,7 +27,7 @@ public sealed class AuthService
 
     public static readonly TimeSpan LockDuration = TimeSpan.FromMinutes(5);
 
-    private const string WrongCredentials = "Conta ou senha incorreta.";
+    private static readonly LocalText WrongCredentials = new("auth.wrong_credentials");
 
     private readonly IGameStore _store;
     private readonly PasswordHasher _hasher;
@@ -65,7 +66,7 @@ public sealed class AuthService
         }
         catch (StoreConflictException ex)
         {
-            return AuthResult<string>.Fail(ex.Message, 409);
+            return AuthResult<string>.Fail(ex.Text, 409);
         }
     }
 
@@ -76,7 +77,7 @@ public sealed class AuthService
         if (_throttle.TryGetValue(name, out var state) && now < state.LockedUntil)
         {
             var minutes = Math.Ceiling((state.LockedUntil - now).TotalMinutes);
-            return AuthResult<LoginResponse>.Fail($"Muitas tentativas erradas. Tente de novo em {minutes:0} min.", 429);
+            return AuthResult<LoginResponse>.Fail(new LocalText("auth.locked", minutes), 429);
         }
 
         var account = await _store.FindAccountAsync(name);
@@ -98,7 +99,7 @@ public sealed class AuthService
 
     public async Task<AuthResult<CharacterList>> ListCharactersAsync(string? token)
     {
-        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterList>.Fail("Sessão expirada. Entre de novo.", 401);
+        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterList>.Fail(new LocalText("auth.session_expired"), 401);
         var list = new CharacterList();
         foreach (var c in await _store.ListCharactersAsync(accountId))
             list.Characters.Add(new CharacterSummary { Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level });
@@ -107,10 +108,10 @@ public sealed class AuthService
 
     public async Task<AuthResult<CharacterSummary>> CreateCharacterAsync(string? token, CreateCharacterRequest request)
     {
-        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterSummary>.Fail("Sessão expirada. Entre de novo.", 401);
+        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterSummary>.Fail(new LocalText("auth.session_expired"), 401);
         var error = AccountRules.ValidateCharacterName(request.Name);
         if (error != null) return AuthResult<CharacterSummary>.Fail(error);
-        if (!Enum.IsDefined(typeof(CharacterClass), request.ClassId)) return AuthResult<CharacterSummary>.Fail("Classe inválida.");
+        if (!Enum.IsDefined(typeof(CharacterClass), request.ClassId)) return AuthResult<CharacterSummary>.Fail(new LocalText("auth.bad_class"));
 
         try
         {
@@ -123,16 +124,16 @@ public sealed class AuthService
         }
         catch (StoreConflictException ex)
         {
-            return AuthResult<CharacterSummary>.Fail(ex.Message, 409);
+            return AuthResult<CharacterSummary>.Fail(ex.Text, 409);
         }
     }
 
     /// <summary>Para o Hello do jogo: o personagem pedido, se o token for válido e o personagem for da conta.</summary>
     public async Task<AuthResult<CharacterRecord>> ResolveCharacterAsync(string? token, int characterId)
     {
-        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterRecord>.Fail("Sessão expirada. Entre de novo.", 401);
+        if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterRecord>.Fail(new LocalText("auth.session_expired"), 401);
         var character = await _store.LoadCharacterAsync(characterId);
-        if (character == null || character.AccountId != accountId) return AuthResult<CharacterRecord>.Fail("Personagem não encontrado.", 404);
+        if (character == null || character.AccountId != accountId) return AuthResult<CharacterRecord>.Fail(new LocalText("auth.character_not_found"), 404);
         return AuthResult<CharacterRecord>.Success(character);
     }
 

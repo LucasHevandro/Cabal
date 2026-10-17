@@ -6,6 +6,7 @@ using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Net;
 using Game.Shared.Social;
+using Game.Shared.Text;
 using ComboStateMessage = Game.Shared.Net.ComboState;
 
 namespace Game.Bots;
@@ -530,7 +531,8 @@ public sealed class Bot
                 _comboRequested = false; // o servidor respondeu: começou (Active) ou recusou
                 break;
             case Notice notice:
-                var key = new string(notice.Text.Where(c => !char.IsDigit(c)).ToArray());
+                // Agrupa pelo texto sem os argumentos (a chave), para o relatório contar cada tipo de aviso.
+                var key = Loc.T(notice.Text.Key);
                 Stats.Notices[key] = Stats.Notices.GetValueOrDefault(key) + 1;
                 break;
             case PartyInvite invite:

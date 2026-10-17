@@ -118,7 +118,7 @@ public class PersistenceTests
         await second.SendAsync(new Hello { Token = token, CharacterId = characterId });
 
         var reject = Assert.IsType<Reject>(await second.ReceiveFirstAsync(typeof(Welcome), typeof(Reject)));
-        Assert.Contains("já está no jogo", reject.Reason);
+        Assert.Contains("já está no jogo", reject.Reason.ToString());
     }
 
     [Theory]
@@ -133,7 +133,7 @@ public class PersistenceTests
         await client.SendAsync(new Hello { Name = "Intruso", Token = token, CharacterId = characterId });
 
         var reject = Assert.IsType<Reject>(await client.ReceiveFirstAsync(typeof(Welcome), typeof(Reject)));
-        Assert.Contains(expected, reject.Reason);
+        Assert.Contains(expected, reject.Reason.ToString());
     }
 
     [Fact]

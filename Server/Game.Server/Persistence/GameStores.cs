@@ -1,6 +1,7 @@
 using Game.Shared.Accounts;
 using Game.Shared.Items;
 using Game.Shared.Net;
+using Game.Shared.Text;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -38,7 +39,7 @@ public sealed class EfGameStore : IGameStore
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
-            throw new StoreConflictException("Essa conta já existe.");
+            throw new StoreConflictException(new LocalText("auth.account_exists"));
         }
         return new AccountRecord(account.Id, account.Name, account.PasswordHash);
     }
@@ -70,7 +71,7 @@ public sealed class EfGameStore : IGameStore
         await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         var count = await db.Characters.CountAsync(c => c.AccountId == accountId);
         if (count >= AccountRules.MaxCharactersPerAccount)
-            throw new StoreConflictException($"A conta já tem {AccountRules.MaxCharactersPerAccount} personagens.");
+            throw new StoreConflictException(new LocalText("auth.max_characters", AccountRules.MaxCharactersPerAccount));
 
         var now = DateTimeOffset.UtcNow;
         var character = new CharacterEntity
@@ -90,11 +91,11 @@ public sealed class EfGameStore : IGameStore
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
-            throw new StoreConflictException("Esse nome já está em uso.");
+            throw new StoreConflictException(new LocalText("auth.name_taken"));
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
         {
-            throw new StoreConflictException("Tente de novo em instantes.");
+            throw new StoreConflictException(new LocalText("auth.try_again"));
         }
         return ToRecord(character);
     }
@@ -295,7 +296,7 @@ public sealed class InMemoryGameStore : IGameStore
     {
         lock (_lock)
         {
-            if (_accounts.Values.Any(a => a.Name == normalizedAccount)) throw new StoreConflictException("Essa conta já existe.");
+            if (_accounts.Values.Any(a => a.Name == normalizedAccount)) throw new StoreConflictException(new LocalText("auth.account_exists"));
             var account = new AccountRecord(_nextAccountId++, normalizedAccount, passwordHash);
             _accounts.Add(account.Id, account);
             return Task.FromResult(account);
@@ -327,9 +328,9 @@ public sealed class InMemoryGameStore : IGameStore
         lock (_lock)
         {
             if (_characters.Values.Count(c => c.AccountId == accountId) >= AccountRules.MaxCharactersPerAccount)
-                throw new StoreConflictException($"A conta já tem {AccountRules.MaxCharactersPerAccount} personagens.");
+                throw new StoreConflictException(new LocalText("auth.max_characters", AccountRules.MaxCharactersPerAccount));
             var key = AccountRules.NameKey(name);
-            if (_characters.Values.Any(c => AccountRules.NameKey(c.Name) == key)) throw new StoreConflictException("Esse nome já está em uso.");
+            if (_characters.Values.Any(c => AccountRules.NameKey(c.Name) == key)) throw new StoreConflictException(new LocalText("auth.name_taken"));
             var character = initial with { Id = _nextCharacterId++, AccountId = accountId, Name = name.Trim(), Class = characterClass };
             _characters.Add(character.Id, character);
             return Task.FromResult(character);

@@ -2,6 +2,7 @@ using Game.Server.Persistence;
 using Game.Shared.Accounts;
 using Game.Shared.Net;
 using Game.Shared.Social;
+using Game.Shared.Text;
 
 namespace Game.Server.World;
 
@@ -16,7 +17,7 @@ public sealed partial class GameWorld
     {
         if (player.IsGuest)
         {
-            SystemChat(player, "Convidados não têm amigos, bloqueios nem denúncias (entre com uma conta)");
+            SystemChat(player, LT("social.guest_no_relations"));
             return;
         }
         var name = (command.TargetName ?? "").Trim();
@@ -26,13 +27,13 @@ public sealed partial class GameWorld
                 AddFriend(player, name);
                 break;
             case RelationActionKind.RemoveFriend:
-                RemoveRelation(player, RelationKind.Friend, name, "não é mais seu amigo", "não está na sua lista de amigos");
+                RemoveRelation(player, RelationKind.Friend, name, "social.not_friend_anymore", "social.not_in_friends");
                 break;
             case RelationActionKind.Block:
                 Block(player, name);
                 break;
             case RelationActionKind.Unblock:
-                RemoveRelation(player, RelationKind.Blocked, name, "foi desbloqueado", "não está bloqueado");
+                RemoveRelation(player, RelationKind.Blocked, name, "social.unblocked", "social.not_blocked");
                 break;
             case RelationActionKind.Report:
                 Report(player, name, command.Text, now);
@@ -43,14 +44,14 @@ public sealed partial class GameWorld
     private void AddFriend(ServerPlayer player, string name)
     {
         var target = FindPlayerByName(name);
-        string? error =
-            target == null ? $"{name} precisa estar online para ser adicionado" :
-            target == player ? "Você não pode adicionar a si mesmo" :
-            target.IsGuest ? $"{target.Name} é um convidado e não pode ser adicionado" :
-            player.HasRelation(RelationKind.Friend, target.CharacterId) ? $"{target.Name} já é seu amigo" :
-            player.HasRelation(RelationKind.Blocked, target.CharacterId) ? $"Desbloqueie {target.Name} antes de adicionar" :
+        LocalText? error =
+            target == null ? LT("social.friend_must_be_online", name) :
+            target == player ? LT("social.friend_self") :
+            target.IsGuest ? LT("social.friend_guest", target.Name) :
+            player.HasRelation(RelationKind.Friend, target.CharacterId) ? LT("social.already_friend", target.Name) :
+            player.HasRelation(RelationKind.Blocked, target.CharacterId) ? LT("social.unblock_to_add", target.Name) :
             player.Relations.Count(r => r.Kind == RelationKind.Friend) >= RelationRules.MaxFriends
-                ? $"Sua lista de amigos está cheia ({RelationRules.MaxFriends})" :
+                ? LT("social.friends_full", RelationRules.MaxFriends) :
             null;
         if (error != null)
         {
@@ -59,8 +60,8 @@ public sealed partial class GameWorld
         }
         player.Relations.Add(new RelationRecord(RelationKind.Friend, target!.CharacterId, target.Name));
         player.SocialDirty = true;
-        SystemChat(player, $"{target.Name} agora é seu amigo");
-        if (!target.HasBlocked(player)) SystemChat(target, $"{player.Name} adicionou você como amigo");
+        SystemChat(player, LT("social.friend_added", target.Name));
+        if (!target.HasBlocked(player)) SystemChat(target, LT("social.added_you", player.Name));
     }
 
     private void Block(ServerPlayer player, string name)
@@ -70,13 +71,13 @@ public sealed partial class GameWorld
         var key = AccountRules.NameKey(name);
         var known = player.Relations.FirstOrDefault(r => r.Kind == RelationKind.Friend && AccountRules.NameKey(r.OtherName) == key);
         var (id, display) = target != null ? (target.CharacterId, target.Name) : known != null ? (known.OtherId, known.OtherName) : (0, name);
-        string? error =
-            target == player ? "Você não pode bloquear a si mesmo" :
-            target == null && known == null ? $"{name} precisa estar online para ser bloqueado" :
-            id == 0 ? $"{display} é um convidado e não pode ser bloqueado" :
-            player.HasRelation(RelationKind.Blocked, id) ? $"{display} já está bloqueado" :
+        LocalText? error =
+            target == player ? LT("social.block_self") :
+            target == null && known == null ? LT("social.block_must_be_online", name) :
+            id == 0 ? LT("social.block_guest", display) :
+            player.HasRelation(RelationKind.Blocked, id) ? LT("social.already_blocked", display) :
             player.Relations.Count(r => r.Kind == RelationKind.Blocked) >= RelationRules.MaxBlocked
-                ? $"Sua lista de bloqueados está cheia ({RelationRules.MaxBlocked})" :
+                ? LT("social.blocked_full", RelationRules.MaxBlocked) :
             null;
         if (error != null)
         {
@@ -86,21 +87,21 @@ public sealed partial class GameWorld
         player.Relations.RemoveAll(r => r.Kind == RelationKind.Friend && r.OtherId == id);
         player.Relations.Add(new RelationRecord(RelationKind.Blocked, id, display));
         player.SocialDirty = true;
-        SystemChat(player, $"{display} foi bloqueado: você não vê mais as mensagens nem recebe convites dele");
+        SystemChat(player, LT("social.blocked", display));
     }
 
-    private void RemoveRelation(ServerPlayer player, RelationKind kind, string name, string done, string missing)
+    private void RemoveRelation(ServerPlayer player, RelationKind kind, string name, string doneKey, string missingKey)
     {
         var key = AccountRules.NameKey(name);
         var relation = player.Relations.FirstOrDefault(r => r.Kind == kind && AccountRules.NameKey(r.OtherName) == key);
         if (relation == null)
         {
-            SystemChat(player, $"{name} {missing}");
+            SystemChat(player, LT(missingKey, name));
             return;
         }
         player.Relations.Remove(relation);
         player.SocialDirty = true;
-        SystemChat(player, $"{relation.OtherName} {done}");
+        SystemChat(player, LT(doneKey, relation.OtherName));
     }
 
     private void Report(ServerPlayer player, string name, string reasonText, double now)
@@ -110,13 +111,13 @@ public sealed partial class GameWorld
         if (reason.Length > RelationRules.MaxReportReason) reason = reason[..RelationRules.MaxReportReason];
         player.ReportTimes.RemoveAll(t => now - t > 3600);
         var targetKey = target != null ? AccountRules.NameKey(target.Name) : "";
-        string? error =
-            target == null ? $"{name} precisa estar online para ser denunciado" :
-            target == player ? "Você não pode denunciar a si mesmo" :
-            reason.Length == 0 ? "Diga o motivo da denúncia" :
+        LocalText? error =
+            target == null ? LT("social.report_must_be_online", name) :
+            target == player ? LT("social.report_self") :
+            reason.Length == 0 ? LT("social.report_reason") :
             player.ReportedAt.TryGetValue(targetKey, out var last) && now - last < RelationRules.SameTargetCooldownSeconds
-                ? $"Você já denunciou {target.Name} há pouco tempo" :
-            player.ReportTimes.Count >= RelationRules.MaxReportsPerHour ? "Você fez muitas denúncias na última hora" :
+                ? LT("social.report_cooldown", target.Name) :
+            player.ReportTimes.Count >= RelationRules.MaxReportsPerHour ? LT("social.report_limit") :
             null;
         if (error != null)
         {
@@ -129,7 +130,7 @@ public sealed partial class GameWorld
         var excerpt = string.Join("\n", target!.RecentChat.Select(l => $"[{l.At:0} s · {ChannelName(l.Channel)}] {l.Text}"));
         player.PendingReports.Add(new ReportRecord(
             player.CharacterId, player.Name, target.CharacterId, target.Name, reason, excerpt, DateTimeOffset.UtcNow));
-        SystemChat(player, $"Denúncia de {target.Name} enviada para a moderação. Obrigado!");
+        SystemChat(player, LT("social.report_sent", target.Name));
     }
 
     /// <summary>Guarda a mensagem original (sem filtro) nas recentes do jogador, para uma eventual denúncia.</summary>
@@ -140,7 +141,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>Avisa os amigos (quem tem este personagem na lista) que ele entrou ou saiu, e atualiza a lista deles.</summary>
-    private void NotifyWatchers(ServerPlayer player, string? message)
+    private void NotifyWatchers(ServerPlayer player, LocalText? message)
     {
         if (player.IsGuest) return;
         foreach (var other in _players.Values)

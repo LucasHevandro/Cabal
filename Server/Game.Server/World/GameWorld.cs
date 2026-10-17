@@ -7,9 +7,10 @@ using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
-using Game.Shared.World;
+using Game.Shared.Text;
 using ComboPhase = Game.Shared.Combat.ComboState;
 using ComboStateMessage = Game.Shared.Net.ComboState;
+using Game.Shared.World;
 
 namespace Game.Server.World;
 
@@ -103,7 +104,7 @@ public sealed partial class GameWorld
             PlayerId = player.Id, ServerTime = now, TickRate = TickRate, SpawnX = spawnX, SpawnZ = spawnZ,
         });
         _players.Add(player.Id, player);
-        NotifyWatchers(player, $"{player.Name} entrou no jogo");
+        NotifyWatchers(player, LT("social.friend_online", player.Name));
         return player;
     }
 
@@ -145,8 +146,8 @@ public sealed partial class GameWorld
     {
         if (!_players.TryGetValue(playerId, out var leaving)) return;
         _players.Remove(playerId);
-        if (leaving.PartyId != 0) LeaveParty(leaving, $"{leaving.Name} saiu do jogo e deixou o grupo");
-        NotifyWatchers(leaving, $"{leaving.Name} saiu do jogo");
+        if (leaving.PartyId != 0) LeaveParty(leaving, LT("party.left_game", leaving.Name));
+        NotifyWatchers(leaving, LT("social.friend_offline", leaving.Name));
         if (_arenaQueue.Remove(playerId)) MarkQueue();
         foreach (var monster in _monsters.Values)
         {
@@ -187,7 +188,7 @@ public sealed partial class GameWorld
             // Durante a troca a bolsa não se mexe (só usar poção): a oferta aponta para posições da bolsa.
             case ItemCommand command when player.TradeId != 0 && command.Action != ItemActionKind.Use:
             case UpgradeItem or ApplyOption when player.TradeId != 0:
-                SystemChat(player, "Termine a troca antes de mexer na bolsa");
+                SystemChat(player, LT("trade.finish_first_bag"));
                 break;
             case ItemCommand command:
                 HandleItemCommand(player, command, now);
@@ -365,8 +366,11 @@ public sealed partial class GameWorld
         }
     }
 
-    private void Notify(ServerPlayer player, string text, bool announcement = false) =>
+    private void Notify(ServerPlayer player, LocalText text, bool announcement = false) =>
         _outbox.Send(player.Id, new Notice { Text = text, Announcement = announcement });
+
+    /// <summary>Atalho para um texto traduzido no cliente (chave do pt-BR.txt e argumentos).</summary>
+    private static LocalText LT(string key, params object?[] args) => new(key, args);
 
     private ServerMonster CreateMonster(SpawnDefinition spawn, float x, float z, int instanceId = 0)
     {
@@ -509,7 +513,7 @@ public sealed partial class GameWorld
 
     private static LootSpawned LootMessage(ServerLoot loot) => new()
     {
-        LootId = loot.Id, ItemId = loot.Drop.ItemId, Name = loot.Drop.Name, Rarity = (byte)loot.Drop.Rarity,
+        LootId = loot.Id, ItemId = loot.Drop.ItemId, Rarity = (byte)loot.Drop.Rarity,
         Quantity = loot.Drop.Quantity, X = loot.X, Z = loot.Z,
     };
 
@@ -528,7 +532,7 @@ public sealed partial class GameWorld
             var definition = ItemCatalog.Get(item.ItemId);
             message.Items.Add(new InventoryStack
             {
-                ItemId = item.ItemId, Name = definition.Name, Rarity = (byte)definition.Rarity, Quantity = item.Quantity,
+                ItemId = item.ItemId, Rarity = (byte)definition.Rarity, Quantity = item.Quantity,
                 Container = container, Slot = (ushort)slot, Uid = item.Uid, Upgrade = (byte)item.Upgrade,
                 PityFails = (byte)Math.Min(item.PityFails, 255), PityLevel = (byte)item.PityLevel,
                 RegainGuaranteed = item.RegainGuaranteed, OptionId = item.OptionId,

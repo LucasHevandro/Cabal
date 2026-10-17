@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Game.Server.Accounts;
 using Game.Shared.Accounts;
+using Game.Shared.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -38,7 +39,7 @@ public sealed class LoginApi : IAsyncDisposable
         _app.MapPost("/api/register", async (HttpRequest request) =>
         {
             var body = await ReadAsync<Credentials>(request);
-            if (body == null) return Error("Pedido inválido.", 400);
+            if (body == null) return Error(new LocalText("auth.bad_request"), 400);
             var result = await auth.RegisterAsync(body);
             if (result.Ok) log?.Invoke($"Conta criada: {result.Value}");
             return result.Ok ? Ok(new ApiError()) : Error(result.Error, result.StatusCode);
@@ -47,7 +48,7 @@ public sealed class LoginApi : IAsyncDisposable
         _app.MapPost("/api/login", async (HttpRequest request) =>
         {
             var body = await ReadAsync<Credentials>(request);
-            if (body == null) return Error("Pedido inválido.", 400);
+            if (body == null) return Error(new LocalText("auth.bad_request"), 400);
             var result = await auth.LoginAsync(body);
             return result.Ok ? Ok(result.Value!) : Error(result.Error, result.StatusCode);
         });
@@ -61,7 +62,7 @@ public sealed class LoginApi : IAsyncDisposable
         _app.MapPost("/api/characters", async (HttpRequest request) =>
         {
             var body = await ReadAsync<CreateCharacterRequest>(request);
-            if (body == null) return Error("Pedido inválido.", 400);
+            if (body == null) return Error(new LocalText("auth.bad_request"), 400);
             var result = await auth.CreateCharacterAsync(BearerToken(request), body);
             if (result.Ok) log?.Invoke($"Personagem criado: {result.Value!.Name} (id {result.Value.Id})");
             return result.Ok ? Ok(result.Value!) : Error(result.Error, result.StatusCode);
@@ -95,5 +96,5 @@ public sealed class LoginApi : IAsyncDisposable
 
     private static IResult Ok<T>(T value) => Results.Json(value, Json);
 
-    private static IResult Error(string message, int status) => Results.Json(new ApiError { Error = message }, Json, statusCode: status);
+    private static IResult Error(LocalText message, int status) => Results.Json(ApiError.From(message), Json, statusCode: status);
 }

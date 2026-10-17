@@ -2,6 +2,7 @@ using Game.Server.Persistence;
 using Game.Shared.Items;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 
 namespace Game.Server.World;
 
@@ -17,21 +18,21 @@ public sealed partial class GameWorld
             ItemActionKind.Move => MoveItem(player, command),
             ItemActionKind.Discard => DiscardItem(player, command),
             ItemActionKind.Use => UseItem(player, command, now),
-            _ => "Ação desconhecida.",
+            _ => LT("item.unknown_action"),
         };
         if (reason != null) Notify(player, reason);
         // Mesmo quando recusa, reenvia: o cliente pode ter previsto e precisa voltar ao estado certo.
         player.InventoryDirty = true;
     }
 
-    private string? MoveItem(ServerPlayer player, ItemCommand c)
+    private LocalText? MoveItem(ServerPlayer player, ItemCommand c)
     {
         if (c.From == ItemContainerKind.Bag && c.To == ItemContainerKind.Equipment)
         {
             var item = player.Bag[c.FromSlot];
-            if (item == null) return "Posição vazia.";
+            if (item == null) return LT("equip.empty_slot");
             if ((int)ItemCatalog.Get(item.ItemId).Slot != c.ToSlot && ItemCatalog.Get(item.ItemId).Kind == ItemKind.Equipment)
-                return "Esse item não vai nessa posição.";
+                return LT("item.wrong_slot");
             var reason = player.Equipment.Equip(player.Bag, c.FromSlot, player.Progress.Level, player.Class);
             if (reason == null) player.RecalculateStats();
             return reason;
@@ -41,13 +42,13 @@ public sealed partial class GameWorld
         {
             var slot = (EquipSlot)c.FromSlot;
             var worn = player.Equipment[slot];
-            if (worn == null) return "Nada vestido aí.";
+            if (worn == null) return LT("equip.nothing_worn");
             var target = player.Bag[c.ToSlot];
             if (target != null)
             {
                 // Soltou em cima de outro item: troca se o outro puder ser vestido aí.
                 var definition = ItemCatalog.Get(target.ItemId);
-                if (definition.Kind != ItemKind.Equipment || definition.Slot != slot) return "Solte numa posição vazia da bolsa.";
+                if (definition.Kind != ItemKind.Equipment || definition.Slot != slot) return LT("item.drop_on_empty");
                 var swap = player.Equipment.Equip(player.Bag, c.ToSlot, player.Progress.Level, player.Class);
                 if (swap == null) player.RecalculateStats();
                 return swap;
@@ -55,7 +56,7 @@ public sealed partial class GameWorld
             if (!player.Equipment.TryRemove(slot, out var removed) || !player.Bag.TryPut(c.ToSlot, removed!))
             {
                 if (removed != null) player.Equipment.Put(slot, removed);
-                return "Posição inválida.";
+                return LT("item.bad_slot");
             }
             player.RecalculateStats();
             return null;
@@ -63,11 +64,11 @@ public sealed partial class GameWorld
 
         var from = ContainerOf(player, c.From);
         var to = ContainerOf(player, c.To);
-        if (from == null || to == null) return "Movimento inválido.";
+        if (from == null || to == null) return LT("item.bad_move");
         if ((c.From == ItemContainerKind.Warehouse || c.To == ItemContainerKind.Warehouse) && !NearNpc(player, NpcRole.Warehouse))
-            return "Vá até o armazém da vila.";
-        if (from == to) return from.Move(c.FromSlot, c.ToSlot) ? null : "Movimento inválido.";
-        return Transfer(from, c.FromSlot, to, c.ToSlot) ? null : "Movimento inválido.";
+            return LT("storage.go_to");
+        if (from == to) return from.Move(c.FromSlot, c.ToSlot) ? null : LT("item.bad_move");
+        return Transfer(from, c.FromSlot, to, c.ToSlot) ? null : LT("item.bad_move");
     }
 
     /// <summary>Move entre dois lugares diferentes: posição vazia recebe, mesmo item empilhável junta, diferente troca.</summary>
@@ -100,11 +101,11 @@ public sealed partial class GameWorld
         return true;
     }
 
-    private string? DiscardItem(ServerPlayer player, ItemCommand c)
+    private LocalText? DiscardItem(ServerPlayer player, ItemCommand c)
     {
-        if (c.From != ItemContainerKind.Bag) return "Só dá para jogar fora da bolsa.";
+        if (c.From != ItemContainerKind.Bag) return LT("item.discard_bag_only");
         var item = player.Bag[c.FromSlot];
-        if (item == null) return "Posição vazia.";
+        if (item == null) return LT("equip.empty_slot");
         var quantity = c.Quantity <= 0 || c.Quantity >= item.Quantity ? item.Quantity : c.Quantity;
         if (quantity == item.Quantity) player.Bag.Take(c.FromSlot);
         else item.Quantity -= quantity;
@@ -112,16 +113,16 @@ public sealed partial class GameWorld
         return null;
     }
 
-    private string? UseItem(ServerPlayer player, ItemCommand c, double now)
+    private LocalText? UseItem(ServerPlayer player, ItemCommand c, double now)
     {
-        if (c.From != ItemContainerKind.Bag) return "Use itens da bolsa.";
+        if (c.From != ItemContainerKind.Bag) return LT("item.use_bag_only");
         var item = player.Bag[c.FromSlot];
-        if (item == null) return "Posição vazia.";
+        if (item == null) return LT("equip.empty_slot");
         var definition = ItemCatalog.Get(item.ItemId);
-        if (definition.Kind != ItemKind.Consumable || definition.HealHp <= 0) return "Esse item não pode ser usado.";
-        if (player.IsDead) return "Você está morto.";
-        if (now < player.NextPotionAt) return "Espere um instante para usar outra.";
-        if (player.Hp.Current >= player.Hp.Max) return "A vida já está cheia.";
+        if (definition.Kind != ItemKind.Consumable || definition.HealHp <= 0) return LT("item.not_usable");
+        if (player.IsDead) return LT("player.you_are_dead");
+        if (now < player.NextPotionAt) return LT("item.potion_wait");
+        if (player.Hp.Current >= player.Hp.Max) return LT("item.hp_full");
 
         player.NextPotionAt = now + ServerPlayer.PotionCooldownSeconds;
         player.Hp.Add(definition.HealHp);
@@ -150,8 +151,8 @@ public sealed partial class GameWorld
     private void HandleUpgrade(ServerPlayer player, UpgradeItem message)
     {
         var item = ItemAt(player, message.Container, message.Slot);
-        string? refused = !NearNpc(player, NpcRole.Smith) ? "Vá até a ferreira da vila."
-            : item == null ? "Escolha um item."
+        LocalText? refused = !NearNpc(player, NpcRole.Smith) ? LT("smith.go_to")
+            : item == null ? LT("smith.pick_item")
             : null;
         if (refused == null) refused = UpgradeRules.CanTry(item!, player.Bag, player.Alz);
         if (refused != null)
@@ -170,18 +171,18 @@ public sealed partial class GameWorld
         player.StatsDirty = true;
         if (message.Container == ItemContainerKind.Equipment) player.RecalculateStats();
 
-        var name = ItemCatalog.Get(item.ItemId).Name;
+        var name = Loc.Ref("item." + item.ItemId);
         var text = outcome switch
         {
-            UpgradeOutcome.Success => $"Sucesso! {name} +{item.Upgrade}",
-            UpgradeOutcome.FailedKept => $"Falhou. {name} continua +{item.Upgrade}",
-            _ => $"Falhou. {name} caiu para +{item.Upgrade} (a próxima tentativa é garantida)",
+            UpgradeOutcome.Success => LT("upgrade.success", name, item.Upgrade),
+            UpgradeOutcome.FailedKept => LT("upgrade.failed_kept", name, item.Upgrade),
+            _ => LT("upgrade.failed_down", name, item.Upgrade),
         };
         Log(player, "melhoria", item.ItemId, cost.Cores, -spent, $"uid {item.Uid} +{before} → +{item.Upgrade} ({outcome})");
         _outbox.Send(player.Id, new UpgradeResult { Outcome = (byte)outcome, Uid = item.Uid, NewLevel = (byte)item.Upgrade, Message = text });
         if (outcome == UpgradeOutcome.Success && item.Upgrade >= 8)
         {
-            foreach (var other in _players.Values) Notify(other, $"{player.Name} melhorou {name} para +{item.Upgrade}!", announcement: true);
+            foreach (var other in _players.Values) Notify(other, LT("upgrade.broadcast", player.Name, name, item.Upgrade), announcement: true);
         }
     }
 
@@ -189,9 +190,9 @@ public sealed partial class GameWorld
     {
         var item = ItemAt(player, message.Container, message.Slot);
         var stone = player.Bag[message.StoneSlot];
-        var reason = !NearNpc(player, NpcRole.Smith) ? "Vá até a ferreira da vila."
-            : item == null ? "Escolha um item."
-            : stone == null ? "Escolha a pedra."
+        var reason = !NearNpc(player, NpcRole.Smith) ? LT("smith.go_to")
+            : item == null ? LT("smith.pick_item")
+            : stone == null ? LT("smith.pick_stone")
             : UpgradeRules.ApplyOption(item, player.Bag, stone.ItemId);
         if (reason != null)
         {
@@ -201,7 +202,7 @@ public sealed partial class GameWorld
         player.InventoryDirty = true;
         if (message.Container == ItemContainerKind.Equipment) player.RecalculateStats();
         Log(player, "opcao", item!.ItemId, 1, 0, $"uid {item.Uid} recebeu {item.OptionId}");
-        Notify(player, $"{ItemCatalog.Get(item.ItemId).Name} recebeu {ItemCatalog.Get(item.OptionId).Name}");
+        Notify(player, LT("option.applied", Loc.Ref("item." + item.ItemId), Loc.Ref("item." + item.OptionId)));
     }
 
     // ===== Atributos e Despertar =====
@@ -212,7 +213,7 @@ public sealed partial class GameWorld
         if (total == 0) return;
         if (total > player.FreeAttributePoints)
         {
-            Notify(player, $"Só há {player.FreeAttributePoints} pontos livres");
+            Notify(player, LT("attr.not_enough_points", player.FreeAttributePoints));
             player.SheetDirty = true;
             return;
         }
@@ -229,11 +230,11 @@ public sealed partial class GameWorld
         if (player.IsDead) return;
         if (!player.Awakening.TryActivate(now))
         {
-            Notify(player, player.Awakening.IsActive(now) ? "O Despertar já está ativo" : "A barra do Despertar ainda não encheu");
+            Notify(player, player.Awakening.IsActive(now) ? LT("awaken.already_active") : LT("awaken.not_full"));
             return;
         }
         player.SheetDirty = true;
-        Notify(player, $"Despertar! +{AwakeningState.DamageBonus:P0} de dano por {AwakeningState.DurationSeconds:0} s", announcement: true);
+        Notify(player, LT("awaken.activated", AwakeningState.DamageBonus, AwakeningState.DurationSeconds), announcement: true);
     }
 
     // ===== NPCs e missões =====
@@ -244,7 +245,7 @@ public sealed partial class GameWorld
         if (npc == null) return;
         if (!NpcCatalog.InRange(npc, player.X, player.Z))
         {
-            Notify(player, $"Chegue perto de {npc.Name}");
+            Notify(player, LT("npc.come_closer", Loc.Ref("npc." + npc.Id)));
             return;
         }
         if (player.Quests.OnTalk(npc.Id).Count > 0) player.QuestsDirty = true;
@@ -270,16 +271,16 @@ public sealed partial class GameWorld
         var needsGiver = message.Action != QuestActionKind.Abandon;
         if (needsGiver && giver != null && !NpcCatalog.InRange(giver, player.X, player.Z))
         {
-            Notify(player, $"Fale com {giver.Name}");
+            Notify(player, LT("npc.talk_to", Loc.Ref("npc." + giver.Id)));
             return;
         }
 
-        string? reason;
+        LocalText? reason;
         switch (message.Action)
         {
             case QuestActionKind.Accept:
                 reason = player.Quests.Accept(quest.Id, player.Progress.Level);
-                if (reason == null) Notify(player, $"Missão aceita: {quest.Name}");
+                if (reason == null) Notify(player, LT("quest.accepted", Loc.Ref("quest." + quest.Id)));
                 break;
             case QuestActionKind.TurnIn:
                 reason = player.Quests.TurnIn(quest.Id, player.Bag, _uids.Next, out var reward);
@@ -289,12 +290,14 @@ public sealed partial class GameWorld
                     player.InventoryDirty = true;
                     player.SheetDirty = true; // pode ter liberado skills ou o combo
                     Log(player, "missao", null, 0, reward.Alz, $"{quest.Id}: +{reward.Xp} XP, itens {string.Join(", ", quest.RewardItems.Select(i => $"{i.ItemId} x{i.Quantity}"))}");
-                    Notify(player, $"Missão concluída: {quest.Name}. {quest.Unlocks}".Trim(), announcement: true);
+                    Notify(player, quest.Unlocks.Length > 0
+                        ? LT("quest.completed_unlocks", Loc.Ref("quest." + quest.Id), Loc.Ref("quest." + quest.Id + ".unlocks"))
+                        : LT("quest.completed", Loc.Ref("quest." + quest.Id)), announcement: true);
                     GrantXp(player, reward.Xp);
                 }
                 break;
             default:
-                reason = player.Quests.Abandon(quest.Id) ? null : "Missão não aceita.";
+                reason = player.Quests.Abandon(quest.Id) ? null : LT("quest.not_active");
                 break;
         }
 

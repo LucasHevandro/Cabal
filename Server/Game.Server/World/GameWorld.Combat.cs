@@ -7,8 +7,9 @@ using Game.Shared.Net;
 using Game.Shared.Progression;
 using Game.Shared.Pvp;
 using Game.Shared.Social;
-using Game.Shared.World;
+using Game.Shared.Text;
 using ComboPhase = Game.Shared.Combat.ComboState;
+using Game.Shared.World;
 
 namespace Game.Server.World;
 
@@ -38,7 +39,7 @@ public sealed partial class GameWorld
         if (player.Combo.Tick(now))
         {
             player.ComboDirty = true;
-            Notify(player, $"Combo encerrado: tempo esgotado ({player.Combo.HitCount} acertos)");
+            Notify(player, LT("combo.ended_timeout", player.Combo.HitCount));
         }
 
         player.MpRegenCarry += PlayerRules.MpRegenPerSecond * dt;
@@ -55,19 +56,19 @@ public sealed partial class GameWorld
         if (player.IsDead || player.Combo.State == ComboPhase.Active) return;
         if (!player.ComboUnlocked)
         {
-            Notify(player, $"Conclua a missão \"{QuestCatalog.Get(ClassCatalog.ComboQuestId).Name}\" para liberar o combo");
+            Notify(player, LT("combo.locked", Loc.Ref("quest." + ClassCatalog.ComboQuestId)));
             return;
         }
         var target = FindMonster(message.TargetId);
         if ((target == null || target.IsDead) && HostilePlayer(player, message.TargetId) == null)
         {
-            Notify(player, "Selecione um alvo para o combo");
+            Notify(player, LT("combo.need_target"));
             return;
         }
         var cost = player.Combo.Config.ActivationSpCost;
         if (!player.Sp.TrySpend(cost))
         {
-            Notify(player, $"SP insuficiente ({player.Sp.Current}/{cost})");
+            Notify(player, LT("combo.no_sp", player.Sp.Current, cost));
             return;
         }
         player.Combo.TryStart(PressTime(message.ClientTime, now));
@@ -81,7 +82,7 @@ public sealed partial class GameWorld
         var skill = player.Skills[message.Slot];
         if (!player.SkillUnlocked(message.Slot))
         {
-            Notify(player, $"{skill.Name} ainda não foi liberada");
+            Notify(player, LT("skill.locked", Loc.Ref("skill." + skill.Id)));
             return;
         }
         var target = FindMonster(message.TargetId);
@@ -94,7 +95,7 @@ public sealed partial class GameWorld
         switch (SkillRules.Check(skill, message.Slot, player.Cooldowns, player.Mp, distance, now))
         {
             case SkillUseCheck.NoTarget:
-                Notify(player, "Selecione um alvo");
+                Notify(player, LT("combat.need_target"));
                 return;
             case SkillUseCheck.OnCooldown:
                 if (player.Combo.State == ComboPhase.Active)
@@ -102,24 +103,24 @@ public sealed partial class GameWorld
                     // Como no CABAL: skill em recarga durante o combo quebra a corrente.
                     player.Combo.Cancel();
                     player.ComboDirty = true;
-                    Notify(player, $"Combo encerrado: {skill.Name} em recarga");
+                    Notify(player, LT("combo.ended_cooldown", Loc.Ref("skill." + skill.Id)));
                 }
                 else
                 {
-                    Notify(player, $"{skill.Name} em recarga");
+                    Notify(player, LT("skill.cooldown", Loc.Ref("skill." + skill.Id)));
                 }
                 return;
             case SkillUseCheck.OutOfRange:
-                Notify(player, "Fora de alcance");
+                Notify(player, LT("combat.out_of_range"));
                 return;
             case SkillUseCheck.NotEnoughMp:
-                Notify(player, $"MP insuficiente ({player.Mp.Current}/{skill.MpCost})");
+                Notify(player, LT("combat.no_mp", player.Mp.Current, skill.MpCost));
                 return;
         }
 
         var multiplier = 1.0;
         byte grade = 255;
-        var routeName = "";
+        var routeId = "";
         var inCombo = player.Combo.State == ComboPhase.Active;
         if (inCombo)
         {
@@ -127,7 +128,7 @@ public sealed partial class GameWorld
             player.ComboDirty = true;
             if (result.ComboEnded)
             {
-                Notify(player, $"Combo encerrado: fora da janela ({result.HitCount} acertos)");
+                Notify(player, LT("combo.ended_window", result.HitCount));
             }
             else
             {
@@ -137,7 +138,7 @@ public sealed partial class GameWorld
                 var gauge = player.Awakening.Gauge;
                 player.Awakening.AddFromGrade(result.Grade, now);
                 if (player.Awakening.Gauge != gauge) player.SheetDirty = true;
-                routeName = result.Route?.Name ?? "";
+                routeId = result.Route?.Id ?? "";
             }
         }
 
@@ -155,7 +156,7 @@ public sealed partial class GameWorld
                     new DamageInput(skill.BaseDamage, power, pvpMultiplier, CritChance(player),
                         PlayerRules.CritMultiplier, victim.Stats.Defense), _random);
                 hits++;
-                DamagePlayerToPlayer(player, victim, hit, message.Slot, grade, routeName, now);
+                DamagePlayerToPlayer(player, victim, hit, message.Slot, grade, routeId, now);
             }
             if (!inCombo && hits > 0) player.Sp.Add(PlayerRules.SpPerHit);
             return;
@@ -168,7 +169,7 @@ public sealed partial class GameWorld
                 new DamageInput(skill.BaseDamage, power, multiplier, CritChance(player),
                     PlayerRules.CritMultiplier, victim.Data.Defense), _random);
             hits++;
-            DamagePlayerToMonster(player, victim, hit, message.Slot, grade, routeName, now);
+            DamagePlayerToMonster(player, victim, hit, message.Slot, grade, routeId, now);
         }
         if (!inCombo && hits > 0) player.Sp.Add(PlayerRules.SpPerHit);
     }
@@ -182,7 +183,7 @@ public sealed partial class GameWorld
                       enemy != null && Distance(player.X, player.Z, enemy.X, enemy.Z) - PlayerRules.BodyRadius <= PlayerRules.FinisherRange;
         if (!inReach)
         {
-            Notify(player, "Chegue perto do alvo para finalizar");
+            Notify(player, LT("combo.finisher_closer"));
             return;
         }
 
@@ -197,7 +198,7 @@ public sealed partial class GameWorld
                 new DamageInput(PlayerRules.FinisherBaseDamage, power, multiplier * PvpRules.AwakeningMultiplier(player.Awakening.DamageMultiplier(now)),
                     CritChance(player), PlayerRules.CritMultiplier, enemy.Stats.Defense), _random);
             DamagePlayerToPlayer(player, enemy, pvpHit, CombatSource.Finisher, 255, "", now);
-            Notify(player, $"Finalizador x{multiplier:0.00} depois de {chain} acertos");
+            Notify(player, LT("combo.finisher", multiplier, chain));
             return;
         }
         target = target!;
@@ -205,7 +206,7 @@ public sealed partial class GameWorld
             new DamageInput(PlayerRules.FinisherBaseDamage, power, multiplier * player.Awakening.DamageMultiplier(now),
                 CritChance(player), PlayerRules.CritMultiplier, target.Data.Defense), _random);
         DamagePlayerToMonster(player, target, hit, CombatSource.Finisher, 255, "", now);
-        Notify(player, $"Finalizador x{multiplier:0.00} depois de {chain} acertos");
+        Notify(player, LT("combo.finisher", multiplier, chain));
     }
 
     private IEnumerable<ServerMonster> SkillTargets(SkillData skill, ServerMonster main)
@@ -222,7 +223,7 @@ public sealed partial class GameWorld
     }
 
     private void DamagePlayerToMonster(ServerPlayer player, ServerMonster monster, DamageResult hit, byte source,
-        byte grade, string routeName, double now)
+        byte grade, string routeId, double now)
     {
         // Escudo: o golpe acerta, mas não tira vida (o cliente mostra 0).
         var dealt = monster.Invulnerable ? 0 : -monster.Hp.Add(-hit.Amount);
@@ -233,7 +234,7 @@ public sealed partial class GameWorld
         SendNearby(monster.X, monster.Z, new CombatEvent
         {
             AttackerId = player.Id, TargetId = monster.Id, Source = source, Damage = dealt, Critical = hit.Critical,
-            Grade = grade, RouteName = routeName,
+            Grade = grade, RouteId = routeId,
         });
 
         if (monster.Hp.Current == 0) KillMonster(monster, now);
@@ -249,7 +250,7 @@ public sealed partial class GameWorld
         player.Movement.Teleport(spawnX, spawnZ, now);
         player.StatsDirty = true;
         _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
-        Notify(player, player.ArenaId != 0 ? "Você renasceu na base" : dungeon != null ? "Você renasceu na entrada da cripta" : "Você renasceu na vila");
+        Notify(player, player.ArenaId != 0 ? LT("respawn.arena_base") : dungeon != null ? LT("respawn.crypt") : LT("respawn.village"));
     }
 
     private void DamageMonsterToPlayer(ServerMonster monster, ServerPlayer player, int baseDamage, byte source, double now)
@@ -281,7 +282,7 @@ public sealed partial class GameWorld
         {
             if (m.AggroPlayerId == player.Id) m.AggroPlayerId = 0;
         }
-        Notify(player, "Você morreu", announcement: true);
+        Notify(player, LT("player.died"), announcement: true);
     }
 
     // ===== Monstros =====
@@ -403,7 +404,7 @@ public sealed partial class GameWorld
             if (member.CharacterId != 0 && alzParts[i] > 0)
                 member.PendingLogs.Add(new ItemLogEntry(member.CharacterId, DateTimeOffset.UtcNow, "alz_monstro", null, 0, alzParts[i],
                     $"{monster.Data.Id} (id {monster.Id}){(sharing.Count > 1 ? $", grupo de {sharing.Count}" : "")}"));
-            Notify(member, $"+{xp} XP, +{alzParts[i]} Alz");
+            Notify(member, LT("reward.xp_alz", xp, alzParts[i]));
         }
 
         for (var i = 0; i < loot.Items.Count; i++)
@@ -458,7 +459,7 @@ public sealed partial class GameWorld
             foreach (var player in _players.Values)
             {
                 if (InRange(player.X, player.Z, boss.X, boss.Z, InterestRadius))
-                    Notify(player, $"{boss.Data.Name} ficou furioso!", announcement: true);
+                    Notify(player, LT("boss.enraged", Loc.Ref("monster." + boss.Data.Id)), announcement: true);
             }
         }
         if (!boss.PhaseTwo) return;
@@ -499,12 +500,12 @@ public sealed partial class GameWorld
         if (player.IsDead || !_loot.TryGetValue(message.LootId, out var loot)) return;
         if (Distance(player.X, player.Z, loot.X, loot.Z) > PlayerRules.PickupRange + 0.5f)
         {
-            Notify(player, "Longe demais para pegar");
+            Notify(player, LT("loot.too_far"));
             return;
         }
         if (!loot.CanBePickedBy(player.Id, player.PartyId, now))
         {
-            Notify(player, "Este item ainda é de outro jogador");
+            Notify(player, LT("loot.not_yours"));
             return;
         }
 
@@ -516,7 +517,7 @@ public sealed partial class GameWorld
         }
         if (!player.Bag.TryAdd(drop.ItemId, drop.Quantity, _uids.Next))
         {
-            Notify(player, "Bolsa cheia");
+            Notify(player, LT("bag.full_short"));
             return;
         }
         player.InventoryDirty = true;
@@ -526,7 +527,7 @@ public sealed partial class GameWorld
         if (player.CharacterId != 0)
             player.PendingLogs.Add(new ItemLogEntry(player.CharacterId, DateTimeOffset.UtcNow, "coleta", drop.ItemId, drop.Quantity, 0,
                 $"item no chão {loot.Id}, dono {loot.OwnerId}"));
-        Notify(player, $"{drop.Name} x{drop.Quantity}");
+        Notify(player, LT("loot.picked", Loc.Ref("item." + drop.ItemId), drop.Quantity));
     }
 
     private void ExpireLoot(double now)
@@ -555,7 +556,7 @@ public sealed partial class GameWorld
         player.RecalculateStats();
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);
-        Notify(player, $"Nível {player.Progress.Level}! +{levels * Attributes.PointsPerLevel} pontos de atributo", announcement: true);
+        Notify(player, LT("level.up", player.Progress.Level, levels * Attributes.PointsPerLevel), announcement: true);
         NotifyWatchers(player, null); // o nível aparece na lista de amigos
         if (player.CharacterId != 0)
             player.PendingLogs.Add(new ItemLogEntry(player.CharacterId, DateTimeOffset.UtcNow, "nivel", null, 0, 0, $"nível {player.Progress.Level}"));

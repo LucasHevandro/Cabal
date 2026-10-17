@@ -4,6 +4,7 @@ using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using Game.Shared.World;
 
 namespace Game.Server.World;
@@ -99,7 +100,7 @@ public sealed partial class GameWorld
     {
         if (command.Action == DungeonActionKind.Leave)
         {
-            if (player.DungeonId != 0) ExitDungeon(player, "Você saiu da cripta");
+            if (player.DungeonId != 0) ExitDungeon(player, LT("dungeon.left"));
             return;
         }
         var definition = DungeonCatalog.Find(command.DungeonId);
@@ -113,26 +114,26 @@ public sealed partial class GameWorld
         Enter(definition, members, now);
     }
 
-    private string? CanEnter(ServerPlayer player, DungeonDefinition definition, out List<ServerPlayer> members)
+    private LocalText? CanEnter(ServerPlayer player, DungeonDefinition definition, out List<ServerPlayer> members)
     {
         members = PartyMembers(player).ToList();
         var party = FindParty(player.PartyId);
-        if (player.DungeonId != 0) return "Você já está numa dungeon";
-        if (!NearNpc(player, NpcRole.DungeonPortal)) return $"Fale com {Portal.Name} para entrar";
-        if (party != null && party.LeaderId != player.Id) return "Só o líder do grupo pode entrar com todos";
-        if (members.Count > DungeonRules.MaxPlayers) return $"No máximo {DungeonRules.MaxPlayers} jogadores";
+        if (player.DungeonId != 0) return LT("dungeon.already_in");
+        if (!NearNpc(player, NpcRole.DungeonPortal)) return LT("dungeon.talk_to_portal", Loc.Ref("npc." + Portal.Id));
+        if (party != null && party.LeaderId != player.Id) return LT("dungeon.leader_only");
+        if (members.Count > DungeonRules.MaxPlayers) return LT("dungeon.max_players", DungeonRules.MaxPlayers);
         var minLevel = MinLevelFor(definition);
         foreach (var member in members)
         {
-            if (member.DungeonId != 0) return $"{member.Name} já está numa dungeon";
-            if (member.DuelId != 0 || member.ArenaId != 0) return $"{member.Name} está num duelo ou na arena";
-            if (member.TradeId != 0) return $"{member.Name} está numa troca";
-            if (member.IsDead) return $"{member.Name} está morto";
-            if (member.Progress.Level < minLevel) return $"{member.Name} precisa do nível {minLevel}";
+            if (member.DungeonId != 0) return LT("dungeon.member_in_dungeon", member.Name);
+            if (member.DuelId != 0 || member.ArenaId != 0) return LT("dungeon.member_pvp", member.Name);
+            if (member.TradeId != 0) return LT("dungeon.member_trade", member.Name);
+            if (member.IsDead) return LT("dungeon.member_dead", member.Name);
+            if (member.Progress.Level < minLevel) return LT("dungeon.member_level", member.Name, minLevel);
             if (Distance(member.X, member.Z, Portal.X, Portal.Z) > DungeonRules.PortalRange)
-                return $"{member.Name} precisa estar perto do portal";
+                return LT("dungeon.member_far", member.Name);
             if (member.Bag.Count(definition.KeyItemId) < 1)
-                return $"{member.Name} precisa de uma {ItemCatalog.Get(definition.KeyItemId).Name} (vendida pela mercadora)";
+                return LT("dungeon.member_key", member.Name, Loc.Ref("item." + definition.KeyItemId));
         }
         return null;
     }
@@ -180,7 +181,7 @@ public sealed partial class GameWorld
             // O estado vai antes da posição: o cliente monta o chão da dungeon antes de ser levado para lá.
             _outbox.Send(member.Id, StateMessage(instance));
             _outbox.Send(member.Id, new PositionCorrection { X = member.X, Z = member.Z });
-            Notify(member, $"{definition.Name}: {DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds)} para vencer o chefe!", announcement: true);
+            Notify(member, LT("dungeon.started", Loc.Ref("dungeon." + definition.Id), DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds)), announcement: true);
         }
     }
 
@@ -192,7 +193,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>Tira o jogador da dungeon e o leva para perto do portal na vila.</summary>
-    private void ExitDungeon(ServerPlayer player, string message)
+    private void ExitDungeon(ServerPlayer player, LocalText message)
     {
         var instance = FindDungeon(player.DungeonId);
         player.DungeonId = 0;
@@ -212,7 +213,7 @@ public sealed partial class GameWorld
     private void DestroyDungeon(DungeonInstance instance)
     {
         foreach (var id in instance.PlayerIds.ToList())
-            if (_players.TryGetValue(id, out var p) && p.DungeonId == instance.Id) ExitDungeon(p, "A cripta se fechou");
+            if (_players.TryGetValue(id, out var p) && p.DungeonId == instance.Id) ExitDungeon(p, LT("dungeon.closed"));
         foreach (var monster in _monsters.Values.Where(m => m.InstanceId == instance.Id).ToList()) _monsters.Remove(monster.Id);
         foreach (var loot in _loot.Values.Where(l => l.InstanceId == instance.Id).ToList()) RemoveLoot(loot, 0);
         _dungeons.Remove(instance.Id);
@@ -239,7 +240,7 @@ public sealed partial class GameWorld
             if (now - instance.StartedAt > DungeonRules.TimeLimitSeconds)
             {
                 instance.Failed = true;
-                foreach (var p in InstancePlayers(instance)) Notify(p, "Tempo esgotado! A cripta expulsou o grupo.", announcement: true);
+                foreach (var p in InstancePlayers(instance)) Notify(p, LT("dungeon.timeout"), announcement: true);
                 DestroyDungeon(instance);
                 continue;
             }
@@ -250,7 +251,7 @@ public sealed partial class GameWorld
                 instance.Room++;
                 instance.Dirty = true;
                 foreach (var p in InstancePlayers(instance))
-                    Notify(p, $"O portão se abriu: {instance.Definition.Rooms[instance.Room].Name}", announcement: true);
+                    Notify(p, LT("dungeon.gate_open", Loc.Ref("room." + instance.Definition.Rooms[instance.Room].Id)), announcement: true);
             }
 
             if (instance.InBossRoom) TickCryptBoss(instance, now);
@@ -297,14 +298,14 @@ public sealed partial class GameWorld
             }
             instance.Dirty = true;
             foreach (var p in InstancePlayers(instance))
-                Notify(p, $"{boss.Data.Name} ergueu um escudo! Derrote os servos para quebrá-lo.", announcement: true);
+                Notify(p, LT("dungeon.boss_shield", Loc.Ref("monster." + boss.Data.Id)), announcement: true);
         }
         else if (instance.Shield && instance.Servants.All(id => FindMonster(id)?.IsDead ?? true))
         {
             instance.Shield = false;
             boss.Invulnerable = false;
             instance.Dirty = true;
-            foreach (var p in InstancePlayers(instance)) Notify(p, "O escudo caiu!", announcement: true);
+            foreach (var p in InstancePlayers(instance)) Notify(p, LT("dungeon.shield_down"), announcement: true);
         }
 
         // Golpe no chão: avisa onde vai cair e machuca quem não saiu do círculo.
@@ -368,8 +369,8 @@ public sealed partial class GameWorld
             player.Alz += alz;
             player.StatsDirty = true;
             Log(player, "bau_dungeon", null, 0, alz, $"{definition.Id} medalha {instance.Medal}, {rolls} sorteios");
-            Notify(player, $"Vitória em {DungeonRules.FormatTime(instance.Elapsed)}! Medalha {DungeonRules.MedalName(instance.Medal)} · " +
-                           $"baú com {rolls} sorteio{(rolls > 1 ? "s" : "")} e {alz:N0} Alz", announcement: true);
+            Notify(player, LT(rolls > 1 ? "dungeon.victory" : "dungeon.victory_one", DungeonRules.FormatTime(instance.Elapsed),
+                Loc.Ref("medal." + instance.Medal), rolls, alz), announcement: true);
         }
 
         var run = new DungeonRunRecord(definition.Id, Math.Round(instance.Elapsed, 1), (int)instance.Medal, instance.MaxCombo,

@@ -22,7 +22,7 @@ public class SocialWorldTests
             Sent.Where(s => s.PlayerId == playerId).Select(s => s.Message).OfType<T>().ToList();
 
         public List<string> System(int playerId) =>
-            To<ChatMessage>(playerId).Where(m => m.Channel == ChatChannel.System).Select(m => m.Text).ToList();
+            To<ChatMessage>(playerId).Where(m => m.Channel == ChatChannel.System).Select(m => m.Display).ToList();
     }
 
     private sealed class FixedRandom : IRandomSource
@@ -32,10 +32,10 @@ public class SocialWorldTests
 
     private static MonsterData Dummy(int hp = 1) => new()
     {
-        Id = "teste", Name = "Monstro de teste", Level = 1, MaxHp = hp, AttackDamage = 10, AttackPower = 0, Defense = 0,
+        Id = "teste", Level = 1, MaxHp = hp, AttackDamage = 10, AttackPower = 0, Defense = 0,
         AttackRange = 1.5f, AttackCooldownSeconds = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 3f, Aggressive = false,
         AggroRadius = 8, LeashRadius = 30, WanderRadius = 0, XpReward = 100, RespawnSeconds = 5,
-        Drops = new DropTable(90, 90, new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 1.0)),
+        Drops = new DropTable(90, 90, new DropEntry("pelo_macio", ItemRarity.Common, 1.0)),
     };
 
     /// <summary>Mundo com um monstro em (0, 2) e convidados na origem.</summary>

@@ -23,7 +23,7 @@ public class RelationWorldTests
             Sent.Where(s => s.PlayerId == playerId).Select(s => s.Message).OfType<T>().ToList();
 
         public List<string> System(int playerId) =>
-            To<ChatMessage>(playerId).Where(m => m.Channel == ChatChannel.System).Select(m => m.Text).ToList();
+            To<ChatMessage>(playerId).Where(m => m.Channel == ChatChannel.System).Select(m => m.Display).ToList();
     }
 
     private long _uid = 1000;

@@ -19,7 +19,7 @@ public class PvpWorldTests
             Sent.Where(s => s.PlayerId == playerId).Select(s => s.Message).OfType<T>().ToList();
 
         public List<string> Texts(int playerId) =>
-            To<ChatMessage>(playerId).Select(m => m.Text).Concat(To<Notice>(playerId).Select(n => n.Text)).ToList();
+            To<ChatMessage>(playerId).Select(m => m.Display).Concat(To<Notice>(playerId).Select(n => n.Text.ToString())).ToList();
     }
 
     private sealed class FixedRandom : IRandomSource

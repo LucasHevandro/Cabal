@@ -90,7 +90,7 @@ public class ServerHostTests
         await client.SendAsync(new Hello { ProtocolVersion = 999, Name = "Antigo" });
 
         var reject = await client.ReceiveAsync<Reject>();
-        Assert.Contains("Versão", reject.Reason);
+        Assert.Contains("Versão", reject.Reason.ToString());
     }
 
     [Fact]

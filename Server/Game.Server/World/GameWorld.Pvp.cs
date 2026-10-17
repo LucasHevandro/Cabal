@@ -1,8 +1,9 @@
 using Game.Shared.Combat;
 using Game.Shared.Net;
 using Game.Shared.Pvp;
-using Game.Shared.World;
+using Game.Shared.Text;
 using ComboPhase = Game.Shared.Combat.ComboState;
+using Game.Shared.World;
 
 namespace Game.Server.World;
 
@@ -107,7 +108,7 @@ public sealed partial class GameWorld
 
     /// <summary>Golpe de jogador em jogador: dano reduzido do PvP; no duelo ninguém morre (para em 1 de vida).</summary>
     private void DamagePlayerToPlayer(ServerPlayer attacker, ServerPlayer victim, DamageResult hit, byte source, byte grade,
-        string routeName, double now)
+        string routeId, double now)
     {
         if (victim.IsDodging(now))
         {
@@ -122,12 +123,12 @@ public sealed partial class GameWorld
         SendNearby(victim.X, victim.Z, new CombatEvent
         {
             AttackerId = attacker.Id, TargetId = victim.Id, Source = source, Damage = dealt, Critical = hit.Critical, Grade = grade,
-            RouteName = routeName,
+            RouteId = routeId,
         });
 
         if (duel != null)
         {
-            if (victim.Hp.Current <= 1) EndDuel(duel, attacker, $"{attacker.Name} venceu o duelo contra {victim.Name}!");
+            if (victim.Hp.Current <= 1) EndDuel(duel, attacker, LT("duel.won", attacker.Name, victim.Name));
             return;
         }
         if (victim.Hp.Current == 0 && FindArena(victim.ArenaId) is { } match) KillInArena(match, attacker, victim, now);
@@ -147,34 +148,34 @@ public sealed partial class GameWorld
                 break;
             case DuelActionKind.Decline:
                 if (player.PendingDuelInvite is { } invite && _players.TryGetValue(invite.FromId, out var from))
-                    SystemChat(from, $"{player.Name} recusou o duelo");
+                    SystemChat(from, LT("duel.declined", player.Name));
                 player.PendingDuelInvite = null;
                 break;
             case DuelActionKind.Forfeit:
                 if (FindDuel(player.DuelId) is { } duel && _players.TryGetValue(duel.OpponentOf(player.Id), out var winner))
-                    EndDuel(duel, winner, $"{player.Name} desistiu do duelo contra {winner.Name}");
+                    EndDuel(duel, winner, LT("duel.forfeit", player.Name, winner.Name));
                 break;
         }
     }
 
-    private string? PvpBusy(ServerPlayer player) =>
-        player.IsDead ? $"{player.Name} está morto" :
-        player.DuelId != 0 ? $"{player.Name} já está num duelo" :
-        player.ArenaId != 0 ? $"{player.Name} está na arena" :
-        player.DungeonId != 0 ? $"{player.Name} está numa dungeon" :
+    private LocalText? PvpBusy(ServerPlayer player) =>
+        player.IsDead ? LT("pvp.busy_dead", player.Name) :
+        player.DuelId != 0 ? LT("pvp.busy_duel", player.Name) :
+        player.ArenaId != 0 ? LT("pvp.busy_arena", player.Name) :
+        player.DungeonId != 0 ? LT("pvp.busy_dungeon", player.Name) :
         null;
 
     private void RequestDuel(ServerPlayer player, string name, double now)
     {
         var target = FindPlayerByName(name);
-        string? error =
-            target == null ? $"{name} não está online" :
-            target == player ? "Você não pode duelar consigo mesmo" :
+        LocalText? error =
+            target == null ? LT("player.offline", name) :
+            target == player ? LT("duel.self") :
             PvpBusy(player) ?? PvpBusy(target) ??
-            (target.HasBlocked(player) ? $"{target.Name} não está aceitando duelos" :
-            Distance(player.X, player.Z, target.X, target.Z) > DuelRules.Range ? $"Chegue perto de {target.Name} para desafiar" :
+            (target.HasBlocked(player) ? LT("duel.not_accepting", target.Name) :
+            Distance(player.X, player.Z, target.X, target.Z) > DuelRules.Range ? LT("duel.come_closer", target.Name) :
             target.PendingDuelInvite is { } pending && pending.ExpiresAt > now && pending.FromId != player.Id
-                ? $"{target.Name} já tem um desafio esperando" : null);
+                ? LT("duel.pending", target.Name) : null);
         if (error != null)
         {
             SystemChat(player, error);
@@ -182,7 +183,7 @@ public sealed partial class GameWorld
         }
         target!.PendingDuelInvite = (player.Id, now + DuelRules.InviteSeconds);
         _outbox.Send(target.Id, new DuelInvite { FromId = player.Id, FromName = player.Name, Seconds = (float)DuelRules.InviteSeconds });
-        SystemChat(player, $"Desafio enviado para {target.Name}");
+        SystemChat(player, LT("duel.sent", target.Name));
     }
 
     private void AcceptDuel(ServerPlayer player, int fromId, double now)
@@ -191,11 +192,11 @@ public sealed partial class GameWorld
         player.PendingDuelInvite = null;
         if (pending is not { } invite || invite.FromId != fromId || invite.ExpiresAt < now || !_players.TryGetValue(fromId, out var from))
         {
-            SystemChat(player, "O desafio expirou");
+            SystemChat(player, LT("duel.expired"));
             return;
         }
         var error = PvpBusy(player) ?? PvpBusy(from) ??
-                    (Distance(player.X, player.Z, from.X, from.Z) > DuelRules.Range ? $"Chegue perto de {from.Name} para duelar" : null);
+                    (Distance(player.X, player.Z, from.X, from.Z) > DuelRules.Range ? LT("duel.come_closer_accept", from.Name) : null);
         if (error != null)
         {
             SystemChat(player, error);
@@ -213,11 +214,11 @@ public sealed partial class GameWorld
         {
             p.DuelId = duel.Id;
             p.PvpDirty = true;
-            Notify(p, $"Duelo contra {(p == from ? player.Name : from.Name)} em {DuelRules.CountdownSeconds:0} segundos!", announcement: true);
+            Notify(p, LT("duel.starting", (p == from ? player.Name : from.Name), DuelRules.CountdownSeconds), announcement: true);
         }
     }
 
-    private void EndDuel(DuelSession duel, ServerPlayer? winner, string message)
+    private void EndDuel(DuelSession duel, ServerPlayer? winner, LocalText message)
     {
         _duels.Remove(duel.Id);
         foreach (var id in new[] { duel.PlayerA, duel.PlayerB })
@@ -246,12 +247,12 @@ public sealed partial class GameWorld
             var hasB = _players.TryGetValue(duel.PlayerB, out var b);
             if (!hasA || !hasB)
             {
-                EndDuel(duel, hasA ? a : b, "O duelo acabou: o outro jogador saiu");
+                EndDuel(duel, hasA ? a : b, LT("duel.ended_left"));
                 continue;
             }
             if (a!.IsDead || b!.IsDead)
             {
-                EndDuel(duel, null, "O duelo acabou: alguém caiu para um monstro");
+                EndDuel(duel, null, LT("duel.ended_monster"));
                 continue;
             }
             if (!duel.Started(now)) continue;
@@ -260,11 +261,11 @@ public sealed partial class GameWorld
             if (outA || outB)
             {
                 var (loser, winner) = outA ? (a, b) : (b, a);
-                EndDuel(duel, winner, $"{loser.Name} fugiu do duelo: {winner.Name} venceu!");
+                EndDuel(duel, winner, LT("duel.fled", loser.Name, winner.Name));
             }
             else if (now >= duel.EndsAt)
             {
-                EndDuel(duel, null, "O duelo empatou: o tempo acabou");
+                EndDuel(duel, null, LT("duel.draw"));
             }
         }
     }
@@ -286,19 +287,19 @@ public sealed partial class GameWorld
                 }
                 if (_arenaQueue.Contains(player.Id))
                 {
-                    SystemChat(player, "Você já está na fila da arena");
+                    SystemChat(player, LT("arena.already_queued"));
                     return;
                 }
                 _arenaQueue.Add(player.Id);
                 player.InArenaQueue = true;
                 MarkQueue();
-                SystemChat(player, $"Na fila da arena ({_arenaQueue.Count}/{ArenaTeamSize * 2})");
+                SystemChat(player, LT("arena.queued", _arenaQueue.Count, ArenaTeamSize * 2));
                 break;
             case ArenaActionKind.LeaveQueue:
-                if (RemoveFromQueue(player)) SystemChat(player, "Você saiu da fila da arena");
+                if (RemoveFromQueue(player)) SystemChat(player, LT("arena.left_queue"));
                 break;
             case ArenaActionKind.Leave:
-                if (FindArena(player.ArenaId) is { } match) LeaveArena(match, player, "Você saiu da arena (sem recompensa)");
+                if (FindArena(player.ArenaId) is { } match) LeaveArena(match, player, LT("arena.left_match"));
                 break;
         }
     }
@@ -381,7 +382,7 @@ public sealed partial class GameWorld
                 player.PvpDirty = true;
                 match.Teams[player.Id] = team;
                 match.Scores[player.Id] = new ArenaScore { Name = player.Name, Team = team, Level = player.Progress.Level };
-                if (player.TradeId != 0 && FindTrade(player.TradeId) is { } trade) CancelTrade(trade, "A troca foi cancelada: a arena começou");
+                if (player.TradeId != 0 && FindTrade(player.TradeId) is { } trade) CancelTrade(trade, LT("trade.cancelled_arena"));
                 player.Hp.Add(player.Hp.Max);
                 player.Mp.Add(player.Mp.Max);
                 player.StatsDirty = true;
@@ -390,7 +391,7 @@ public sealed partial class GameWorld
                 // O estado (com a origem) vai antes da posição: o cliente monta o campo antes de ser levado.
                 _outbox.Send(player.Id, PvpMessage(player, now));
                 _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
-                Notify(player, $"Arena: você é do time {ArenaRules.TeamName(team)}! Começa em {ArenaRules.CountdownSeconds:0} s.", announcement: true);
+                Notify(player, LT("arena.your_team", Loc.Ref(ArenaRules.TeamKey(team)), ArenaRules.CountdownSeconds), announcement: true);
             }
         }
         MarkQueue();
@@ -424,12 +425,12 @@ public sealed partial class GameWorld
             foreach (var id in match.Teams.Keys) _players[id].PvpDirty = true;
             if (owner == ArenaTeam.None)
             {
-                foreach (var id in match.Teams.Keys) SystemChat(_players[id], $"O ponto {point.Name} ficou neutro");
+                foreach (var id in match.Teams.Keys) SystemChat(_players[id], LT("arena.point_neutral", point.Name));
                 continue;
             }
             foreach (var (id, _) in present.Where(kv => kv.Value == owner)) match.Scores[id].Captures++;
             foreach (var id in match.Teams.Keys)
-                Notify(_players[id], $"Time {ArenaRules.TeamName(owner)} tomou o ponto {point.Name}!", announcement: true);
+                Notify(_players[id], LT("arena.point_taken", Loc.Ref(ArenaRules.TeamKey(owner)), point.Name), announcement: true);
         }
 
         match.ScoreCarry += dt;
@@ -460,8 +461,8 @@ public sealed partial class GameWorld
             if (team == ArenaTeam.Blue) match.ScoreBlue += ArenaRules.ScorePerKill;
             else match.ScoreRed += ArenaRules.ScorePerKill;
         }
-        Notify(victim, $"{killer.Name} derrubou você", announcement: true);
-        Notify(killer, $"Você derrubou {victim.Name} (+{ArenaRules.ScorePerKill})");
+        Notify(victim, LT("arena.downed_you", killer.Name), announcement: true);
+        Notify(killer, LT("arena.you_downed", victim.Name, ArenaRules.ScorePerKill));
         foreach (var id in match.Teams.Keys) _players[id].PvpDirty = true;
     }
 
@@ -481,12 +482,12 @@ public sealed partial class GameWorld
             player.PvpDirty = true;
             Log(player, "arena", null, 0, alz, $"partida {match.Id}: {(won ? "vitória" : match.Winner == ArenaTeam.None ? "empate" : "derrota")} " +
                                               $"{match.ScoreBlue} x {match.ScoreRed}");
-            var result = match.Winner == ArenaTeam.None ? "Empate!" : won ? "Vitória!" : "Derrota.";
-            Notify(player, $"{result} Azul {match.ScoreBlue} x {match.ScoreRed} Vermelho · +{alz:N0} Alz", announcement: true);
+            var result = match.Winner == ArenaTeam.None ? LT("arena.draw") : won ? LT("arena.victory") : LT("arena.defeat");
+            Notify(player, LT("arena.result", result, match.ScoreBlue, match.ScoreRed, alz), announcement: true);
         }
     }
 
-    private void LeaveArena(ArenaMatch match, ServerPlayer player, string message)
+    private void LeaveArena(ArenaMatch match, ServerPlayer player, LocalText message)
     {
         match.Teams.Remove(player.Id);
         SendHome(player, message);
@@ -495,12 +496,12 @@ public sealed partial class GameWorld
     private void CloseArena(ArenaMatch match)
     {
         foreach (var id in match.Teams.Keys.ToList())
-            if (_players.TryGetValue(id, out var p)) SendHome(p, "A arena terminou: de volta à vila");
+            if (_players.TryGetValue(id, out var p)) SendHome(p, LT("arena.ended"));
         _arenas.Remove(match.Id);
     }
 
     /// <summary>Tira o jogador da arena e o leva para a vila, vivo.</summary>
-    private void SendHome(ServerPlayer player, string message)
+    private void SendHome(ServerPlayer player, LocalText message)
     {
         player.ArenaId = 0;
         player.PvpDirty = true;

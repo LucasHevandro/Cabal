@@ -18,7 +18,7 @@ public class CombatTests
         public List<T> To<T>(int playerId) where T : INetMessage =>
             Sent.Where(s => s.PlayerId == playerId).Select(s => s.Message).OfType<T>().ToList();
 
-        public List<string> Notices(int playerId) => To<Notice>(playerId).Select(n => n.Text).ToList();
+        public List<string> Notices(int playerId) => To<Notice>(playerId).Select(n => n.Text.ToString()).ToList();
     }
 
     /// <summary>Sempre o mesmo número: 0,5 = sem variação de dano e sem crítico.</summary>
@@ -31,10 +31,10 @@ public class CombatTests
 
     private static MonsterData Dummy(bool aggressive = false, int hp = 5000, int attack = 50, float windup = 0.5f) => new()
     {
-        Id = "teste", Name = "Monstro de teste", Level = 1, MaxHp = hp, AttackDamage = attack, AttackPower = 0,
+        Id = "teste", Level = 1, MaxHp = hp, AttackDamage = attack, AttackPower = 0,
         Defense = 0, AttackRange = 1.5f, AttackCooldownSeconds = 2f, AttackWindupSeconds = windup, MoveSpeed = 3f,
         Aggressive = aggressive, AggroRadius = 8, LeashRadius = 30, WanderRadius = 0, XpReward = 50, RespawnSeconds = 5,
-        Drops = new DropTable(10, 20, new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 0.9)),
+        Drops = new DropTable(10, 20, new DropEntry("pelo_macio", ItemRarity.Common, 0.9)),
     };
 
     private static (GameWorld World, FakeOutbox Outbox, ServerPlayer Player, ServerMonster Monster) Setup(
@@ -228,7 +228,7 @@ public class CombatTests
         double t = 0;
         while (t < 2.0) world.Tick(t += 0.05);
 
-        Assert.Contains(outbox.To<Notice>(player.Id), n => n.Announcement && n.Text.Contains("furioso"));
+        Assert.Contains(outbox.To<Notice>(player.Id), n => n.Announcement && n.Text.ToString().Contains("furioso"));
         var warning = Assert.Single(outbox.To<AreaWarning>(player.Id));
         Assert.Equal(BossRules.AreaRadius, warning.Radius);
 

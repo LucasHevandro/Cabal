@@ -6,6 +6,7 @@ using Game.Server.Accounts;
 using Game.Server.Persistence;
 using Game.Server.World;
 using Game.Shared.Net;
+using Game.Shared.Text;
 
 namespace Game.Server.Net;
 
@@ -199,12 +200,12 @@ public sealed class ServerHost : IOutbox, IDisposable
             if (connection.LoginPending) return; // esperando o banco: ignora o resto até entrar
             if (message is not Hello hello)
             {
-                Refuse(connection, "Envie Hello primeiro.");
+                Refuse(connection, new LocalText("net.hello_first"));
                 return;
             }
             if (hello.ProtocolVersion != Protocol.Version)
             {
-                Refuse(connection, $"Versão do jogo incompatível (cliente v{hello.ProtocolVersion}, servidor v{Protocol.Version}). Atualize o jogo.");
+                Refuse(connection, new LocalText("net.old_version", hello.ProtocolVersion, Protocol.Version));
                 return;
             }
 
@@ -212,7 +213,7 @@ public sealed class ServerHost : IOutbox, IDisposable
             {
                 if (!_options.AllowGuests)
                 {
-                    Refuse(connection, "Entre com sua conta.");
+                    Refuse(connection, new LocalText("net.login_required"));
                     return;
                 }
                 Enter(connection, hello.Name, now, character: null);
@@ -221,7 +222,7 @@ public sealed class ServerHost : IOutbox, IDisposable
 
             if (_auth == null)
             {
-                Refuse(connection, "Este servidor não tem contas.");
+                Refuse(connection, new LocalText("net.no_accounts"));
                 return;
             }
 
@@ -244,7 +245,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         catch (Exception ex)
         {
             _log($"Erro ao carregar personagem {hello.CharacterId}: {ex.GetBaseException().Message}");
-            result = AuthResult<CharacterRecord>.Fail("Servidor sem acesso ao banco. Tente de novo em instantes.", 503);
+            result = AuthResult<CharacterRecord>.Fail(new LocalText("net.db_unavailable"), 503);
         }
 
         _inbox.Enqueue((connection, now =>
@@ -258,7 +259,7 @@ public sealed class ServerHost : IOutbox, IDisposable
             }
             if (World.IsCharacterOnline(result.Value!.Id))
             {
-                Refuse(connection, "Esse personagem já está no jogo.");
+                Refuse(connection, new LocalText("net.already_online"));
                 return;
             }
             Enter(connection, result.Value.Name, now, result.Value);
@@ -277,7 +278,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         _log($"Conexão #{connection.ConnectionId} entrou como {player.Name} (id {player.Id}, {kind})");
     }
 
-    private void Refuse(ClientConnection connection, string reason)
+    private void Refuse(ClientConnection connection, LocalText reason)
     {
         connection.Send(NetCodec.Encode(new Reject { Reason = reason }));
         _log($"Conexão #{connection.ConnectionId} recusada: {reason}");

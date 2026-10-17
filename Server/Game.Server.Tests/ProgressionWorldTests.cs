@@ -23,7 +23,7 @@ public class ProgressionWorldTests
         public List<T> To<T>(int playerId) where T : INetMessage =>
             Sent.Where(s => s.PlayerId == playerId).Select(s => s.Message).OfType<T>().ToList();
 
-        public List<string> Notices(int playerId) => To<Notice>(playerId).Select(n => n.Text).ToList();
+        public List<string> Notices(int playerId) => To<Notice>(playerId).Select(n => n.Text.ToString()).ToList();
     }
 
     private sealed class FixedRandom : IRandomSource
@@ -38,10 +38,10 @@ public class ProgressionWorldTests
 
     private static MonsterData Dummy(string id = "teste", int hp = 100) => new()
     {
-        Id = id, Name = "Monstro de teste", Level = 1, MaxHp = hp, AttackDamage = 10, AttackPower = 0, Defense = 0,
+        Id = id, Level = 1, MaxHp = hp, AttackDamage = 10, AttackPower = 0, Defense = 0,
         AttackRange = 1.5f, AttackCooldownSeconds = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 3f, Aggressive = false,
         AggroRadius = 8, LeashRadius = 30, WanderRadius = 0, XpReward = 10, RespawnSeconds = 5,
-        Drops = new DropTable(0, 0, new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 1.0)),
+        Drops = new DropTable(0, 0, new DropEntry("pelo_macio", ItemRarity.Common, 1.0)),
     };
 
     /// <summary>Mundo com um monstro em (0, 2) e um personagem de verdade (não convidado), na origem.</summary>
