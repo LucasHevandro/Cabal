@@ -138,7 +138,26 @@ namespace Game.Client.Combat
         private void Start()
         {
             if (Camera.main != null) _camera = Camera.main.GetComponent<OrbitCamera>();
+            if (!Online) ApplyClassModel(CharacterClass.Blade);
         }
+
+        /// <summary>
+        /// Troca a cápsula pelo modelo da classe (Visuals/class/blade ou arcanist), se existir. As formas simples ficam
+        /// escondidas, não apagadas: sem modelo para a classe nova, elas voltam.
+        /// </summary>
+        private void ApplyClassModel(CharacterClass characterClass)
+        {
+            if (_classModel != null) Destroy(_classModel);
+            var key = characterClass == CharacterClass.Arcanist ? "arcanist" : "blade";
+            _classModel = VisualCatalog.Spawn(VisualCatalog.Class, key, transform);
+            foreach (var name in new[] { "Corpo", "Frente" })
+            {
+                var part = transform.Find(name);
+                if (part != null && part.TryGetComponent<Renderer>(out var renderer)) renderer.enabled = _classModel == null;
+            }
+        }
+
+        private GameObject _classModel;
 
         private void Update()
         {
@@ -306,6 +325,7 @@ namespace Game.Client.Combat
 
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
+            VisualAnimator.Trigger(this, "Attack");
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
             if (Online)
@@ -524,6 +544,7 @@ namespace Game.Client.Combat
             var characterClass = (CharacterClass)sheet.Class;
             if (_classSkillsFor == characterClass) return;
             _classSkillsFor = characterClass;
+            ApplyClassModel(characterClass);
             skills = ClassCatalog.SkillsFor(characterClass).Select(s => s.Skill).ToList();
             _cooldowns = new SkillCooldowns(skills.Count);
             var config = comboTuning.ToConfig();

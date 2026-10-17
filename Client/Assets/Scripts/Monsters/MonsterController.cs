@@ -101,6 +101,7 @@ namespace Game.Client.Monsters
                 case MonsterActionKind.AttackStarted:
                     Face(ToWorld(action.Point) - transform.position);
                     ShowTelegraph();
+                    Fx.VisualAnimator.Trigger(this, "Attack");
                     break;
                 case MonsterActionKind.AttackLanded:
                     HideTelegraph();

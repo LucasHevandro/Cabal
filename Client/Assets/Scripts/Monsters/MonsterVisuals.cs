@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Client.Fx;
 using UnityEngine;
 
 namespace Game.Client.Monsters
@@ -59,20 +60,33 @@ namespace Game.Client.Monsters
         public static (MonsterShape Shape, Vector3 Scale, Color Color) LookFor(string typeId) =>
             Looks.TryGetValue(typeId ?? "", out var look) ? look : (MonsterShape.Capsule, Vector3.one, Color.gray);
 
-        /// <summary>Monta corpo, "olho" (frente), anel de seleção e aviso de golpe como filhos de <paramref name="root"/>.</summary>
-        public static MonsterParts Build(Transform root, MonsterShape shape, Vector3 scale, Material body, Material telegraph, Material ring)
+        /// <summary>
+        /// Monta corpo, "olho" (frente), anel de seleção e aviso de golpe como filhos de <paramref name="root"/>. Se o
+        /// <see cref="VisualCatalog"/> tiver um modelo para <paramref name="visualCategory"/>/<paramref name="visualId"/>,
+        /// o corpo é o modelo (e a altura e o raio vêm dele); senão, a forma simples.
+        /// </summary>
+        public static MonsterParts Build(Transform root, MonsterShape shape, Vector3 scale, Material body, Material telegraph, Material ring,
+            string visualCategory = null, string visualId = null)
         {
             var height = 2f * scale.y;
             var radius = 0.5f * Mathf.Max(scale.x, scale.z);
 
             var bodyRoot = new GameObject("Corpo");
             bodyRoot.transform.SetParent(root, false);
-            var mesh = Primitive(TypeFor(shape), "Malha", bodyRoot.transform, body);
-            mesh.transform.localPosition = new Vector3(0, height / 2f, 0);
-            mesh.transform.localScale = shape == MonsterShape.Capsule ? scale : new Vector3(scale.x, scale.y * 2f, scale.z);
-            var eye = Primitive(PrimitiveType.Cube, "Frente", bodyRoot.transform, telegraph);
-            eye.transform.localPosition = new Vector3(0, height * 0.75f, radius);
-            eye.transform.localScale = new Vector3(0.3f, 0.12f, 0.12f) * Mathf.Max(1f, scale.x);
+            var model = visualCategory != null ? VisualCatalog.Spawn(visualCategory, visualId, bodyRoot.transform) : null;
+            if (model != null)
+            {
+                (height, radius) = VisualCatalog.Measure(model, root);
+            }
+            else
+            {
+                var mesh = Primitive(TypeFor(shape), "Malha", bodyRoot.transform, body);
+                mesh.transform.localPosition = new Vector3(0, height / 2f, 0);
+                mesh.transform.localScale = shape == MonsterShape.Capsule ? scale : new Vector3(scale.x, scale.y * 2f, scale.z);
+                var eye = Primitive(PrimitiveType.Cube, "Frente", bodyRoot.transform, telegraph);
+                eye.transform.localPosition = new Vector3(0, height * 0.75f, radius);
+                eye.transform.localScale = new Vector3(0.3f, 0.12f, 0.12f) * Mathf.Max(1f, scale.x);
+            }
 
             var selection = Primitive(PrimitiveType.Cylinder, "Anel de seleção", root, ring);
             selection.transform.localPosition = new Vector3(0, 0.02f, 0);

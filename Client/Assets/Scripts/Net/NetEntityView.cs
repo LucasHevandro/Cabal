@@ -75,7 +75,11 @@ namespace Game.Client.Net
             }
 
             var windUp = (state.Flags & EntityState.FlagWindUp) != 0;
-            if (windUp && !_windUp) _telegraphStartedAt = Time.time;
+            if (windUp && !_windUp)
+            {
+                _telegraphStartedAt = Time.time;
+                Fx.VisualAnimator.Trigger(this, "Attack");
+            }
             _windUp = windUp;
             IsEnraged = (state.Flags & EntityState.FlagEnraged) != 0;
         }

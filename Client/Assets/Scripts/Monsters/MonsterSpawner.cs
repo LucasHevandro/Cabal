@@ -70,7 +70,8 @@ namespace Game.Client.Monsters
             root.transform.position = position;
             root.transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
 
-            var parts = MonsterVisuals.Build(root.transform, shape, bodyScale, bodyMaterial, telegraphMaterial, ringMaterial);
+            var parts = MonsterVisuals.Build(root.transform, shape, bodyScale, bodyMaterial, telegraphMaterial, ringMaterial,
+                Fx.VisualCatalog.Monster, data.Id);
 
             var controller = root.AddComponent<CharacterController>();
             controller.height = parts.Height;

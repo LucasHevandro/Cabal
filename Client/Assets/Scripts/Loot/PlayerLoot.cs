@@ -161,6 +161,14 @@ namespace Game.Client.Loot
                 renderer.SetPropertyBlock(block);
             }
 
+            // Modelo do item (Visuals/item/<id>), se existir; o cubo colorido fica escondido.
+            var model = Fx.VisualCatalog.Spawn(Fx.VisualCatalog.Item, drop.ItemId, cube.transform);
+            if (model != null)
+            {
+                model.transform.localScale = Vector3.one / cube.transform.localScale.x;
+                renderer.enabled = false;
+            }
+
             var pickup = cube.AddComponent<LootPickup>();
             pickup.Initialize(drop);
             if (drop.Rarity >= ItemRarity.Rare)

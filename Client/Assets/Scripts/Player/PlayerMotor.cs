@@ -72,6 +72,7 @@ namespace Game.Client.Player
                 _dodgeEndsAt = Time.time + dodgeDuration;
                 _nextDodgeAt = Time.time + dodgeCooldown;
                 DodgeCount++;
+                Fx.VisualAnimator.Trigger(this, "Dodge");
             }
 
             Vector3 horizontal;

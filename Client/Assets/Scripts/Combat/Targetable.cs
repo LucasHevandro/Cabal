@@ -89,6 +89,7 @@ namespace Game.Client.Combat
             if (!IsAlive || amount <= 0) return 0;
             var dealt = -Hp.Add(-amount);
             Damaged?.Invoke(dealt, critical);
+            Fx.VisualAnimator.Trigger(this, "Hit");
             if (!IsAlive) Died?.Invoke(this);
             return dealt;
         }

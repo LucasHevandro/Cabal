@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Client.Combat;
+using Game.Client.Fx;
 using Game.Client.Monsters;
 using Game.Client.Player;
 using Game.Client.UI;
@@ -111,7 +112,7 @@ namespace Game.Client.Net
                     _ => new Color(0.85f, 0.8f, 0.5f),
                 };
                 var parts = MonsterVisuals.Build(root.transform, MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f),
-                    MaterialFor("npc_" + npc.Id, color), telegraphMaterial, ringMaterial);
+                    MaterialFor("npc_" + npc.Id, color), telegraphMaterial, ringMaterial, VisualCatalog.Npc, npc.Id);
                 if (parts.Ring != null) parts.Ring.SetActive(false);
                 // Vira para a praça (ponto de nascimento).
                 root.transform.rotation = Quaternion.LookRotation(new Vector3(-npc.X, 0, -npc.Z).normalized + Vector3.forward * 0.001f);
@@ -228,13 +229,14 @@ namespace Game.Client.Net
             {
                 var look = MonsterVisuals.LookFor(spawned.TypeId);
                 parts = MonsterVisuals.Build(root.transform, look.Shape, look.Scale, MaterialFor(spawned.TypeId, look.Color),
-                    telegraphMaterial, ringMaterial);
+                    telegraphMaterial, ringMaterial, VisualCatalog.Monster, spawned.TypeId);
                 _monsterData.TryGetValue(spawned.TypeId, out data);
             }
             else
             {
                 parts = MonsterVisuals.Build(root.transform, MonsterShape.Capsule, new Vector3(0.8f, 1f, 0.8f),
-                    MaterialFor("outro_jogador", new Color(0.3f, 0.75f, 0.45f)), telegraphMaterial, ringMaterial);
+                    MaterialFor("outro_jogador", new Color(0.3f, 0.75f, 0.45f)), telegraphMaterial, ringMaterial,
+                    VisualCatalog.Class, spawned.TypeId); // o servidor manda a classe do jogador no TypeId
             }
 
             // Colisor só para o clique de seleção (gatilho: não empurra o jogador).
