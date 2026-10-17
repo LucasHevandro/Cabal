@@ -268,6 +268,7 @@ namespace Game.Client.Net
                 _message = "";
             }
             if (GUILayout.Button(Loc.T("login.offline"), GUILayout.Height(30 * scale))) GameMode.SetOffline();
+            if (GUILayout.Button(Loc.T("options.title"), GUILayout.Height(30 * scale))) UI.OptionsWindow.Open();
             GUILayout.EndHorizontal();
         }
 

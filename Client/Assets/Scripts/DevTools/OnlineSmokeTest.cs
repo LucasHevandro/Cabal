@@ -6,6 +6,7 @@ using Game.Client.Combat;
 using Game.Client.Loot;
 using Game.Client.Net;
 using Game.Client.Player;
+using Game.Client.UI;
 using Game.Shared.Net;
 using Game.Shared.Social;
 using Game.Shared.Progression;
@@ -414,6 +415,13 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.5f);
             Capture("8-missao-concluida");
             yield return new WaitForEndOfFrame();
+
+            // Janela de opções (F10) por cima do jogo.
+            OptionsWindow.Open();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("9-opcoes");
+            yield return new WaitForEndOfFrame();
+            OptionsWindow.Close();
             outcome.Ok = true;
             outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
         }

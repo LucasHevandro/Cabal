@@ -5,6 +5,9 @@
 # Para chaves literais use {{ e }}. Quebra de linha: \n.
 # Para traduzir: copie este arquivo como <idioma>.txt (ex.: en-US.txt) e troque só o que vem depois do "=".
 
+# Nome do idioma, como aparece na janela de opções.
+language.name = Português (Brasil)
+
 # ===== Itens =====
 item.espada_ferro = Espada de Ferro
 item.espada_aco_negro = Espada de Aço Negro
@@ -288,7 +291,7 @@ hud.grade_excellent = EXCELLENT
 hud.grade_good = GOOD
 hud.grade_miss = MISS
 hud.route = <b>{0} +{1:0}%</b>
-help.controls = <b>Controles</b>\nWASD andar · Shift correr · Espaço esquivar\nBotão direito girar câmera · Roda zoom\nTab / clique: selecionar alvo · Esc limpar
+help.controls = <b>Controles</b>\nWASD andar · Shift correr · Espaço esquivar\nBotão direito girar câmera · Roda zoom · F10 opções\nTab / clique: selecionar alvo · Esc limpar
 help.keys_online = 1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\nEnter chat · O amigos · /convidar nome forma grupo\n/duelo nome desafia · /arena entra na fila 5v5
 help.keys_offline = 1–4 skills · E coletar itens · I inventário
 help.combo = Q iniciar combo (gasta SP)\nF finalizador (depois de 3 acertos)\n\n<b>Rotas de combo</b> (F = físico, M = mágico)\nF→M ou M→F: Alternância +10%\nF F M: Tempestade +25% · M M F: Eco Arcano +25%
@@ -782,3 +785,24 @@ chat.use_report = Use /denunciar nome motivo
 chat.use_duel = Use /duelo nome
 chat.use_trade = Use /trocar nome
 chat.unknown = Comando desconhecido: /{0} (digite /ajuda)
+
+# ===== Cliente: opções =====
+options.title = Opções
+options.video = Vídeo
+options.resolution = Resolução
+options.fullscreen = Tela cheia
+options.apply = Aplicar
+options.quality = Qualidade
+options.quality_pc = Alta
+options.quality_mobile = Baixa
+options.fps = Limite de FPS
+options.fps_unlimited = Sem limite
+options.vsync = Sincronia vertical (VSync)
+options.audio = Áudio
+options.volume_master = Volume geral
+options.volume_effects = Efeitos
+options.volume_music = Música
+options.language = Idioma
+options.language_label = Idioma do jogo
+options.defaults = Restaurar padrão
+options.hint = F10 abre e fecha · Esc fecha · as opções ficam salvas

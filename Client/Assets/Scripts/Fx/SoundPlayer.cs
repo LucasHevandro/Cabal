@@ -55,7 +55,7 @@ namespace Game.Client.Fx
             var source = _sources[_next];
             _next = (_next + 1) % _sources.Length;
             source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
-            source.volume = volume * masterVolume;
+            source.volume = volume * masterVolume * UI.GameSettings.EffectsVolume;
             source.clip = clip;
             source.Play();
         }

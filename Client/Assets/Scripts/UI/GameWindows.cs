@@ -83,6 +83,7 @@ namespace Game.Client.UI
             {
                 var mouse = Mouse.current;
                 if (mouse == null) return false;
+                if (OptionsWindow.IsOpen) return true;
                 var screen = mouse.position.ReadValue();
                 var point = new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale);
                 foreach (var rect in OpenRects) if (rect.Contains(point)) return true;

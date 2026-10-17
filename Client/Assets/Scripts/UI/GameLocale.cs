@@ -38,6 +38,14 @@ namespace Game.Client.UI
         private static void LoadInEditor() => Load(Loc.DefaultLanguage);
 #endif
 
+        /// <summary>Nome do idioma escrito nele mesmo (chave <c>language.name</c> do arquivo), ou o código.</summary>
+        public static string DisplayName(string language)
+        {
+            var asset = Resources.Load<TextAsset>(Folder + language);
+            if (asset == null) return language;
+            return Loc.Parse(asset.text, out _).TryGetValue("language.name", out var name) ? name : language;
+        }
+
         /// <summary>Carrega o idioma; o que faltar nele aparece em português. Falso se o arquivo não existir.</summary>
         public static bool Load(string language)
         {
