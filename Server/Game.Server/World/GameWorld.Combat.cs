@@ -5,6 +5,7 @@ using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Pvp;
 using Game.Shared.Social;
 using Game.Shared.World;
 using ComboPhase = Game.Shared.Combat.ComboState;
@@ -58,7 +59,7 @@ public sealed partial class GameWorld
             return;
         }
         var target = FindMonster(message.TargetId);
-        if (target == null || target.IsDead)
+        if ((target == null || target.IsDead) && HostilePlayer(player, message.TargetId) == null)
         {
             Notify(player, "Selecione um alvo para o combo");
             return;
@@ -84,7 +85,11 @@ public sealed partial class GameWorld
             return;
         }
         var target = FindMonster(message.TargetId);
-        double? distance = target != null && !target.IsDead ? EdgeDistance(player, target) : (double?)null;
+        // Sem monstro: pode ser um jogador hostil (duelo começado ou time inimigo na arena).
+        var enemy = target == null ? HostilePlayer(player, message.TargetId) : null;
+        double? distance = target != null && !target.IsDead ? EdgeDistance(player, target)
+            : enemy != null ? Distance(player.X, player.Z, enemy.X, enemy.Z) - PlayerRules.BodyRadius
+            : (double?)null;
 
         switch (SkillRules.Check(skill, message.Slot, player.Cooldowns, player.Mp, distance, now))
         {
@@ -139,9 +144,24 @@ public sealed partial class GameWorld
         SkillRules.TryUse(skill, message.Slot, player.Cooldowns, player.Mp, distance, now);
         player.StatsDirty = true;
 
-        multiplier *= player.Awakening.DamageMultiplier(now);
         var power = ClassCatalog.PowerFor(skill.Kind, player.Stats);
         var hits = 0;
+        if (enemy != null)
+        {
+            var pvpMultiplier = multiplier * PvpRules.AwakeningMultiplier(player.Awakening.DamageMultiplier(now));
+            foreach (var victim in PvpTargets(player, skill, enemy))
+            {
+                var hit = DamageFormula.Calculate(
+                    new DamageInput(skill.BaseDamage, power, pvpMultiplier, CritChance(player),
+                        PlayerRules.CritMultiplier, victim.Stats.Defense), _random);
+                hits++;
+                DamagePlayerToPlayer(player, victim, hit, message.Slot, grade, routeName, now);
+            }
+            if (!inCombo && hits > 0) player.Sp.Add(PlayerRules.SpPerHit);
+            return;
+        }
+
+        multiplier *= player.Awakening.DamageMultiplier(now);
         foreach (var victim in SkillTargets(skill, target!))
         {
             var hit = DamageFormula.Calculate(
@@ -157,7 +177,10 @@ public sealed partial class GameWorld
     {
         if (player.IsDead || !player.Combo.CanFinish) return;
         var target = FindMonster(message.TargetId);
-        if (target == null || target.IsDead || EdgeDistance(player, target) > PlayerRules.FinisherRange)
+        var enemy = target == null ? HostilePlayer(player, message.TargetId) : null;
+        var inReach = target != null && !target.IsDead && EdgeDistance(player, target) <= PlayerRules.FinisherRange ||
+                      enemy != null && Distance(player.X, player.Z, enemy.X, enemy.Z) - PlayerRules.BodyRadius <= PlayerRules.FinisherRange;
+        if (!inReach)
         {
             Notify(player, "Chegue perto do alvo para finalizar");
             return;
@@ -168,6 +191,16 @@ public sealed partial class GameWorld
         player.ComboDirty = true;
         // O finalizador usa o poder principal da classe (o maior dos dois).
         var power = Math.Max(player.Stats.AttackPower, player.Stats.MagicPower);
+        if (enemy != null)
+        {
+            var pvpHit = DamageFormula.Calculate(
+                new DamageInput(PlayerRules.FinisherBaseDamage, power, multiplier * PvpRules.AwakeningMultiplier(player.Awakening.DamageMultiplier(now)),
+                    CritChance(player), PlayerRules.CritMultiplier, enemy.Stats.Defense), _random);
+            DamagePlayerToPlayer(player, enemy, pvpHit, CombatSource.Finisher, 255, "", now);
+            Notify(player, $"Finalizador x{multiplier:0.00} depois de {chain} acertos");
+            return;
+        }
+        target = target!;
         var hit = DamageFormula.Calculate(
             new DamageInput(PlayerRules.FinisherBaseDamage, power, multiplier * player.Awakening.DamageMultiplier(now),
                 CritChance(player), PlayerRules.CritMultiplier, target.Data.Defense), _random);
@@ -211,12 +244,12 @@ public sealed partial class GameWorld
         player.IsDead = false;
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);
-        var dungeon = DungeonRespawnPoint(player);
+        var dungeon = ArenaRespawnPoint(player) ?? DungeonRespawnPoint(player);
         var (spawnX, spawnZ) = dungeon ?? SpawnPointFor(player.Id);
         player.Movement.Teleport(spawnX, spawnZ, now);
         player.StatsDirty = true;
         _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
-        Notify(player, dungeon != null ? "Você renasceu na entrada da cripta" : "Você renasceu na vila");
+        Notify(player, player.ArenaId != 0 ? "Você renasceu na base" : dungeon != null ? "Você renasceu na entrada da cripta" : "Você renasceu na vila");
     }
 
     private void DamageMonsterToPlayer(ServerMonster monster, ServerPlayer player, int baseDamage, byte source, double now)

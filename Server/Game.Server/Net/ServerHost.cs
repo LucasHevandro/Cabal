@@ -29,6 +29,9 @@ public sealed record ServerOptions
     /// <summary>Dungeon fácil (vida e dano baixos, sem nível mínimo) para os bots de nível 1 conseguirem terminar.</summary>
     public bool DungeonTest { get; init; }
 
+    /// <summary>Jogadores por time na arena (5; menos para testar com poucos jogadores).</summary>
+    public int ArenaTeamSize { get; init; } = Game.Shared.Pvp.ArenaRules.TeamSize;
+
     /// <summary>De quantos em quantos segundos salvar os personagens conectados.</summary>
     public double SaveIntervalSeconds { get; init; } = 10;
 }
@@ -81,7 +84,8 @@ public sealed class ServerHost : IOutbox, IDisposable
         _saver = saver;
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
-        World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null);
+        World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null,
+            arenaTeamSize: options.ArenaTeamSize);
     }
 
     private bool SimulatingLatency => _options.SimulatedLatencyMs > 0 || _options.SimulatedJitterMs > 0;

@@ -125,6 +125,7 @@ public sealed partial class GameWorld
         foreach (var member in members)
         {
             if (member.DungeonId != 0) return $"{member.Name} já está numa dungeon";
+            if (member.DuelId != 0 || member.ArenaId != 0) return $"{member.Name} está num duelo ou na arena";
             if (member.TradeId != 0) return $"{member.Name} está numa troca";
             if (member.IsDead) return $"{member.Name} está morto";
             if (member.Progress.Level < minLevel) return $"{member.Name} precisa do nível {minLevel}";
@@ -171,6 +172,7 @@ public sealed partial class GameWorld
             member.Bag.TryRemove(definition.KeyItemId, 1);
             member.InventoryDirty = true;
             Log(member, "chave_dungeon", definition.KeyItemId, 1, 0, $"entrou em {definition.Id} (instância {instance.Id})");
+            RemoveFromQueue(member);
             instance.PlayerIds.Add(member.Id);
             instance.Members.Add(member.Name);
             member.DungeonId = instance.Id;

@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --db memory    banco em memória (tudo se perde ao desligar) — desenvolvimento sem Docker
 //   --guests       aceita entrar sem conta (bots e testes; convidados não são salvos)
 //   --dungeon-test dungeon fácil e sem nível mínimo (bots de nível 1 conseguem terminar)
+//   --arena-size N jogadores por time na arena (padrão 5; 1 para testar a dois)
 //   --stats N      métricas de desempenho a cada N segundos
 //   --latency N    (testes) atrasa cada mensagem N ms em cada sentido; --jitter N soma até N ms aleatórios
 var options = new ServerOptions();
@@ -34,6 +35,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--guests":
             options = options with { AllowGuests = true };
+            break;
+        case "--arena-size" when int.TryParse(value, out var arenaSize):
+            options = options with { ArenaTeamSize = Math.Max(1, arenaSize) };
             break;
         case "--dungeon-test":
             options = options with { DungeonTest = true };

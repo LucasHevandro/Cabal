@@ -36,6 +36,7 @@ public sealed partial class GameWorld
     private readonly IRandomSource _random;
     private readonly ItemUidAllocator _uids;
     private readonly DungeonTuning _dungeonTuning;
+    private readonly int _arenaTeamSize;
     private readonly Dictionary<int, ServerPlayer> _players = new();
     private readonly Dictionary<int, ServerMonster> _monsters = new();
     private readonly Dictionary<int, ServerLoot> _loot = new();
@@ -49,9 +50,10 @@ public sealed partial class GameWorld
     /// os testes passam grupos próprios e uma fonte aleatória fixa.
     /// </summary>
     public GameWorld(IOutbox outbox, IEnumerable<SpawnDefinition>? spawns = null, IRandomSource? random = null,
-        ItemUidAllocator? uids = null, DungeonTuning? dungeonTuning = null)
+        ItemUidAllocator? uids = null, DungeonTuning? dungeonTuning = null, int arenaTeamSize = Game.Shared.Pvp.ArenaRules.TeamSize)
     {
         _outbox = outbox;
+        _arenaTeamSize = Math.Max(1, arenaTeamSize);
         _dungeonTuning = dungeonTuning ?? DungeonTuning.Normal;
         _random = random ?? new SystemRandomSource();
         _uids = uids ?? new ItemUidAllocator();
@@ -115,7 +117,8 @@ public sealed partial class GameWorld
     public (CharacterSnapshot Snapshot, List<ItemLogEntry> Logs) CaptureForSave(ServerPlayer player)
     {
         // Na dungeon (ou morto) salva fora: na volta aparece no portal ou na vila.
-        var (x, z) = player.DungeonId != 0 ? (NpcCatalog.Find(NpcCatalog.DungeonPortal)!.X, NpcCatalog.Find(NpcCatalog.DungeonPortal)!.Z + 2.5f)
+        var (x, z) = player.ArenaId != 0 ? SpawnPointFor(player.Id)
+            : player.DungeonId != 0 ? (NpcCatalog.Find(NpcCatalog.DungeonPortal)!.X, NpcCatalog.Find(NpcCatalog.DungeonPortal)!.Z + 2.5f)
             : player.IsDead ? SpawnPointFor(player.Id) : (player.X, player.Z);
         var items = new List<ItemRecord>();
         foreach (var (slot, item) in player.Bag.Items()) items.Add(ToRecord(item, ItemContainerKind.Bag, slot));
@@ -144,6 +147,7 @@ public sealed partial class GameWorld
         _players.Remove(playerId);
         if (leaving.PartyId != 0) LeaveParty(leaving, $"{leaving.Name} saiu do jogo e deixou o grupo");
         NotifyWatchers(leaving, $"{leaving.Name} saiu do jogo");
+        if (_arenaQueue.Remove(playerId)) MarkQueue();
         foreach (var monster in _monsters.Values)
         {
             if (monster.AggroPlayerId == playerId) monster.AggroPlayerId = 0;
@@ -224,6 +228,12 @@ public sealed partial class GameWorld
             case DungeonCommand dungeon:
                 HandleDungeon(player, dungeon, now);
                 break;
+            case DuelCommand duel:
+                HandleDuel(player, duel, now);
+                break;
+            case ArenaCommand arena:
+                HandleArena(player, arena, now);
+                break;
         }
     }
 
@@ -237,6 +247,8 @@ public sealed partial class GameWorld
         foreach (var player in _players.Values) TickPlayer(player, now, (float)dt);
         foreach (var monster in _monsters.Values) TickMonster(monster, now, (float)dt);
         TickDungeons(now);
+        TickDuels(now);
+        TickArenas(now, (float)dt);
         ExpireLoot(now);
         TickTrades();
 
@@ -258,7 +270,7 @@ public sealed partial class GameWorld
         if (player.Movement.TryMove(move.X, move.Z, now))
         {
             player.Yaw = move.Yaw;
-            if (player.DungeonId != 0 && ClampToDungeon(player, now))
+            if ((player.DungeonId != 0 && ClampToDungeon(player, now)) || (player.ArenaId != 0 && ClampToArena(player, now)))
                 _outbox.Send(player.Id, new PositionCorrection { X = player.X, Z = player.Z });
             return;
         }
@@ -341,6 +353,7 @@ public sealed partial class GameWorld
         SendPartyState(player);
         SendSocialLists(player);
         SendTradeState(player);
+        SendPvpState(player, now);
     }
 
     /// <summary>Manda a mensagem a todos os jogadores perto do ponto.</summary>

@@ -119,6 +119,12 @@ public sealed class BotStats
     public double DungeonSeconds;
     public byte DungeonMedal;
     public int DungeonMaxCombo;
+
+    // Arena
+    public int ArenaMatches;
+    public int ArenaWins;
+    public int ArenaKills;
+    public int PvpHitsDealt;
 }
 
 /// <summary>
@@ -170,6 +176,17 @@ public sealed class Bot
 
     private readonly List<InventoryStack> _bag = new();
     private DungeonState? _dungeon;
+    private PvpState? _pvp;
+
+    /// <summary>Último estado de PvP (fila, duelo ou arena).</summary>
+    public PvpState? Pvp => _pvp;
+
+    public bool InArena => _pvp is { Mode: PvpMode.Arena };
+
+    /// <summary>Na arena só vai aos pontos, sem atacar (teste do cliente: o jogador consegue derrubá-lo).</summary>
+    public bool PassiveInArena { get; set; }
+
+    public void JoinArena() => Connection.Send(new ArenaCommand { Action = ArenaActionKind.Join });
     private static readonly Game.Shared.Dungeon.DungeonDefinition Crypt = Game.Shared.Dungeon.DungeonCatalog.Crypt();
 
     /// <summary>Último estado da dungeon (nulo ou inativo = fora).</summary>
@@ -278,6 +295,16 @@ public sealed class Bot
         if (_dead) return;
 
         var serverNow = _clock.ServerNow(localNow);
+        if (InArena)
+        {
+            UpdateArena(serverNow, localNow, dt);
+            if (localNow >= _nextMoveAt)
+            {
+                _nextMoveAt = localNow + 0.05;
+                Connection.Send(new MoveInput { Sequence = ++_sequence, X = X, Z = Z });
+            }
+            return;
+        }
         var target = NearestMonster();
         if (target == null && Dungeon is { } inside)
         {
@@ -368,6 +395,65 @@ public sealed class Bot
         Connection.Send(new UseSkill { Slot = 0, TargetId = targetId, ClientTime = serverNow });
     }
 
+    /// <summary>
+    /// Na arena: luta com o inimigo mais perto (até 10 m); se não tiver, vai para o ponto mais perto que não é do
+    /// próprio time e fica nele.
+    /// </summary>
+    private void UpdateArena(double serverNow, double localNow, float dt)
+    {
+        var pvp = _pvp!;
+        if (pvp.Finished || serverNow < pvp.StartsAt) return;
+        var enemies = pvp.Players.Where(p => p.Team != pvp.Team).Select(p => p.Id).ToHashSet();
+        (int Id, float X, float Z)? enemy = null;
+        var best = 10f * 10f;
+        foreach (var (id, e) in _entities)
+        {
+            if (e.Kind != EntityKind.Player || e.Dead || !enemies.Contains(id)) continue;
+            var d = (e.X - X) * (e.X - X) + (e.Z - Z) * (e.Z - Z);
+            if (d < best)
+            {
+                best = d;
+                enemy = (id, e.X, e.Z);
+            }
+        }
+        if (enemy is { } t && !PassiveInArena)
+        {
+            var dx = t.X - X;
+            var dz = t.Z - Z;
+            var distance = MathF.Sqrt(dx * dx + dz * dz);
+            if (distance > AttackDistance)
+            {
+                var step = MathF.Min(distance - AttackDistance + 0.1f, RunSpeed * dt);
+                X += dx / distance * step;
+                Z += dz / distance * step;
+            }
+            else
+            {
+                Fight(t.Id, serverNow, localNow);
+            }
+            return;
+        }
+        var points = Game.Shared.Pvp.ArenaRules.Points;
+        var goal = -1;
+        var goalDistance = float.MaxValue;
+        for (var i = 0; i < points.Count && i < pvp.Points.Count; i++)
+        {
+            if (pvp.Points[i].Owner == pvp.Team && !pvp.Points[i].Contested) continue;
+            var px = pvp.OriginX + points[i].X;
+            var pz = pvp.OriginZ + points[i].Z;
+            var d = (px - X) * (px - X) + (pz - Z) * (pz - Z);
+            // Espalha o time: cada bot prefere um ponto pelo próprio id.
+            d += (PlayerId + i) % 3 * 40f;
+            if (d < goalDistance)
+            {
+                goalDistance = d;
+                goal = i;
+            }
+        }
+        if (goal < 0) goal = PlayerId % points.Count;
+        Walk(pvp.OriginX + points[goal].X, pvp.OriginZ + points[goal].Z, 1.5f, dt);
+    }
+
     private (int Id, float X, float Z)? NearestMonster()
     {
         (int, float, float)? best = null;
@@ -450,6 +536,15 @@ public sealed class Bot
             case PartyInvite invite:
                 if (AutoAcceptInvites) Connection.Send(new PartyCommand { Action = PartyActionKind.Accept, TargetId = invite.InviterId });
                 break;
+            case PvpState pvp:
+                if (pvp is { Mode: PvpMode.Arena, Finished: true } && _pvp is { Mode: PvpMode.Arena, Finished: false })
+                {
+                    Stats.ArenaMatches++;
+                    if (pvp.Winner == pvp.Team) Stats.ArenaWins++;
+                    Stats.ArenaKills += pvp.Players.Where(p => p.Id == PlayerId).Sum(p => p.Kills);
+                }
+                _pvp = pvp;
+                break;
             case DungeonState dungeon:
                 if (dungeon.Active && dungeon.Completed && _dungeon is { Completed: false })
                 {
@@ -463,6 +558,9 @@ public sealed class Bot
             case Inventory inventory:
                 _bag.Clear();
                 _bag.AddRange(inventory.Items.Where(i => i.Container == ItemContainerKind.Bag));
+                break;
+            case DuelInvite duelInvite:
+                if (AutoTrade) Connection.Send(new DuelCommand { Action = DuelActionKind.Accept, TargetId = duelInvite.FromId });
                 break;
             case TradeInvite tradeInvite:
                 if (AutoTrade) Connection.Send(new TradeCommand { Action = TradeActionKind.Accept, TargetId = tradeInvite.FromId });
@@ -480,6 +578,8 @@ public sealed class Bot
                 if (chat.Channel == ChatChannel.System) Stats.SystemChat++;
                 break;
             case CombatEvent hit:
+                if (hit.AttackerId == PlayerId && _entities.TryGetValue(hit.TargetId, out var victim) && victim.Kind == EntityKind.Player)
+                    Stats.PvpHitsDealt++;
                 if (hit.AttackerId == PlayerId)
                 {
                     Stats.HitsConfirmed++;

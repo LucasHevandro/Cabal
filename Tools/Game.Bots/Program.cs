@@ -9,6 +9,8 @@ using Game.Shared.Social;
 //   --invite Nome: o primeiro bot convida esse personagem (um cliente de verdade) e fala no grupo quando ele entra.
 //   --dungeon: grupos de 4 vão ao portal, o líder entra na Cripta e todos lutam até o chefe (servidor com
 //     --guests --dungeon-test, para bots de nível 1). Mede o tempo e a medalha de cada grupo.
+//   --arena-passive: como --arena, mas os bots não atacam (teste do cliente na arena).
+//   --arena: todos entram na fila da arena, jogam as partidas (pontos e lutas) e voltam para a fila até o fim.
 //   --accounts: cada bot entra com conta (bot01, bot02... senha senha12345), como jogador de verdade (amigos,
 //     bloqueio e denúncia só funcionam com conta); sem isso entram como convidados.
 var host = "127.0.0.1";
@@ -18,6 +20,8 @@ var seconds = 60.0;
 var party = args.Contains("--party");
 var accounts = args.Contains("--accounts");
 var dungeon = args.Contains("--dungeon");
+var arenaPassive = args.Contains("--arena-passive");
+var arena = args.Contains("--arena") || arenaPassive;
 if (dungeon) party = true;
 var inviteName = "";
 for (var i = 0; i < args.Length - 1; i++)
@@ -51,6 +55,7 @@ for (var i = 0; i < count; i++)
     // Na dungeon todos esperam no portal da Guardiã Selene.
     if (dungeon) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), -5, -4);
     bot.AutoAcceptInvites = party && i % 4 != 0;
+    bot.PassiveInArena = arenaPassive;
     bot.AutoTrade = inviteName.Length > 0 && i == 0;
     try
     {
@@ -73,6 +78,7 @@ var clientJoined = false;
 var nextClientInviteAt = 0.0;
 var enterAt = new Dictionary<int, double>();
 var leaveAt = new Dictionary<string, double>();
+var arenaJoinAt = new Dictionary<string, double>();
 while (clock.Elapsed.TotalSeconds < seconds)
 {
     var now = clock.Elapsed.TotalSeconds;
@@ -94,6 +100,16 @@ while (clock.Elapsed.TotalSeconds < seconds)
     {
         nextClientInviteAt = now + 5;
         bots[0].Invite(inviteName);
+    }
+    // Arena: quem está livre (fora da fila e da partida) entra na fila; para de entrar no último minuto e meio.
+    if (arena && now < seconds - 90)
+    {
+        foreach (var b in bots)
+            if (b.PlayerId != 0 && b.Pvp is not { InQueue: true } && !b.InArena && now >= arenaJoinAt.GetValueOrDefault(b.Name))
+            {
+                arenaJoinAt[b.Name] = now + 3;
+                b.JoinArena();
+            }
     }
     // Dungeon: com o grupo completo perto do portal, o líder entra; depois de vencer, sai.
     if (dungeon)
@@ -180,6 +196,14 @@ if (party)
     Console.WriteLine($"Grupos: {grouped}/{bots.Count} bots no grupo certo | estados de grupo recebidos {bots.Sum(b => b.Stats.PartyStates)} | " +
                       $"chat recebido {bots.Sum(b => b.Stats.ChatReceived)} (grupo {bots.Sum(b => b.Stats.PartyChatReceived)}, sistema {bots.Sum(b => b.Stats.SystemChat)})");
     ok &= grouped == bots.Count && bots.Sum(b => b.Stats.PartyChatReceived) > 0;
+}
+if (arena)
+{
+    var matches = bots.Sum(b => b.Stats.ArenaMatches);
+    Console.WriteLine($"Arena: {bots.Count(b => b.Stats.ArenaMatches > 0)}/{bots.Count} bots terminaram partidas | " +
+                      $"{matches} participações, {bots.Sum(b => b.Stats.ArenaWins)} vitórias | golpes em jogadores {bots.Sum(b => b.Stats.PvpHitsDealt)} | " +
+                      $"abates {bots.Sum(b => b.Stats.ArenaKills)}");
+    ok &= bots.All(b => b.Stats.ArenaMatches > 0) && bots.Sum(b => b.Stats.PvpHitsDealt) > 0;
 }
 if (dungeon)
 {

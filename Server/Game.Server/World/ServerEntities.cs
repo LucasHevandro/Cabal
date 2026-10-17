@@ -103,6 +103,13 @@ public sealed class ServerPlayer
     /// <summary>Instância de dungeon em que está (0 = mundo aberto).</summary>
     public int DungeonId { get; set; }
 
+    /// <summary>PvP: duelo e partida da arena em andamento (0 = nenhum), fila, desafio esperando e reenviar o PvpState.</summary>
+    public int DuelId { get; set; }
+    public int ArenaId { get; set; }
+    public bool InArenaQueue { get; set; }
+    public (int FromId, double ExpiresAt)? PendingDuelInvite { get; set; }
+    public bool PvpDirty { get; set; }
+
     /// <summary>Amigos e bloqueados (salvos com o personagem).</summary>
     public List<RelationRecord> Relations { get; } = new();
 
