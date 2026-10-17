@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Shared.Text;
 using UnityEngine;
 
 namespace Game.Client.World
@@ -13,7 +14,8 @@ namespace Game.Client.World
         [SerializeField] private int maxLevel = 10;
         [SerializeField] private float radius = 25f;
 
-        public string DisplayName => displayName;
+        /// <summary>Nome da zona no idioma do jogador (a cena guarda a chave, ex.: zone.vila).</summary>
+        public string DisplayName => Loc.Has(displayName) ? Loc.T(displayName) : displayName;
         public int MinLevel => minLevel;
         public int MaxLevel => maxLevel;
         public float Radius => radius;

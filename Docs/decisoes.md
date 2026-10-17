@@ -138,3 +138,21 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
 - `--arena-size N` muda o tamanho do time para testes (1 contra 1).
 - **Revisar:** com o dano a 35%, uma luta 1 contra 1 de mesmo nível dura uns 20 a 30 golpes. Ajustar com gente de
   verdade, e decidir se a arena terá ranking e moeda própria.
+
+## 2026-10-17 — Textos em arquivo de tradução
+
+- **Um arquivo por idioma:** `Shared/Game.Shared/Resources/Locales/pt-BR.txt`, com linhas `chave = texto` e
+  argumentos `{0}`, `{1}` (com formato, como `{0:N0}`). O formato é simples de propósito: dá para editar em qualquer
+  editor e sem ferramenta. Para traduzir, copia-se o arquivo como `en-US.txt` e troca-se só o texto. O que faltar na
+  tradução aparece em português.
+- **Nomes dos catálogos saíram do código:** itens, monstros, skills, NPCs, missões, zonas e salas têm só o id. O nome
+  vem da chave `item.<id>`, `monster.<id>` etc. A cena guarda as chaves das zonas e dos bonecos de treino.
+- **O servidor manda chave, não frase:** avisos, linhas do chat do sistema, resultado da ferreira, recusa de conexão e
+  erros da API de contas vão como chave mais argumentos (`LocalText`). Cada cliente monta o texto no idioma dele.
+  Nomes de itens, monstros e NPCs vão como referência a outra chave (`@item.pocao_hp_p`). Por isso o protocolo foi
+  para a v10. Logs e o registro de denúncias continuam em português (são para nós, não para o jogador).
+- **Teste que segura a regra:** um teste do Shared procura no código (Shared, servidor, cliente e ferramentas) toda
+  chave escrita e falha se ela não existir no arquivo. Outro confere que todo item, monstro, skill, NPC e missão tem
+  nome. Assim um texto novo sem tradução não passa.
+- Ficaram em português: os comandos do chat (`/convidar`, `/duelo`...), o menu do editor e as ferramentas de teste.
+

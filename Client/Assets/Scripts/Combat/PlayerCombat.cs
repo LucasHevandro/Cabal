@@ -8,10 +8,11 @@ using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Core;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using Game.Shared.World;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Msg = Game.Shared.Net;
+using UnityEngine.InputSystem;
 
 namespace Game.Client.Combat
 {
@@ -145,7 +146,7 @@ namespace Game.Client.Combat
             }
             if (ConnectMenu.IsOpen) return;
 
-            if (Combo.Tick(now)) OnComboEnded("Tempo esgotado");
+            if (Combo.Tick(now)) OnComboEnded(Loc.T("combo.reason_timeout"));
             KeepComboOnTargetDeath();
             if (!GameMode.IsOnline) RegenerateMp();
 
@@ -181,25 +182,25 @@ namespace Game.Client.Combat
             if (Combo.State == ComboState.Active) return;
             if (Online && CharacterState.HasSheet && !CharacterState.Sheet.ComboUnlocked)
             {
-                Refuse($"Conclua a missão \"{QuestCatalog.Get(ClassCatalog.ComboQuestId).Name}\" para liberar o combo");
+                Refuse(Loc.T("combo.locked", QuestCatalog.Get(ClassCatalog.ComboQuestId).Name));
                 return;
             }
             if (Target == null || !Target.IsAlive)
             {
-                ShowMessage("Selecione um alvo (Tab ou clique)");
+                ShowMessage(Loc.T("combat.need_target_hint"));
                 return;
             }
             var cost = Combo.Config.ActivationSpCost;
             if (!Sp.TrySpend(cost))
             {
-                ShowMessage($"SP insuficiente ({Sp.Current}/{cost})");
+                ShowMessage(Loc.T("combo.no_sp", Sp.Current, cost));
                 SoundPlayer.Play(SoundId.Error, 0.6f, 0f);
                 return;
             }
             Combo.TryStart(now);
             if (Online) NetworkSession.Instance.Send(new Msg.StartCombo { TargetId = Target.NetworkId, ClientTime = ServerNow });
             SoundPlayer.Play(SoundId.ComboStart, 0.8f, 0f);
-            ShowMessage("Combo! Aperte as skills quando o marcador estiver na janela");
+            ShowMessage(Loc.T("combo.started"));
         }
 
         private void TryFinisher()
@@ -208,7 +209,7 @@ namespace Game.Client.Combat
             var target = Target;
             if (target == null || !InRange(target, finisherRange))
             {
-                ShowMessage("Chegue perto do alvo para finalizar");
+                ShowMessage(Loc.T("combo.finisher_closer"));
                 return;
             }
 
@@ -223,14 +224,14 @@ namespace Game.Client.Combat
             }
             var hit = RollDamage(finisherBaseDamage, multiplier, target);
             var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
-            DamageNumbers.Spawn(target.HeadPosition, $"FINAL {dealt}", new Color(1f, 0.45f, 0.1f), 38f);
+            DamageNumbers.Spawn(target.HeadPosition, Loc.T("fx.final", dealt), new Color(1f, 0.45f, 0.1f), 38f);
             SoundPlayer.Play(SoundId.Finisher, 1f, 0f);
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(target.CenterPosition, new Color(1f, 0.5f, 0.15f), 45);
 
             BestChain = Mathf.Max(BestChain, chain);
             HitStop.Trigger(0.12f);
             if (_camera != null) _camera.Shake(shakeAmplitude * 4f, 0.3f);
-            ShowMessage($"Finalizador x{multiplier:0.00} depois de {chain} acertos");
+            ShowMessage(Loc.T("combo.finisher", multiplier, chain));
         }
 
         private void UseSkill(int index, double now)
@@ -239,7 +240,7 @@ namespace Game.Client.Combat
             var skill = skills[index];
             if (Online && !CharacterState.SkillUnlocked(index))
             {
-                Refuse($"{skill.Name} ainda não foi liberada ({UnlockText(index)})");
+                Refuse(Loc.T("skill.locked_detail", skill.Name, UnlockText(index)));
                 return;
             }
             var target = Target;
@@ -248,25 +249,25 @@ namespace Game.Client.Combat
             switch (SkillRules.Check(skill, index, _cooldowns, Mp, distance, Time.time))
             {
                 case SkillUseCheck.NoTarget:
-                    ShowMessage("Selecione um alvo (Tab ou clique)");
+                    ShowMessage(Loc.T("combat.need_target_hint"));
                     return;
                 case SkillUseCheck.OnCooldown:
                     // Como no CABAL: usar skill em recarga durante o combo quebra a corrente.
                     if (Combo.State == ComboState.Active)
                     {
                         Combo.Cancel();
-                        OnComboEnded($"{skill.Name} em recarga");
+                        OnComboEnded(Loc.T("skill.cooldown", skill.Name));
                     }
                     else
                     {
-                        Refuse($"{skill.Name} em recarga");
+                        Refuse(Loc.T("skill.cooldown", skill.Name));
                     }
                     return;
                 case SkillUseCheck.OutOfRange:
-                    Refuse("Fora de alcance");
+                    Refuse(Loc.T("combat.out_of_range"));
                     return;
                 case SkillUseCheck.NotEnoughMp:
-                    Refuse($"MP insuficiente ({Mp.Current}/{skill.MpCost})");
+                    Refuse(Loc.T("combat.no_mp", Mp.Current, skill.MpCost));
                     return;
             }
 
@@ -280,7 +281,7 @@ namespace Game.Client.Combat
                 LastGradeAt = Time.unscaledTime;
                 if (result.ComboEnded)
                 {
-                    OnComboEnded("Fora da janela");
+                    OnComboEnded(Loc.T("combo.reason_window"));
                 }
                 else
                 {
@@ -401,7 +402,7 @@ namespace Game.Client.Combat
             if (IsDead) return 0;
             if (_motor != null && _motor.IsDodging)
             {
-                DamageNumbers.Spawn(transform.position + Vector3.up * 2.2f, "Esquivou!", new Color(0.7f, 1f, 0.7f), 24f);
+                DamageNumbers.Spawn(transform.position + Vector3.up * 2.2f, Loc.T("fx.dodged"), new Color(0.7f, 1f, 0.7f), 24f);
                 return 0;
             }
 
@@ -425,7 +426,7 @@ namespace Game.Client.Combat
             Mp.SetMax(stats.MaxMp);
             Hp.Add(Hp.Max);
             Mp.Add(Mp.Max);
-            ShowMessage($"Nível {level}! HP {stats.MaxHp} · MP {stats.MaxMp} · ataque {stats.AttackPower} · defesa {stats.Defense}");
+            ShowMessage(Loc.T("level.up_offline", level, stats.MaxHp, stats.MaxMp, stats.AttackPower, stats.Defense));
         }
 
         private void Die()
@@ -441,7 +442,7 @@ namespace Game.Client.Combat
             if (Combo.State == ComboState.Active) Combo.Cancel();
             _selector.Select(null);
             SoundPlayer.Play(SoundId.Miss, 1f, 0f);
-            ShowMessage("Você morreu");
+            ShowMessage(Loc.T("player.died"));
             transform.localScale = new Vector3(1f, 0.25f, 1f);
         }
 
@@ -457,7 +458,7 @@ namespace Game.Client.Combat
             if (_motor != null) _motor.Teleport(_spawnPoint);
             Hp.Add(Hp.Max);
             Mp.Add(Mp.Max);
-            LeaveDeath("Você renasceu na cidade");
+            LeaveDeath(Loc.T("respawn.city"));
         }
 
         /// <summary>
@@ -473,7 +474,7 @@ namespace Game.Client.Combat
             if (Target == null || !Target.IsAlive)
             {
                 Combo.Cancel();
-                OnComboEnded("Sem alvo");
+                OnComboEnded(Loc.T("combat.no_target"));
             }
         }
 
@@ -501,7 +502,7 @@ namespace Game.Client.Combat
                 LastGradeAt = Time.unscaledTime;
                 SoundPlayer.Play(SoundId.Miss, 0.7f, 0f);
             }
-            ShowMessage($"Combo encerrado: {reason} ({Combo.HitCount} acertos)");
+            ShowMessage(Loc.T("combo.ended", reason, Combo.HitCount));
         }
 
         // ===== Modo online: o servidor manda, o cliente mostra =====
@@ -527,10 +528,10 @@ namespace Game.Client.Combat
         {
             if (_classSkillsFor == null || index >= skills.Count) return "";
             var classSkill = ClassCatalog.SkillsFor(_classSkillsFor.Value)[index];
-            var text = $"Nv {classSkill.RequiredLevel}";
-            if (!string.IsNullOrEmpty(classSkill.RequiredQuestId))
-                text += compact ? "\n+ missão" : $" + missão \"{QuestCatalog.Get(classSkill.RequiredQuestId).Name}\"";
-            return text;
+            if (string.IsNullOrEmpty(classSkill.RequiredQuestId)) return Loc.T("skill.unlock_level", classSkill.RequiredLevel);
+            return compact
+                ? Loc.T("skill.unlock_level_quest_short", classSkill.RequiredLevel)
+                : Loc.T("skill.unlock_level_quest", classSkill.RequiredLevel, QuestCatalog.Get(classSkill.RequiredQuestId).Name);
         }
 
         /// <summary>Recursos e vida decididos pelo servidor.</summary>
@@ -545,7 +546,7 @@ namespace Game.Client.Combat
             Sp.Add(stats.Sp - Sp.Current);
 
             if (stats.Hp == 0 && !IsDead) EnterDeath();
-            else if (stats.Hp > 0 && IsDead) LeaveDeath("Você renasceu na vila");
+            else if (stats.Hp > 0 && IsDead) LeaveDeath(Loc.T("respawn.village"));
         }
 
         /// <summary>O servidor é quem sabe se o combo continua; a previsão local se ajusta.</summary>
@@ -556,10 +557,10 @@ namespace Game.Client.Combat
                 Combo.Cancel();
                 var reason = (ComboEndReason)state.LastEndReason switch
                 {
-                    ComboEndReason.Missed => "fora da janela (servidor)",
-                    ComboEndReason.TimedOut => "tempo esgotado (servidor)",
-                    ComboEndReason.Finished => "finalizado",
-                    _ => "interrompido",
+                    ComboEndReason.Missed => Loc.T("combo.reason_window_server"),
+                    ComboEndReason.TimedOut => Loc.T("combo.reason_timeout_server"),
+                    ComboEndReason.Finished => Loc.T("combo.reason_finished"),
+                    _ => Loc.T("combo.reason_interrupted"),
                 };
                 OnComboEnded(reason);
             }
@@ -574,16 +575,16 @@ namespace Game.Client.Combat
             var color = finisher ? new Color(1f, 0.45f, 0.1f) : DamageColor(grade, hit.Critical);
             if (!mine) color = Color.Lerp(color, Color.gray, 0.5f);
 
-            var text = finisher ? $"FINAL {hit.Damage}" : hit.Critical ? $"{hit.Damage}!" : hit.Damage.ToString();
+            var text = finisher ? Loc.T("fx.final", hit.Damage) : hit.Critical ? $"{hit.Damage}!" : hit.Damage.ToString();
             DamageNumbers.Spawn(target.HeadPosition, text, color, finisher ? 38f : mine ? (hit.Critical ? 32f : 26f) : 20f);
             if (CombatFx.Instance != null)
                 CombatFx.Instance.Sparks(target.CenterPosition, color, finisher ? 45 : grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
             if (!mine) return;
 
-            if (!string.IsNullOrEmpty(hit.RouteName) && (LastRoute == null || LastRoute.Name != hit.RouteName || Time.unscaledTime - LastRouteAt > 0.5f))
+            if (!string.IsNullOrEmpty(hit.RouteId) && (LastRoute == null || LastRoute.Id != hit.RouteId || Time.unscaledTime - LastRouteAt > 0.5f))
             {
                 // A rota já foi prevista localmente; só mostra se a previsão não mostrou.
-                ShowMessage($"Rota: {hit.RouteName}");
+                ShowMessage(Loc.T("combo.route", Loc.T("route." + hit.RouteId)));
             }
             var heavy = finisher || grade == ComboGrade.Excellent;
             SoundPlayer.Play(finisher ? SoundId.Finisher : heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
@@ -597,7 +598,7 @@ namespace Game.Client.Combat
             var head = transform.position + Vector3.up * 2.2f;
             if (hit.Dodged)
             {
-                DamageNumbers.Spawn(head, "Esquivou!", new Color(0.7f, 1f, 0.7f), 24f);
+                DamageNumbers.Spawn(head, Loc.T("fx.dodged"), new Color(0.7f, 1f, 0.7f), 24f);
                 return;
             }
             DamageNumbers.Spawn(head, hit.Critical ? $"-{hit.Damage}!" : $"-{hit.Damage}", new Color(1f, 0.3f, 0.3f), hit.Critical ? 30f : 24f);

@@ -3,6 +3,7 @@ using Game.Client.Fx;
 using Game.Client.UI;
 using Game.Shared.Combat;
 using Game.Shared.Monsters;
+using Game.Shared.Text;
 using Game.Shared.World;
 using UnityEngine;
 
@@ -67,7 +68,7 @@ namespace Game.Client.Monsters
             _phaseTwo = true;
             _monster.Data.AttackCooldownSeconds = _baseCooldown * BossRules.PhaseTwoCooldownFactor;
             _nextAreaAt = Time.time + 1.5f;
-            CombatHud.Announce($"{_target.DisplayName} ficou furioso!");
+            CombatHud.Announce(Loc.T("boss.enraged", _target.DisplayName));
             SoundPlayer.Play(SoundId.Finisher, 1f, 0f);
         }
 

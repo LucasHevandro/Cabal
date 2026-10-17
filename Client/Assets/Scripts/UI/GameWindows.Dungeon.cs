@@ -2,8 +2,9 @@ using Game.Client.Net;
 using Game.Shared.Dungeon;
 using Game.Shared.Items;
 using Game.Shared.Progression;
-using UnityEngine;
+using Game.Shared.Text;
 using Msg = Game.Shared.Net;
+using UnityEngine;
 
 namespace Game.Client.UI
 {
@@ -26,7 +27,7 @@ namespace Game.Client.UI
         private void DrawPortal(NpcDefinition npc)
         {
             var crypt = DungeonCatalog.Crypt();
-            var rect = Window(new Rect(VirtualWidth / 2 - 300, 150, 600, 560), $"{npc.Name} — {crypt.Name}");
+            var rect = Window(new Rect(VirtualWidth / 2 - 300, 150, 600, 560), Loc.T("dungeon.portal_title", npc.Name, crypt.Name));
             var x = rect.x + 16;
             var y = rect.y + 46;
             var keys = CharacterState.Bag.Count(crypt.KeyItemId);
@@ -36,23 +37,22 @@ namespace Game.Client.UI
             var isLeader = party == null || party.Members.Count == 0 || party.LeaderId == NetworkSession.Instance.PlayerId;
 
             GUI.Label(new Rect(x, y, rect.width - 32, 64),
-                $"Três salas e o Senhor da Cripta, para até {DungeonRules.MaxPlayers} jogadores. " +
-                $"Vençam em {DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds)}: medalha <b>S</b> até {DungeonRules.FormatTime(DungeonRules.MedalSSeconds)} " +
-                $"com combo de {DungeonRules.MedalSCombo}+, <b>A</b> até {DungeonRules.FormatTime(DungeonRules.MedalASeconds)}. A medalha dá mais sorteios no baú.", _small);
+                Loc.T("dungeon.crypt_intro", DungeonRules.MaxPlayers, DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds),
+                    DungeonRules.FormatTime(DungeonRules.MedalSSeconds), DungeonRules.MedalSCombo, DungeonRules.FormatTime(DungeonRules.MedalASeconds)), _small);
             y += 74;
-            GUI.Label(new Rect(x, y, rect.width - 32, 24), Check(level >= crypt.MinLevel, $"Nível {crypt.MinLevel} ou mais (você: {level})"), _small);
+            GUI.Label(new Rect(x, y, rect.width - 32, 24), Check(level >= crypt.MinLevel, Loc.T("dungeon.req_level", crypt.MinLevel, level)), _small);
             GUI.Label(new Rect(x, y + 24, rect.width - 32, 24),
-                Check(keys > 0, $"{ItemCatalog.Get(crypt.KeyItemId).Name} na bolsa (você tem {keys}; a mercadora vende)"), _small);
+                Check(keys > 0, Loc.T("dungeon.req_key", ItemCatalog.Get(crypt.KeyItemId).Name, keys)), _small);
             GUI.Label(new Rect(x, y + 48, rect.width - 32, 24),
-                Check(isLeader, members > 1 ? $"Grupo de {members}: o líder entra com todos, que precisam estar aqui perto" : "Sozinho (ou forme um grupo com /convidar)"), _small);
+                Check(isLeader, members > 1 ? Loc.T("dungeon.req_party", members) : Loc.T("dungeon.req_solo")), _small);
             y += 84;
 
-            GUI.Label(new Rect(x, y, rect.width - 32, 26), "<b>Melhores tempos</b>", _label);
+            GUI.Label(new Rect(x, y, rect.width - 32, 26), Loc.T("dungeon.best_times"), _label);
             y += 30;
             var info = CharacterState.DungeonRanking;
             if (info == null || info.Ranking.Count == 0)
             {
-                GUI.Label(new Rect(x, y, rect.width - 32, 24), "Ninguém venceu ainda. Sejam os primeiros!", _small);
+                GUI.Label(new Rect(x, y, rect.width - 32, 24), Loc.T("dungeon.no_runs"), _small);
             }
             else
             {
@@ -64,14 +64,14 @@ namespace Game.Client.UI
                     GUI.color = MedalColor((DungeonMedal)run.Medal);
                     GUI.Label(new Rect(x + 110, y, 40, 24), $"<b>{DungeonRules.MedalName((DungeonMedal)run.Medal)}</b>", _small);
                     GUI.color = Color.white;
-                    GUI.Label(new Rect(x + 150, y, rect.width - 190, 24), $"{run.Members.Replace(",", ", ")}  <size=12>combo {run.MaxCombo}</size>", _small);
+                    GUI.Label(new Rect(x + 150, y, rect.width - 190, 24), Loc.T("dungeon.run_row", run.Members.Replace(",", ", "), run.MaxCombo), _small);
                     y += 26;
                 }
             }
 
             // Só o líder entra; o resto (nível, chaves, distância do grupo) o servidor confere e explica no chat.
             GUI.enabled = isLeader;
-            if (GUI.Button(new Rect(rect.center.x - 120, rect.yMax - 56, 240, 40), members > 1 ? "<b>Entrar com o grupo</b>" : "<b>Entrar</b>", _button))
+            if (GUI.Button(new Rect(rect.center.x - 120, rect.yMax - 56, 240, 40), members > 1 ? Loc.T("dungeon.enter_party") : Loc.T("dungeon.enter"), _button))
             {
                 EnterDungeon();
                 CharacterState.CloseDialog();
@@ -98,15 +98,15 @@ namespace Game.Client.UI
             var rect = new Rect(VirtualWidth - 480, 104, 460, 64);
             OpenRects.Add(rect);
             Box(rect, Panel);
-            GUI.Label(new Rect(rect.x + 14, rect.y + 6, 300, 26), $"<b>Sala {state.Room + 1}/{state.Rooms}</b>  <size=14>{room.Name}</size>", _small);
-            var info = state.Completed ? "Vitória!" : state.BossShield ? "<color=#8fd3ff>Escudo: derrote os servos!</color>"
-                : room.IsBossRoom ? $"Chefe e {Mathf.Max(0, state.MonstersLeft - 1)} servos" : $"{state.MonstersLeft} monstros para abrir o portão";
+            GUI.Label(new Rect(rect.x + 14, rect.y + 6, 300, 26), Loc.T("dungeon.hud_room", state.Room + 1, state.Rooms, room.Name), _small);
+            var info = state.Completed ? Loc.T("dungeon.hud_victory") : state.BossShield ? Loc.T("dungeon.hud_shield")
+                : room.IsBossRoom ? Loc.T("dungeon.hud_boss", Mathf.Max(0, state.MonstersLeft - 1)) : Loc.T("dungeon.hud_monsters", state.MonstersLeft);
             GUI.Label(new Rect(rect.x + 14, rect.y + 32, 300, 24), $"<size=14>{info}</size>", _small);
             GUI.color = left < 120 && !state.Completed ? Bad : Color.white;
             GUI.Label(new Rect(rect.xMax - 160, rect.y + 2, 146, 34), $"<size=26><b>{DungeonRules.FormatTime(state.Completed ? elapsed : Mathf.Max(0, left))}</b></size>",
                 _label.WithAlignment(TextAnchor.UpperRight));
             GUI.color = Color.white;
-            if (GUI.Button(new Rect(rect.xMax - 92, rect.y + 36, 80, 22), "Sair", _button)) LeaveDungeon();
+            if (GUI.Button(new Rect(rect.xMax - 92, rect.y + 36, 80, 22), Loc.T("dungeon.leave"), _button)) LeaveDungeon();
 
             if (state.Completed && !_resultClosed) DrawDungeonResult(state, definition);
         }
@@ -114,21 +114,21 @@ namespace Game.Client.UI
         private void DrawDungeonResult(Msg.DungeonState state, DungeonDefinition definition)
         {
             var medal = (DungeonMedal)state.Medal;
-            var rect = Window(new Rect(VirtualWidth / 2 - 260, 200, 520, 380), $"{definition.Name} — vitória!");
+            var rect = Window(new Rect(VirtualWidth / 2 - 260, 200, 520, 380), Loc.T("dungeon.victory_title", definition.Name));
             GUI.color = MedalColor(medal);
             GUI.Label(new Rect(rect.x, rect.y + 46, rect.width, 90), $"<size=80><b>{DungeonRules.MedalName(medal)}</b></size>", _label.WithCenter());
             GUI.color = Color.white;
             GUI.Label(new Rect(rect.x, rect.y + 140, rect.width, 26),
-                $"Tempo <b>{DungeonRules.FormatTime(state.ElapsedSeconds)}</b> · combo máximo <b>{state.MaxCombo}</b> · {DungeonRules.ChestRolls(medal)} sorteios no baú",
+                Loc.T("dungeon.victory_stats", DungeonRules.FormatTime(state.ElapsedSeconds), state.MaxCombo, DungeonRules.ChestRolls(medal)),
                 _small.WithCenter());
             var ranking = CharacterState.DungeonRanking;
             var place = ranking == null ? -1 : ranking.Ranking.FindIndex(r => Mathf.Abs(r.Seconds - state.ElapsedSeconds) < 0.2f);
             GUI.Label(new Rect(rect.x, rect.y + 170, rect.width, 26),
-                place >= 0 ? $"<color=#ffd25a>{place + 1}º lugar no ranking!</color>" : "Fora do top 10 desta vez.", _small.WithCenter());
+                place >= 0 ? Loc.T("dungeon.ranking_place", place + 1) : Loc.T("dungeon.ranking_out"), _small.WithCenter());
             GUI.Label(new Rect(rect.x + 20, rect.y + 206, rect.width - 40, 60),
-                "O baú apareceu no fundo da sala: os itens com o seu nome são só seus. A cripta fecha sozinha em instantes.", _tiny.WithCenter());
-            if (GUI.Button(new Rect(rect.x + 40, rect.yMax - 56, 200, 40), "Pegar o baú", _button)) _resultClosed = true;
-            if (GUI.Button(new Rect(rect.xMax - 240, rect.yMax - 56, 200, 40), "Sair da cripta", _button)) LeaveDungeon();
+                Loc.T("dungeon.chest_hint"), _tiny.WithCenter());
+            if (GUI.Button(new Rect(rect.x + 40, rect.yMax - 56, 200, 40), Loc.T("dungeon.take_chest"), _button)) _resultClosed = true;
+            if (GUI.Button(new Rect(rect.xMax - 240, rect.yMax - 56, 200, 40), Loc.T("dungeon.leave_crypt"), _button)) LeaveDungeon();
         }
 
         private void LeaveDungeon()

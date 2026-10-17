@@ -146,9 +146,8 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 ## Status
 
-Fase 6 — Conteúdo e social (em andamento): grupo de até 4 com XP e drop divididos, chat (mapa, grupo, sussurro,
-sistema) com filtro e limite de mensagens, lista de amigos, bloquear e denunciar, loja da mercadora e troca com
-dupla confirmação (economia revisada em `Docs/balanceamento.md`) e a dungeon Cripta Esquecida em instância por
-grupo, com medalha, baú e ranking, duelo e arena 5v5 de captura de pontos.
-Fases 1 a 5 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30) concluídas. Veja o Backlog do
+Fase 7 — Interface, áudio e polimento (em andamento): todos os textos do jogo no arquivo de tradução
+`Shared/Game.Shared/Resources/Locales/pt-BR.txt` (pronto para outros idiomas; veja `Docs/decisoes.md`).
+Fases 1 a 6 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30, grupo, chat, amigos, loja, troca,
+dungeon em instância, duelo e arena 5v5) concluídas. Veja o Backlog do
 MVP no GDD.

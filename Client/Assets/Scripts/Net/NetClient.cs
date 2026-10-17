@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using Game.Shared.Net;
+using Game.Shared.Text;
 
 namespace Game.Client.Net
 {
@@ -66,7 +67,7 @@ namespace Game.Client.Net
             }
             catch (Exception ex) when (ex is IOException || ex is SocketException || ex is ObjectDisposedException)
             {
-                Fail("conexão perdida ao enviar");
+                Fail(Loc.T("net.lost_sending"));
             }
         }
 
@@ -86,7 +87,7 @@ namespace Game.Client.Net
                 var connect = _tcp.ConnectAsync(host, port);
                 if (!connect.Wait(timeoutMs))
                 {
-                    Fail($"tempo esgotado conectando em {host}:{port}");
+                    Fail(Loc.T("net.timeout", host, port));
                     return;
                 }
                 _stream = _tcp.GetStream();
@@ -95,15 +96,15 @@ namespace Game.Client.Net
             }
             catch (AggregateException ex) when (ex.InnerException is SocketException socket)
             {
-                Fail($"não foi possível conectar em {host}:{port} ({socket.SocketErrorCode})");
+                Fail(Loc.T("net.cant_connect_code", host, port, socket.SocketErrorCode));
             }
             catch (Exception ex) when (ex is SocketException || ex is IOException || ex is ObjectDisposedException)
             {
-                Fail(_status == Status.Connected ? "conexão perdida" : $"não foi possível conectar em {host}:{port}");
+                Fail(_status == Status.Connected ? Loc.T("net.lost") : Loc.T("net.cant_connect", host, port));
             }
             catch (ProtocolException ex)
             {
-                Fail("erro de protocolo: " + ex.Message);
+                Fail(Loc.T("net.protocol_error", ex.Message));
             }
         }
 
@@ -116,7 +117,7 @@ namespace Game.Client.Net
                 var read = _stream.Read(buffer, 0, buffer.Length);
                 if (read == 0)
                 {
-                    Fail("o servidor encerrou a conexão");
+                    Fail(Loc.T("net.server_closed"));
                     return;
                 }
                 Interlocked.Add(ref _bytesReceived, read);

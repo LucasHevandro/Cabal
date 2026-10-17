@@ -5,6 +5,7 @@ using Game.Client.Player;
 using Game.Client.World;
 using Game.Shared.Combat;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -108,21 +109,8 @@ namespace Game.Client.UI
             var online = GameMode.IsOnline;
             Box(new Rect(20, 20, 420, online ? 346 : 270), Panel);
             GUI.Label(new Rect(36, 30, 400, online ? 336 : 260),
-                "<b>Controles</b>\n" +
-                "WASD andar · Shift correr · Espaço esquivar\n" +
-                "Botão direito girar câmera · Roda zoom\n" +
-                "Tab / clique: selecionar alvo · Esc limpar\n" +
-                (online
-                    ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n" +
-                      "Enter chat · O amigos · /convidar nome forma grupo\n" +
-                      "/duelo nome desafia · /arena entra na fila 5v5\n"
-                    : "1–4 skills · E coletar itens · I inventário\n") +
-                "Q iniciar combo (gasta SP)\n" +
-                "F finalizador (depois de 3 acertos)\n\n" +
-                "<b>Rotas de combo</b> (F = físico, M = mágico)\n" +
-                "F→M ou M→F: Alternância +10%\n" +
-                "F F M: Tempestade +25% · M M F: Eco Arcano +25%\n\n" +
-                $"Melhor corrente: <b>{combat.BestChain}</b>", _small);
+                Loc.T("help.controls") + "\n" + Loc.T(online ? "help.keys_online" : "help.keys_offline") + "\n" +
+                Loc.T("help.combo") + "\n\n" + Loc.T("help.best_chain", combat.BestChain), _small);
         }
 
         private void DrawTargetFrame()
@@ -139,7 +127,7 @@ namespace Game.Client.UI
 
             var dummy = target.GetComponent<TrainingDummy>();
             if (dummy != null)
-                GUI.Label(new Rect(rect.x, rect.y + 52, rect.width, 20), $"DPS {dummy.Dps:0} · total {dummy.TotalDamage}", _small.WithCenter());
+                GUI.Label(new Rect(rect.x, rect.y + 52, rect.width, 20), Loc.T("hud.dps", dummy.Dps, dummy.TotalDamage), _small.WithCenter());
         }
 
         private void DrawComboBar()
@@ -152,7 +140,7 @@ namespace Game.Client.UI
                 var cost = combo.Config.ActivationSpCost;
                 var ready = combat.Sp.Has(cost) && combat.Target != null;
                 GUI.color = ready ? Color.white : new Color(1, 1, 1, 0.5f);
-                GUI.Label(new Rect(rect.x, rect.y, rect.width, rect.height), $"Q: iniciar combo ({cost} SP)", _center);
+                GUI.Label(new Rect(rect.x, rect.y, rect.width, rect.height), Loc.T("hud.combo_start", cost), _center);
                 GUI.color = Color.white;
                 return;
             }
@@ -173,10 +161,10 @@ namespace Game.Client.UI
             var cursor = Mathf.Clamp01((float)combo.GetCursor(now));
             Box(new Rect(rect.x + rect.width * cursor - 3, rect.y - 8, 6, rect.height + 16), Color.white);
 
-            GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), $"<b>{combo.HitCount}</b> acertos", _big.WithAlignment(TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), $"bônus +{combo.ChainBonus * 100:0}%", _label.WithAlignment(TextAnchor.MiddleRight));
+            GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), Loc.T("hud.combo_hits", combo.HitCount), _big.WithAlignment(TextAnchor.MiddleLeft));
+            GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), Loc.T("hud.combo_bonus", combo.ChainBonus * 100), _label.WithAlignment(TextAnchor.MiddleRight));
             if (combo.CanFinish)
-                GUI.Label(new Rect(rect.x, rect.y + rect.height + 6, rect.width, 24), "F: finalizar", _center);
+                GUI.Label(new Rect(rect.x, rect.y + rect.height + 6, rect.width, 24), Loc.T("hud.combo_finish"), _center);
 
             // Últimos tipos acertados na corrente, para o jogador planejar a próxima rota.
             var kinds = combo.ChainKinds;
@@ -186,7 +174,7 @@ namespace Game.Client.UI
                 var kind = kinds[kinds.Count - shown + i];
                 var chip = new Rect(rect.x + i * 30, rect.y + rect.height + 8, 26, 22);
                 Box(chip, kind == SkillKind.Physical ? PhysicalColor : MagicalColor);
-                GUI.Label(chip, kind == SkillKind.Physical ? "<b>F</b>" : "<b>M</b>", _small.WithCenter());
+                GUI.Label(chip, kind == SkillKind.Physical ? Loc.T("hud.kind_physical_short") : Loc.T("hud.kind_magical_short"), _small.WithCenter());
             }
         }
 
@@ -199,8 +187,8 @@ namespace Game.Client.UI
             var fraction = toNext == 0 ? 1f : (float)progress.Xp / toNext;
             Bar(rect, fraction, new Color(0.65f, 0.45f, 0.95f));
             var text = progress.Level >= LevelCurve.MaxLevel
-                ? "Nível máximo"
-                : $"XP {progress.Xp} / {toNext} ({fraction * 100:0.0}%)";
+                ? Loc.T("hud.max_level")
+                : Loc.T("hud.xp", progress.Xp, toNext, fraction * 100);
             GUI.Label(new Rect(0, VirtualHeight - 17, VirtualWidth, 20), text, _small.WithCenter());
         }
 
@@ -210,7 +198,7 @@ namespace Game.Client.UI
             var levels = zone == null ? "" : zone.MinLevel == zone.MaxLevel ? $"{zone.MinLevel}" : $"{zone.MinLevel}–{zone.MaxLevel}";
             var dungeon = Net.CharacterState.Dungeon != null ? Game.Shared.Dungeon.DungeonCatalog.Find(Net.CharacterState.Dungeon.DungeonId) : null;
             var arena = Net.CharacterState.Pvp != null && Net.CharacterState.Pvp.Mode == Game.Shared.Net.PvpMode.Arena;
-            var text = arena ? "<b>Arena</b>  5 contra 5" : dungeon != null ? $"<b>{dungeon.Name}</b>  Dungeon" : zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
+            var text = arena ? Loc.T("hud.zone_arena") : dungeon != null ? Loc.T("hud.zone_dungeon", dungeon.Name) : zone == null ? Loc.T("hud.zone_road") : Loc.T("hud.zone", zone.DisplayName, levels);
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
             Box(rect, Panel);
             GUI.Label(rect, text, _center);
@@ -225,12 +213,12 @@ namespace Game.Client.UI
             var color = Color.white;
             if (!string.IsNullOrEmpty(session.Error))
             {
-                text = $"Desconectado: {session.Error}";
+                text = Loc.T("hud.disconnected", session.Error);
                 color = new Color(1f, 0.5f, 0.45f);
             }
-            else if (session.State == NetClient.Status.Connecting) text = $"Conectando em {GameMode.Host}:{GameMode.Port}…";
-            else if (!session.IsWelcomed) text = "Entrando no mundo…";
-            else text = $"Online · {GameMode.PlayerName} · {session.Clock.LastRtt * 1000:0} ms";
+            else if (session.State == NetClient.Status.Connecting) text = Loc.T("hud.connecting", GameMode.Host, GameMode.Port);
+            else if (!session.IsWelcomed) text = Loc.T("hud.entering_world");
+            else text = Loc.T("hud.online", GameMode.PlayerName, session.Clock.LastRtt * 1000);
 
             var rect = new Rect(VirtualWidth - 460, 64, 440, 30);
             Box(rect, Panel);
@@ -251,21 +239,21 @@ namespace Game.Client.UI
         {
             if (!combat.IsDead) return;
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0.3f, 0f, 0f, 0.35f));
-            ShadowLabel(new Rect(0, VirtualHeight / 2 - 80, VirtualWidth, 80), "<b>VOCÊ MORREU</b>", _big.WithCenter(),
+            ShadowLabel(new Rect(0, VirtualHeight / 2 - 80, VirtualWidth, 80), Loc.T("hud.you_died"), _big.WithCenter(),
                 new Color(1f, 0.4f, 0.35f), 1f);
             GUI.Label(new Rect(0, VirtualHeight / 2, VirtualWidth, 30),
-                $"Renascendo na cidade em {combat.RespawnRemaining:0}…", _center);
+                Loc.T("hud.respawning", combat.RespawnRemaining), _center);
         }
 
         private void DrawInventory()
         {
             var rect = new Rect(VirtualWidth - 440, 140, 400, 500);
             Box(rect, Panel);
-            GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), "<b>Inventário</b> (I fecha)", _label);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), Loc.T("hud.inventory_title"), _label);
             if (_loot == null || _loot.Inventory.Count == 0)
             {
                 GUI.Label(new Rect(rect.x + 16, rect.y + 50, rect.width - 32, 60),
-                    "Vazio. Derrote monstros e passe por cima dos itens (ou aperte E perto deles).", _small);
+                    Loc.T("hud.inventory_empty"), _small);
                 return;
             }
 
@@ -282,7 +270,7 @@ namespace Game.Client.UI
                 if (y > rect.yMax - 30) break;
             }
             GUI.Label(new Rect(rect.x + 16, rect.yMax - 30, rect.width, 24),
-                $"Monstros derrotados: {_loot.MonstersKilled}", _small);
+                Loc.T("hud.monsters_killed", _loot.MonstersKilled), _small);
         }
 
         /// <summary>Nome, nível e vida acima dos monstros vivos por perto.</summary>
@@ -305,7 +293,7 @@ namespace Game.Client.UI
                 var selected = target == combat.Target;
                 GUI.color = selected ? new Color(1f, 0.9f, 0.4f) : Color.white;
                 _small.fontSize = Mathf.RoundToInt(14 * scale);
-                GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), $"{target.DisplayName} Nv {target.Level}", _small.WithCenter());
+                GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), Loc.T("hud.target", target.DisplayName, target.Level), _small.WithCenter());
                 _small.fontSize = 16;
                 GUI.color = Color.white;
                 Bar(new Rect(x, y + 16 * scale, width, 6 * scale), (float)target.Hp.Current / Mathf.Max(1, target.Hp.Max), HpColor);
@@ -316,24 +304,24 @@ namespace Game.Client.UI
         {
             var rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight - 210, 660, 18);
             Bar(rect, (float)combat.Sp.Current / Mathf.Max(1, combat.Sp.Max), SpColor);
-            GUI.Label(rect, $"SP {combat.Sp.Current} / {combat.Sp.Max}", _small.WithCenter());
+            GUI.Label(rect, Loc.T("hud.sp", combat.Sp.Current, combat.Sp.Max), _small.WithCenter());
         }
 
         private void DrawPlayerFrame()
         {
             var rect = new Rect(40, VirtualHeight - 150, 380, 96);
             Box(rect, Panel);
-            GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), $"<b>Você</b> · Nv {combat.Level}", _label);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), Loc.T("hud.you", combat.Level), _label);
             if (_loot != null)
-                GUI.Label(new Rect(rect.x, rect.y + 6, rect.width - 16, 26), $"{_loot.Alz:N0} Alz", _label.WithAlignment(TextAnchor.UpperRight));
+                GUI.Label(new Rect(rect.x, rect.y + 6, rect.width - 16, 26), Loc.T("hud.alz", _loot.Alz), _label.WithAlignment(TextAnchor.UpperRight));
 
             var hpRect = new Rect(rect.x + 16, rect.y + 38, rect.width - 32, 20);
             Bar(hpRect, (float)combat.Hp.Current / Mathf.Max(1, combat.Hp.Max), HpColor);
-            GUI.Label(hpRect, $"HP {combat.Hp.Current} / {combat.Hp.Max}", _small.WithCenter());
+            GUI.Label(hpRect, Loc.T("hud.hp", combat.Hp.Current, combat.Hp.Max), _small.WithCenter());
 
             var mpRect = new Rect(rect.x + 16, rect.y + 64, rect.width - 32, 20);
             Bar(mpRect, (float)combat.Mp.Current / Mathf.Max(1, combat.Mp.Max), MpColor);
-            GUI.Label(mpRect, $"MP {combat.Mp.Current} / {combat.Mp.Max}", _small.WithCenter());
+            GUI.Label(mpRect, Loc.T("hud.mp", combat.Mp.Current, combat.Mp.Max), _small.WithCenter());
         }
 
         /// <summary>Barra do Despertar (online): enche com acertos de combo bons; cheia, R ativa.</summary>
@@ -348,12 +336,12 @@ namespace Game.Client.UI
             {
                 var pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 8f);
                 Bar(rect, (float)(remaining / AwakeningState.DurationSeconds), new Color(1f, 0.35f * pulse, 0.9f * pulse));
-                GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), $"<b>DESPERTAR</b> {remaining:0.0} s", _small.WithCenter());
+                GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), Loc.T("hud.awakening_active", remaining), _small.WithCenter());
                 return;
             }
             var full = sheet.AwakeningGauge >= AwakeningState.MaxGauge;
             Bar(rect, sheet.AwakeningGauge / (float)AwakeningState.MaxGauge, full ? new Color(1f, 0.4f, 0.95f) : new Color(0.6f, 0.3f, 0.6f));
-            GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? "<b>R: DESPERTAR</b>" : $"Despertar {sheet.AwakeningGauge}%", _small.WithCenter());
+            GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? Loc.T("hud.awakening_ready") : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
         }
 
         private void DrawSkillBar()
@@ -372,8 +360,8 @@ namespace Game.Client.UI
                 Box(rect, Panel);
                 GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.Name, _small.WithCenter());
-                var kindText = skill.Kind == SkillKind.Physical ? "físico" : "mágico";
-                if (skill.MpCost > 0) kindText += $" · {skill.MpCost} MP";
+                var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
+                if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 86, rect.width - 16, 24), kindText, _small.WithCenter());
 
                 // Sem mana: escurece a skill inteira.
@@ -406,9 +394,9 @@ namespace Game.Client.UI
             Color color;
             switch (combat.LastGrade)
             {
-                case ComboGrade.Excellent: text = "EXCELLENT"; color = ExcellentColor; break;
-                case ComboGrade.Good: text = "GOOD"; color = new Color(0.6f, 0.9f, 1f); break;
-                default: text = "MISS"; color = new Color(1f, 0.35f, 0.3f); break;
+                case ComboGrade.Excellent: text = Loc.T("hud.grade_excellent"); color = ExcellentColor; break;
+                case ComboGrade.Good: text = Loc.T("hud.grade_good"); color = new Color(0.6f, 0.9f, 1f); break;
+                default: text = Loc.T("hud.grade_miss"); color = new Color(1f, 0.35f, 0.3f); break;
             }
 
             var pop = 1f + Mathf.Max(0, 0.15f - age) * 3f;
@@ -421,7 +409,7 @@ namespace Game.Client.UI
             if (combat.LastRoute != null && routeAge <= 0.9f)
             {
                 ShadowLabel(new Rect(0, VirtualHeight - 412, VirtualWidth, 40),
-                    $"<b>{combat.LastRoute.Name.ToUpperInvariant()} +{combat.LastRoute.DamageBonus * 100:0}%</b>", _big.WithCenter(),
+                    Loc.T("hud.route", combat.LastRoute.Name.ToUpperInvariant(), combat.LastRoute.DamageBonus * 100), _big.WithCenter(),
                     RouteColor, 1f - Mathf.Clamp01((routeAge - 0.6f) / 0.3f));
             }
         }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Game.Client.Combat;
 using Game.Client.Net;
 using Game.Shared.Monsters;
+using Game.Shared.Text;
 using UnityEngine;
 
 namespace Game.Client.Monsters
@@ -64,7 +65,7 @@ namespace Game.Client.Monsters
 
         private MonsterController Spawn(Vector3 position)
         {
-            var root = new GameObject($"{data.Name} (Nv {data.Level})");
+            var root = new GameObject(Loc.T("ui.name_level", data.Name, data.Level));
             root.transform.SetParent(transform, true);
             root.transform.position = position;
             root.transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);

@@ -6,10 +6,11 @@ using Game.Client.Net;
 using Game.Shared.Accounts;
 using Game.Shared.Items;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using Game.Shared.World;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Msg = Game.Shared.Net;
+using UnityEngine.InputSystem;
 
 namespace Game.Client.UI
 {
@@ -33,10 +34,10 @@ namespace Game.Client.UI
         private static readonly Color Good = new Color(0.45f, 0.95f, 0.45f);
         private static readonly Color Bad = new Color(1f, 0.45f, 0.4f);
 
-        private static readonly (EquipSlot Slot, string Label)[] EquipSlots =
+        private static readonly (EquipSlot Slot, string LabelKey)[] EquipSlots =
         {
-            (EquipSlot.Weapon, "Arma"), (EquipSlot.Armor, "Couraça"), (EquipSlot.Gloves, "Luvas"),
-            (EquipSlot.Boots, "Botas"), (EquipSlot.Accessory, "Anel"),
+            (EquipSlot.Weapon, "slot.weapon"), (EquipSlot.Armor, "slot.armor"), (EquipSlot.Gloves, "slot.gloves"),
+            (EquipSlot.Boots, "slot.boots"), (EquipSlot.Accessory, "slot.accessory"),
         };
 
         /// <summary>Retângulos (tela virtual) das janelas abertas no último quadro: o clique ali não vai para o mundo.</summary>
@@ -45,7 +46,6 @@ namespace Game.Client.UI
         private static float _scale = 1f;
         private static Vector2 _offset;
 
-        private readonly Dictionary<string, string> _monsterNames = new Dictionary<string, string>();
         private GUIStyle _label;
         private GUIStyle _small;
         private GUIStyle _tiny;
@@ -108,7 +108,6 @@ namespace Game.Client.UI
                 enabled = false;
                 return;
             }
-            foreach (var spawn in WorldContent.Spawns()) _monsterNames[spawn.Data.Id] = spawn.Data.Name;
             Instance = this;
         }
 
@@ -151,7 +150,7 @@ namespace Game.Client.UI
             var npc = NearestNpc();
             if (npc == null)
             {
-                if (Player != null) Player.ShowNotice("Nenhum NPC por perto");
+                if (Player != null) Player.ShowNotice(Loc.T("npc.none_near"));
                 return;
             }
             Send(new Msg.TalkToNpc { NpcId = npc.Id });
@@ -246,7 +245,7 @@ namespace Game.Client.UI
 
         private void DrawInventory()
         {
-            var rect = Window(InventoryRect, "Inventário  <size=14>(I fecha · botão direito usa/veste)</size>");
+            var rect = Window(InventoryRect, Loc.T("inv.title"));
 
             // Equipamento
             var x = rect.x + 14;
@@ -255,7 +254,7 @@ namespace Game.Client.UI
             {
                 var (slot, label) = EquipSlots[i];
                 var slotRect = new Rect(x + i * (SlotSize + 34), y + 18, SlotSize + 26, SlotSize + 6);
-                GUI.Label(new Rect(slotRect.x, y, slotRect.width, 18), label, _tiny.WithCenter());
+                GUI.Label(new Rect(slotRect.x, y, slotRect.width, 18), Loc.T(label), _tiny.WithCenter());
                 DrawSlot(slotRect, CharacterState.Equipment[slot], Msg.ItemContainerKind.Equipment, (int)slot, worn: true);
             }
 
@@ -266,15 +265,15 @@ namespace Game.Client.UI
             var sheet = CharacterState.Sheet;
             var footer = rect.yMax - 58;
             var alz = Player.GetComponent<PlayerLoot>();
-            GUI.Label(new Rect(x, footer, 220, 24), $"<b>{(alz != null ? alz.Alz : 0):N0}</b> Alz", _small);
+            GUI.Label(new Rect(x, footer, 220, 24), Loc.T("inv.alz", (alz != null ? alz.Alz : 0)), _small);
             if (sheet != null)
                 GUI.Label(new Rect(x, footer + 22, rect.width - 28, 24),
-                    $"Ataque {sheet.AttackPower} · Magia {sheet.MagicPower} · Defesa {sheet.Defense} · Crítico {sheet.CritPercent:0.#}%", _tiny);
+                    Loc.T("inv.stats", sheet.AttackPower, sheet.MagicPower, sheet.Defense, sheet.CritPercent), _tiny);
 
             // Lixeira: soltar um item aqui pede confirmação.
             var trash = TrashRect;
             Box(trash, new Color(0.35f, 0.08f, 0.08f, _dragging ? 0.9f : 0.5f));
-            GUI.Label(trash, "Jogar fora", _tiny.WithCenter());
+            GUI.Label(trash, Loc.T("inv.discard"), _tiny.WithCenter());
         }
 
         private Rect TrashRect => new Rect(InventoryRect.xMax - 110, InventoryRect.yMax - 58, 96, 40);
@@ -382,7 +381,7 @@ namespace Game.Client.UI
                 case Msg.ItemContainerKind.Equipment:
                     var bagSlot = FirstFree(CharacterState.Bag);
                     if (bagSlot >= 0) SendMove(kind, slot, Msg.ItemContainerKind.Bag, bagSlot);
-                    else Player.ShowNotice("Bolsa cheia");
+                    else Player.ShowNotice(Loc.T("bag.full_short"));
                     break;
                 case Msg.ItemContainerKind.Bag when definition.Kind == ItemKind.Equipment:
                     SendMove(kind, slot, Msg.ItemContainerKind.Equipment, (int)definition.Slot);
@@ -496,16 +495,16 @@ namespace Game.Client.UI
                 return;
             }
             var definition = ItemCatalog.Get(item.ItemId);
-            var rect = Window(new Rect(VirtualWidth / 2 - 220, VirtualHeight / 2 - 80, 440, 150), "Jogar fora?");
-            var name = item.Upgrade > 0 ? $"{definition.Name} +{item.Upgrade}" : definition.Name;
+            var rect = Window(new Rect(VirtualWidth / 2 - 220, VirtualHeight / 2 - 80, 440, 150), Loc.T("inv.discard_confirm"));
+            var name = item.Upgrade > 0 ? Loc.T("item.with_upgrade", definition.Name, item.Upgrade) : definition.Name;
             GUI.Label(new Rect(rect.x + 14, rect.y + 44, rect.width - 28, 50),
-                $"{name}{(item.Quantity > 1 ? $" x{item.Quantity}" : "")} some para sempre.", _small);
-            if (GUI.Button(new Rect(rect.x + 60, rect.yMax - 50, 140, 36), "Jogar fora", _button))
+                item.Quantity > 1 ? Loc.T("inv.discard_text_many", name, item.Quantity) : Loc.T("inv.discard_text", name), _small);
+            if (GUI.Button(new Rect(rect.x + 60, rect.yMax - 50, 140, 36), Loc.T("inv.discard"), _button))
             {
                 Send(new Msg.ItemCommand { Action = Msg.ItemActionKind.Discard, From = Msg.ItemContainerKind.Bag, FromSlot = (ushort)_discardSlot });
                 _discardSlot = -1;
             }
-            if (GUI.Button(new Rect(rect.xMax - 200, rect.yMax - 50, 140, 36), "Cancelar", _button)) _discardSlot = -1;
+            if (GUI.Button(new Rect(rect.xMax - 200, rect.yMax - 50, 140, 36), Loc.T("ui.cancel"), _button)) _discardSlot = -1;
         }
 
         // ----- Tooltip -----
@@ -516,20 +515,24 @@ namespace Game.Client.UI
             if (definition == null) return;
             var lines = new List<string>();
             var color = ColorUtility.ToHtmlStringRGB(LootPickup.ColorFor(definition.Rarity));
-            lines.Add($"<b><color=#{color}>{definition.Name}{(item.Upgrade > 0 ? $" +{item.Upgrade}" : "")}</color></b>");
+            var title = item.Upgrade > 0 ? Loc.T("item.with_upgrade", definition.Name, item.Upgrade) : definition.Name;
+            lines.Add($"<b><color=#{color}>{title}</color></b>");
 
             if (definition.Kind == ItemKind.Equipment)
             {
                 var sheetLevel = Player.Level;
                 lines.Add($"{ItemCatalog.GradeName(definition.Grade)} · {SlotName(definition.Slot)}");
                 var levelColor = sheetLevel >= definition.RequiredLevel ? "ffffff" : "ff7766";
-                lines.Add($"<color=#{levelColor}>Nível {definition.RequiredLevel}</color>" +
-                          (definition.RequiredClass.HasValue
-                              ? $" · <color=#{(definition.RequiredClass.Value == CharacterState.Class ? "ffffff" : "ff7766")}>{AccountRules.ClassDisplayName(definition.RequiredClass.Value)}</color>"
-                              : ""));
+                var levelText = $"<color=#{levelColor}>{Loc.T("tip.level", definition.RequiredLevel)}</color>";
+                if (definition.RequiredClass.HasValue)
+                {
+                    var classColor = definition.RequiredClass.Value == CharacterState.Class ? "ffffff" : "ff7766";
+                    levelText += $" · <color=#{classColor}>{AccountRules.ClassDisplayName(definition.RequiredClass.Value)}</color>";
+                }
+                lines.Add(levelText);
                 lines.Add(StatCalculator.ItemStats(item).Describe());
                 if (!string.IsNullOrEmpty(item.OptionId))
-                    lines.Add($"<color=#ffd25a>Opção: {ItemCatalog.Find(item.OptionId)?.Name}</color>");
+                    lines.Add(Loc.T("tip.option", ItemCatalog.Find(item.OptionId)?.Name));
 
                 // Comparação com o que está vestido na mesma posição.
                 var current = CharacterState.Equipment[definition.Slot];
@@ -537,25 +540,25 @@ namespace Game.Client.UI
                 {
                     var delta = StatCalculator.ItemStats(item) + StatCalculator.ItemStats(current) * -1;
                     lines.Add("");
-                    lines.Add("<i>Comparado ao vestido:</i>");
-                    lines.Add(delta.IsEmpty ? "igual" : ColoredDelta(delta));
+                    lines.Add(Loc.T("tip.compared"));
+                    lines.Add(delta.IsEmpty ? Loc.T("tip.equal") : ColoredDelta(delta));
                 }
                 else if (!worn && current == null)
                 {
                     lines.Add("");
-                    lines.Add("<color=#77ee77>Posição vazia: só ganha.</color>");
+                    lines.Add(Loc.T("tip.empty_slot"));
                 }
             }
             else if (definition.IsOptionStone)
             {
-                lines.Add($"Pedra de opção: {definition.OptionStats.Describe()}");
-                lines.Add("Use na ferreira (1 por item).");
+                lines.Add(Loc.T("tip.option_stone", definition.OptionStats.Describe()));
+                lines.Add(Loc.T("tip.option_stone_hint"));
             }
             else if (!string.IsNullOrEmpty(definition.Description))
             {
                 lines.Add(definition.Description);
             }
-            if (item.Quantity > 1) lines.Add($"Quantidade: {item.Quantity}");
+            if (item.Quantity > 1) lines.Add(Loc.T("tip.quantity", item.Quantity));
 
             var text = string.Join("\n", lines);
             var size = _small.CalcSize(new GUIContent(text.Replace("<b>", "").Replace("</b>", "")));
@@ -576,7 +579,7 @@ namespace Game.Client.UI
             return string.Join(", ", parts.Select(p => p.StartsWith("-") ? $"<color=#ff7766>{p}</color>" : $"<color=#77ee77>{p}</color>"));
         }
 
-        private static string SlotName(EquipSlot slot) => EquipSlots.First(s => s.Slot == slot).Label;
+        private static string SlotName(EquipSlot slot) => Loc.T(EquipSlots.First(s => s.Slot == slot).LabelKey);
 
         // ----- Armazém -----
 
@@ -584,7 +587,7 @@ namespace Game.Client.UI
 
         private void DrawWarehouse()
         {
-            Window(new Rect(InventoryRect.x - 470, InventoryRect.y, 460, 340), "Armazém  <size=14>(arraste entre as janelas)</size>");
+            Window(new Rect(InventoryRect.x - 470, InventoryRect.y, 460, 340), Loc.T("storage.title"));
             DrawGrid(CharacterState.Warehouse, Msg.ItemContainerKind.Warehouse, WarehouseOrigin);
         }
 
@@ -594,10 +597,10 @@ namespace Game.Client.UI
 
         private void DrawSmith(NpcDefinition npc)
         {
-            var rect = Window(SmithRect, $"{npc.Name} — melhoria");
+            var rect = Window(SmithRect, Loc.T("smith.title", npc.Name));
             var x = rect.x + 14;
             var y = rect.y + 44;
-            GUI.Label(new Rect(x, y, rect.width - 28, 40), "Arraste um equipamento para cá (ou botão direito nele).", _tiny);
+            GUI.Label(new Rect(x, y, rect.width - 28, 40), Loc.T("smith.drag_hint"), _tiny);
 
             var (item, container, slot) = FindByUid(_smithItemUid);
             var itemRect = new Rect(x, y + 30, SlotSize + 10, SlotSize + 10);
@@ -605,7 +608,7 @@ namespace Game.Client.UI
             if (item == null)
             {
                 _smithItemUid = 0;
-                GUI.Label(new Rect(x + 74, y + 40, 300, 40), "Nenhum item escolhido", _small);
+                GUI.Label(new Rect(x + 74, y + 40, 300, 40), Loc.T("smith.no_item"), _small);
             }
             else
             {
@@ -623,11 +626,11 @@ namespace Game.Client.UI
             Box(new Rect(x, stoneY - 8, rect.width - 28, 1), new Color(1, 1, 1, 0.2f));
             var (stone, _, stoneSlot) = FindByUid(_smithStoneUid);
             if (stone == null) _smithStoneUid = 0;
-            GUI.Label(new Rect(x, stoneY, rect.width - 28, 24), "<b>Opção</b> (pedra + equipamento sem opção)", _small);
+            GUI.Label(new Rect(x, stoneY, rect.width - 28, 24), Loc.T("smith.option_title"), _small);
             GUI.Label(new Rect(x, stoneY + 26, 300, 24),
-                stone == null ? "Escolha uma pedra (botão direito)" : $"{ItemCatalog.Get(stone.ItemId).Name}: {ItemCatalog.Get(stone.ItemId).OptionStats.Describe()}", _tiny);
+                stone == null ? Loc.T("smith.pick_stone_hint") : Loc.T("smith.stone_info", ItemCatalog.Get(stone.ItemId).Name, ItemCatalog.Get(stone.ItemId).OptionStats.Describe()), _tiny);
             GUI.enabled = stone != null && item != null && string.IsNullOrEmpty(item.OptionId);
-            if (GUI.Button(new Rect(rect.xMax - 164, stoneY + 52, 150, 36), "Aplicar pedra", _button) && item != null)
+            if (GUI.Button(new Rect(rect.xMax - 164, stoneY + 52, 150, 36), Loc.T("smith.apply_stone"), _button) && item != null)
             {
                 Send(new Msg.ApplyOption { Container = container, Slot = (ushort)slot, StoneSlot = (ushort)stoneSlot });
                 _smithStoneUid = 0;
@@ -639,21 +642,21 @@ namespace Game.Client.UI
         {
             var definition = ItemCatalog.Get(item.ItemId);
             var y = area.y;
-            GUI.Label(new Rect(area.x, y, area.width, 26), $"<b>{definition.Name} +{item.Upgrade}</b>", _label);
+            GUI.Label(new Rect(area.x, y, area.width, 26), Loc.T("item.with_upgrade_bold", definition.Name, item.Upgrade), _label);
             y += 30;
             if (item.Upgrade >= UpgradeRules.MaxLevel)
             {
-                GUI.Label(new Rect(area.x, y, area.width, 24), "No máximo (+10).", _small);
+                GUI.Label(new Rect(area.x, y, area.width, 24), Loc.T("smith.max"), _small);
                 return;
             }
 
             var guaranteed = UpgradeRules.IsGuaranteed(item);
             var chance = guaranteed ? 1 : UpgradeRules.SuccessChance(item.Upgrade);
             GUI.Label(new Rect(area.x, y, area.width, 24),
-                $"+{item.Upgrade} → +{item.Upgrade + 1}: <b>{chance * 100:0}%</b>{(guaranteed ? " <color=#77ee77>(garantida)</color>" : "")}", _small);
+                $"+{item.Upgrade} → +{item.Upgrade + 1}: <b>{chance * 100:0}%</b>" + (guaranteed ? " <color=#77ee77>" + Loc.T("smith.guaranteed") + "</color>" : ""), _small);
             y += 24;
             GUI.Label(new Rect(area.x, y, area.width, 24),
-                item.Upgrade >= UpgradeRules.DowngradeFrom ? "<color=#ff9977>Falhar perde 1 nível (recuperar é garantido)</color>" : "Falhar mantém o nível", _tiny);
+                item.Upgrade >= UpgradeRules.DowngradeFrom ? Loc.T("smith.fail_downgrade") : Loc.T("smith.fail_keep"), _tiny);
             y += 22;
 
             // Barra de proteção contra azar
@@ -664,7 +667,7 @@ namespace Game.Client.UI
                 var bar = new Rect(area.x, y + 4, area.width, 12);
                 Box(bar, SlotBack);
                 Box(new Rect(bar.x, bar.y, bar.width * Mathf.Clamp01(progress / (float)limit), bar.height), Accent);
-                GUI.Label(new Rect(area.x, y + 16, area.width, 20), $"Proteção: {progress}/{limit} falhas (cheia = garantida)", _tiny);
+                GUI.Label(new Rect(area.x, y + 16, area.width, 20), Loc.T("smith.pity", progress, limit), _tiny);
                 y += 40;
             }
 
@@ -673,7 +676,7 @@ namespace Game.Client.UI
             var have = CharacterState.Bag.Count(cost.CoreId);
             var alz = Player.GetComponent<PlayerLoot>()?.Alz ?? 0;
             GUI.Label(new Rect(area.x, y, area.width, 22),
-                $"<color=#{(have >= cost.Cores ? "ffffff" : "ff7766")}>{cost.Cores}x {ItemCatalog.Get(cost.CoreId).Name} (tem {have})</color>", _tiny);
+                $"<color=#{(have >= cost.Cores ? "ffffff" : "ff7766")}>{Loc.T("smith.cores", cost.Cores, ItemCatalog.Get(cost.CoreId).Name, have)}</color>", _tiny);
             y += 20;
             GUI.Label(new Rect(area.x, y, area.width, 22),
                 $"<color=#{(alz >= cost.Alz ? "ffffff" : "ff7766")}>{cost.Alz:N0} Alz</color>", _tiny);
@@ -681,11 +684,11 @@ namespace Game.Client.UI
 
             var next = item.Clone();
             next.Upgrade++;
-            GUI.Label(new Rect(area.x, y, area.width, 40), $"Próximo nível: {StatCalculator.ItemStats(next).Describe()}", _tiny);
+            GUI.Label(new Rect(area.x, y, area.width, 40), Loc.T("smith.next_level", StatCalculator.ItemStats(next).Describe()), _tiny);
             y += 40;
 
             GUI.enabled = have >= cost.Cores && alz >= cost.Alz;
-            if (GUI.Button(new Rect(area.x, y, 160, 38), "<b>Melhorar</b>", _button))
+            if (GUI.Button(new Rect(area.x, y, 160, 38), Loc.T("smith.upgrade"), _button))
                 Send(new Msg.UpgradeItem { Container = container, Slot = (ushort)slot });
             GUI.enabled = true;
 
@@ -725,9 +728,9 @@ namespace Game.Client.UI
                 var next = QuestCatalog.All.FirstOrDefault(q => q.GiverNpcId == npc.Id && !CharacterState.QuestCompleted(q.Id)
                     && CharacterState.CountsOf(q.Id) == null);
                 var active = CharacterState.Quests.Active.Count > 0;
-                var text = active ? "\"Termine o que pedi e volte aqui.\""
-                    : next != null ? $"\"Volte quando chegar ao nível {next.MinLevel}, aventureiro.\""
-                    : "\"Você já fez tudo o que eu podia pedir. Obrigado!\"";
+                var text = active ? Loc.T("dialog.finish_first")
+                    : next != null ? Loc.T("dialog.come_back_level", next.MinLevel)
+                    : Loc.T("dialog.all_done");
                 GUI.Label(new Rect(x, y, width, 60), text, _small);
                 y += 50;
             }
@@ -737,7 +740,7 @@ namespace Game.Client.UI
                 var quest = QuestCatalog.Find(questId);
                 if (quest == null) continue;
                 y = QuestBlock(quest, x, y, width, ready: true);
-                if (GUI.Button(new Rect(x, y, 180, 34), "<b>Entregar</b>", _button))
+                if (GUI.Button(new Rect(x, y, 180, 34), Loc.T("dialog.turn_in"), _button))
                     Send(new Msg.QuestCommand { Action = Msg.QuestActionKind.TurnIn, QuestId = questId });
                 y += 48;
             }
@@ -746,12 +749,12 @@ namespace Game.Client.UI
                 var quest = QuestCatalog.Find(questId);
                 if (quest == null) continue;
                 y = QuestBlock(quest, x, y, width, ready: false);
-                if (GUI.Button(new Rect(x, y, 180, 34), "Aceitar", _button))
+                if (GUI.Button(new Rect(x, y, 180, 34), Loc.T("dialog.accept"), _button))
                     Send(new Msg.QuestCommand { Action = Msg.QuestActionKind.Accept, QuestId = questId });
                 y += 48;
             }
 
-            if (GUI.Button(new Rect(rect.xMax - 134, rect.yMax - 48, 120, 34), "Fechar", _button)) CharacterState.CloseDialog();
+            if (GUI.Button(new Rect(rect.xMax - 134, rect.yMax - 48, 120, 34), Loc.T("ui.close"), _button)) CharacterState.CloseDialog();
             if (Event.current.type == EventType.Repaint) _dialogHeight = y - rect.y + 60;
         }
 
@@ -759,7 +762,7 @@ namespace Game.Client.UI
 
         private float QuestBlock(QuestDefinition quest, float x, float y, float width, bool ready)
         {
-            GUI.Label(new Rect(x, y, width, 26), $"<b><color=#ffd25a>{quest.Name}</color></b>  <size=14>Nv {quest.MinLevel}</size>", _label);
+            GUI.Label(new Rect(x, y, width, 26), Loc.T("quest.header", quest.Name, quest.MinLevel), _label);
             y += 28;
             var description = _small.CalcHeight(new GUIContent(quest.Description), width);
             GUI.Label(new Rect(x, y, width, description), quest.Description, _small);
@@ -771,7 +774,7 @@ namespace Game.Client.UI
                 GUI.Label(new Rect(x + 10, y, width - 10, 22), "· " + ObjectiveText(quest.Objectives[i], done, counts != null), _tiny);
                 y += 20;
             }
-            GUI.Label(new Rect(x, y, width, 22), $"Recompensa: {RewardText(quest)}", _tiny);
+            GUI.Label(new Rect(x, y, width, 22), Loc.T("quest.reward", RewardText(quest)), _tiny);
             y += 22;
             if (!string.IsNullOrEmpty(quest.Unlocks))
             {
@@ -786,20 +789,20 @@ namespace Game.Client.UI
             var progress = showProgress ? $" {Mathf.Min(done, objective.Count)}/{objective.Count}" : (objective.Count > 1 ? $" x{objective.Count}" : "");
             var text = objective.Kind switch
             {
-                QuestObjectiveKind.Kill => $"Derrote {(_monsterNames.TryGetValue(objective.TargetId, out var name) ? name : objective.TargetId)}",
-                QuestObjectiveKind.Collect => $"Traga {ItemCatalog.Find(objective.TargetId)?.Name ?? objective.TargetId}",
-                _ => $"Fale com {NpcCatalog.Find(objective.TargetId)?.Name ?? objective.TargetId}",
+                QuestObjectiveKind.Kill => Loc.T("objective.kill", Loc.T("monster." + objective.TargetId)),
+                QuestObjectiveKind.Collect => Loc.T("objective.collect", Loc.T("item." + objective.TargetId)),
+                _ => Loc.T("objective.talk", Loc.T("npc." + objective.TargetId)),
             };
             var complete = showProgress && done >= objective.Count;
-            return complete ? $"<color=#77ee77>{text}{progress} (ok)</color>" : text + progress;
+            return complete ? $"<color=#77ee77>{text}{progress} {Loc.T("objective.ok")}</color>" : text + progress;
         }
 
         private static string RewardText(QuestDefinition quest)
         {
             var parts = new List<string>();
-            if (quest.RewardXp > 0) parts.Add($"{quest.RewardXp:N0} XP");
-            if (quest.RewardAlz > 0) parts.Add($"{quest.RewardAlz:N0} Alz");
-            parts.AddRange(quest.RewardItems.Select(i => $"{ItemCatalog.Find(i.ItemId)?.Name ?? i.ItemId} x{i.Quantity}"));
+            if (quest.RewardXp > 0) parts.Add(Loc.T("quest.reward_xp", quest.RewardXp));
+            if (quest.RewardAlz > 0) parts.Add(Loc.T("quest.reward_alz", quest.RewardAlz));
+            parts.AddRange(quest.RewardItems.Select(i => Loc.T("quest.reward_item", Loc.T("item." + i.ItemId), i.Quantity)));
             return string.Join(", ", parts);
         }
 
@@ -812,7 +815,7 @@ namespace Game.Client.UI
             var y = 104f;
             var height = 40f + active.Sum(q => 28f + 20f * (QuestCatalog.Find(q.QuestId)?.Objectives.Count ?? 0));
             Box(new Rect(x, y, 450, height), new Color(0, 0, 0, 0.45f));
-            GUI.Label(new Rect(x + 12, y + 6, 420, 24), "<b>Missões</b>  <size=13>(J abre o diário)</size>", _small);
+            GUI.Label(new Rect(x + 12, y + 6, 420, 24), Loc.T("tracker.title"), _small);
             y += 34;
             foreach (var entry in active)
             {
@@ -832,7 +835,7 @@ namespace Game.Client.UI
 
         private void DrawQuestLog()
         {
-            var rect = Window(new Rect(480, 160, 560, 640), "Diário de missões  <size=14>(J fecha)</size>");
+            var rect = Window(new Rect(480, 160, 560, 640), Loc.T("questlog.title"));
             var x = rect.x + 14;
             var width = rect.width - 44;
             var active = CharacterState.Quests.Active;
@@ -844,20 +847,20 @@ namespace Game.Client.UI
             {
                 var next = QuestCatalog.All.FirstOrDefault(q => !CharacterState.QuestCompleted(q.Id));
                 GUI.Label(new Rect(0, y, width, 60),
-                    next == null ? "Todas as missões foram concluídas!" : $"Nenhuma missão aceita. Fale com o {NpcCatalog.Find(next.GiverNpcId)?.Name} na vila (T).", _small);
+                    next == null ? Loc.T("questlog.all_done") : Loc.T("questlog.none_active", Loc.T("npc." + next.GiverNpcId)), _small);
             }
             foreach (var entry in active)
             {
                 var quest = QuestCatalog.Find(entry.QuestId);
                 if (quest == null) continue;
                 y = QuestBlock(quest, 0, y, width, ready: false);
-                if (GUI.Button(new Rect(0, y, 140, 30), "Abandonar", _button))
+                if (GUI.Button(new Rect(0, y, 140, 30), Loc.T("questlog.abandon"), _button))
                     Send(new Msg.QuestCommand { Action = Msg.QuestActionKind.Abandon, QuestId = quest.Id });
                 y += 44;
             }
             GUI.EndScrollView();
             GUI.Label(new Rect(x, rect.yMax - 44, width, 30),
-                $"Concluídas: {CharacterState.Quests.Completed.Count} de {QuestCatalog.All.Count}", _small);
+                Loc.T("questlog.completed", CharacterState.Quests.Completed.Count, QuestCatalog.All.Count), _small);
         }
 
         // ----- Atributos -----
@@ -865,35 +868,35 @@ namespace Game.Client.UI
         private void DrawAttributes()
         {
             var sheet = CharacterState.Sheet;
-            var rect = Window(new Rect(20, 340, 420, 400), "Atributos  <size=14>(C fecha)</size>");
+            var rect = Window(new Rect(20, 340, 420, 400), Loc.T("attr.title"));
             if (sheet == null) return;
             var x = rect.x + 14;
             var y = rect.y + 46;
             var pending = _addStr + _addDex + _addInt;
             var free = sheet.FreePoints - pending;
 
-            GUI.Label(new Rect(x, y, 390, 24), $"{AccountRules.ClassDisplayName((CharacterClass)sheet.Class)} · Nv {Player.Level}", _small);
+            GUI.Label(new Rect(x, y, 390, 24), Loc.T("attr.class_level", AccountRules.ClassDisplayName((CharacterClass)sheet.Class), Player.Level), _small);
             y += 28;
-            GUI.Label(new Rect(x, y, 390, 24), $"Pontos livres: <b>{free}</b>", _small);
+            GUI.Label(new Rect(x, y, 390, 24), Loc.T("attr.free", free), _small);
             y += 34;
-            y = AttributeRow(x, y, "Força", sheet.Strength, ref _addStr, free, "+2 ataque, +5 HP");
-            y = AttributeRow(x, y, "Destreza", sheet.Dexterity, ref _addDex, free, "+1 defesa, +0,2% crítico");
-            y = AttributeRow(x, y, "Inteligência", sheet.Intelligence, ref _addInt, free, "+2 magia, +4 MP");
+            y = AttributeRow(x, y, Loc.T("attr.str"), sheet.Strength, ref _addStr, free, Loc.T("attr.str_hint"));
+            y = AttributeRow(x, y, Loc.T("attr.dex"), sheet.Dexterity, ref _addDex, free, Loc.T("attr.dex_hint"));
+            y = AttributeRow(x, y, Loc.T("attr.int"), sheet.Intelligence, ref _addInt, free, Loc.T("attr.int_hint"));
 
             GUI.enabled = pending > 0;
-            if (GUI.Button(new Rect(x, y + 6, 160, 34), "Confirmar", _button))
+            if (GUI.Button(new Rect(x, y + 6, 160, 34), Loc.T("attr.confirm"), _button))
             {
                 Send(new Msg.AllocateAttributes { Strength = (ushort)_addStr, Dexterity = (ushort)_addDex, Intelligence = (ushort)_addInt });
                 _addStr = _addDex = _addInt = 0;
             }
-            if (GUI.Button(new Rect(x + 172, y + 6, 120, 34), "Limpar", _button)) _addStr = _addDex = _addInt = 0;
+            if (GUI.Button(new Rect(x + 172, y + 6, 120, 34), Loc.T("attr.clear"), _button)) _addStr = _addDex = _addInt = 0;
             GUI.enabled = true;
             y += 54;
 
             GUI.Label(new Rect(x, y, 390, 90),
-                $"Ataque <b>{sheet.AttackPower}</b> · Magia <b>{sheet.MagicPower}</b>\n" +
-                $"Defesa <b>{sheet.Defense}</b> · Crítico <b>{sheet.CritPercent:0.#}%</b>\n" +
-                $"HP {Player.Hp.Max} · MP {Player.Mp.Max}", _small);
+                Loc.T("attr.sheet_1", sheet.AttackPower, sheet.MagicPower) +
+                Loc.T("attr.sheet_2", sheet.Defense, sheet.CritPercent) +
+                Loc.T("attr.sheet_3", Player.Hp.Max, Player.Mp.Max), _small);
         }
 
         private float AttributeRow(float x, float y, string name, int value, ref int add, int free, string hint)
@@ -918,9 +921,25 @@ namespace Game.Client.UI
             if (npc == null) return;
             var hasQuest = npc.Role == NpcRole.QuestGiver;
             GUI.Label(new Rect(0, VirtualHeight - 340, VirtualWidth, 30),
-                $"<b>T</b>: falar com {npc.Name}{(npc.Role == NpcRole.Smith ? " (melhoria)" : npc.Role == NpcRole.Warehouse ? " (armazém)" : npc.Role == NpcRole.Merchant ? " (loja)" : npc.Role == NpcRole.DungeonPortal ? " (dungeon)" : hasQuest ? " (missões)" : "")}",
+                hasQuest || npc.Role != NpcRole.QuestGiver
+                    ? Loc.T("npc.talk_prompt_role", npc.Name, Loc.T(RoleHintKey(npc.Role)))
+                    : Loc.T("npc.talk_prompt", npc.Name),
                 _label.WithCenter());
         }
+
+        /// <summary>O que o NPC faz, no aviso "falar com" (ex.: melhoria).</summary>
+        private static string RoleHintKey(NpcRole role) => role switch
+        {
+            NpcRole.Smith => "npc.hint_smith", NpcRole.Warehouse => "npc.hint_warehouse", NpcRole.Merchant => "npc.hint_merchant",
+            NpcRole.DungeonPortal => "npc.hint_dungeon", _ => "npc.hint_quests",
+        };
+
+        /// <summary>Plaquinha do NPC no mundo (ex.: Ferreira).</summary>
+        private static string RoleLabelKey(NpcRole role) => role switch
+        {
+            NpcRole.Smith => "npc.role_smith", NpcRole.Warehouse => "npc.role_warehouse", NpcRole.Merchant => "npc.role_merchant",
+            NpcRole.DungeonPortal => "npc.role_dungeon", _ => "npc.role_quests",
+        };
 
         /// <summary>Nome em cima de cada NPC (coordenadas de tela, antes da escala).</summary>
         private void DrawNpcLabels()
@@ -936,7 +955,7 @@ namespace Game.Client.UI
                 if (screen.z <= 0) continue;
                 // Não escreve por cima das janelas do chat e de amigos (coordenadas virtuais do quadro anterior).
                 if (SocialWindows.Contains(new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale))) continue;
-                var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", NpcRole.Merchant => "Loja", NpcRole.DungeonPortal => "Dungeon", _ => "Missões" };
+                var role = Loc.T(RoleLabelKey(npc.Role));
                 var rect = new Rect(screen.x - 150, Screen.height - screen.y - 20, 300, 40);
                 GUI.color = new Color(0, 0, 0, 0.8f);
                 GUI.Label(new Rect(rect.x + 2, rect.y + 2, rect.width, rect.height), $"<b>{npc.Name}</b>\n<size=13>{role}</size>", _small.WithCenter());

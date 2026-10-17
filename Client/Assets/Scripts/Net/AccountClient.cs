@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Game.Shared.Accounts;
+using Game.Shared.Text;
 using UnityEngine;
 
 namespace Game.Client.Net
@@ -69,19 +70,19 @@ namespace Game.Client.Net
                 if (response.IsSuccessStatusCode) return new ApiResult<T>(true, JsonUtility.FromJson<T>(text), "");
 
                 var error = string.IsNullOrEmpty(text) ? null : JsonUtility.FromJson<ApiError>(text);
-                return new ApiResult<T>(false, default, string.IsNullOrEmpty(error?.Error) ? $"Erro {(int)response.StatusCode}" : error.Error);
+                return new ApiResult<T>(false, default, error == null || (string.IsNullOrEmpty(error.Error) && string.IsNullOrEmpty(error.Key)) ? Loc.T("net.http_error", (int)response.StatusCode) : error.Display);
             }
             catch (TaskCanceledException)
             {
-                return new ApiResult<T>(false, default, "O servidor não respondeu a tempo.");
+                return new ApiResult<T>(false, default, Loc.T("net.api_timeout"));
             }
             catch (HttpRequestException)
             {
-                return new ApiResult<T>(false, default, "Não foi possível falar com o servidor. Ele está ligado?");
+                return new ApiResult<T>(false, default, Loc.T("net.api_unreachable"));
             }
             catch (ArgumentException)
             {
-                return new ApiResult<T>(false, default, "Resposta inválida do servidor.");
+                return new ApiResult<T>(false, default, Loc.T("net.api_bad_response"));
             }
         }
     }

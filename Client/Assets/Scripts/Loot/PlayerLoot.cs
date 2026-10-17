@@ -7,9 +7,10 @@ using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Combat;
 using Game.Shared.Loot;
+using Game.Shared.Text;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Msg = Game.Shared.Net;
+using UnityEngine.InputSystem;
 
 namespace Game.Client.Loot
 {
@@ -84,7 +85,7 @@ namespace Game.Client.Loot
             if (loot.Alz > 0)
             {
                 Alz += loot.Alz;
-                DamageNumbers.Spawn(monster.transform.position + Vector3.up * 1.6f, $"+{loot.Alz} Alz", new Color(1f, 0.85f, 0.3f), 22f);
+                DamageNumbers.Spawn(monster.transform.position + Vector3.up * 1.6f, Loc.T("fx.alz_gain", loot.Alz), new Color(1f, 0.85f, 0.3f), 22f);
             }
 
             for (var i = 0; i < loot.Items.Count; i++)
@@ -103,7 +104,7 @@ namespace Game.Client.Loot
             var gained = alz - Alz;
             Alz = alz;
             if (gained > 0)
-                DamageNumbers.Spawn(transform.position + Vector3.up * 2.9f, $"+{gained} Alz", new Color(1f, 0.85f, 0.3f), 22f);
+                DamageNumbers.Spawn(transform.position + Vector3.up * 2.9f, Loc.T("fx.alz_gain", gained), new Color(1f, 0.85f, 0.3f), 22f);
         }
 
         /// <summary>Inventário completo vindo do servidor (substitui o local: o servidor é a fonte da verdade).</summary>
@@ -184,7 +185,7 @@ namespace Game.Client.Loot
             }
             stack.Quantity += drop.Quantity;
 
-            DamageNumbers.Spawn(transform.position + Vector3.up * 2.4f, $"{drop.Name} x{drop.Quantity}", LootPickup.ColorFor(drop.Rarity), 20f);
+            DamageNumbers.Spawn(transform.position + Vector3.up * 2.4f, Loc.T("loot.picked", drop.Name, drop.Quantity), LootPickup.ColorFor(drop.Rarity), 20f);
             SoundPlayer.Play(SoundId.Good, 0.5f);
         }
     }

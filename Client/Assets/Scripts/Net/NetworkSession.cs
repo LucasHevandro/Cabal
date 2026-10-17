@@ -7,9 +7,10 @@ using Game.Client.UI;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using Game.Shared.World;
-using UnityEngine;
 using Ping = Game.Shared.Net.Ping;
+using UnityEngine;
 
 namespace Game.Client.Net
 {
@@ -140,7 +141,7 @@ namespace Game.Client.Net
             while (_client.TryReceive(out var message)) Dispatch(message);
 
             if (_client.State == NetClient.Status.Disconnected && string.IsNullOrEmpty(Error))
-                Error = string.IsNullOrEmpty(_client.Error) ? "Desconectado" : _client.Error;
+                Error = string.IsNullOrEmpty(_client.Error) ? Loc.T("net.disconnected") : _client.Error;
 
             if (!IsWelcomed || _client.State != NetClient.Status.Connected) return;
 
@@ -178,7 +179,7 @@ namespace Game.Client.Net
                     _client.Send(new Ping { ClientTime = LocalNow });
                     break;
                 case Reject reject:
-                    Error = reject.Reason;
+                    Error = reject.Reason.ToString();
                     _client.Disconnect();
                     break;
                 case Pong pong:
@@ -205,8 +206,8 @@ namespace Game.Client.Net
                     if (_motor != null) _motor.Teleport(new Vector3(correction.X, 0, correction.Z));
                     break;
                 case Notice notice:
-                    if (notice.Announcement) CombatHud.Announce(notice.Text);
-                    else if (_combat != null) _combat.ShowNotice(notice.Text);
+                    if (notice.Announcement) CombatHud.Announce(notice.Text.ToString());
+                    else if (_combat != null) _combat.ShowNotice(notice.Text.ToString());
                     break;
                 default:
                     MessageReceived?.Invoke(message);
@@ -218,7 +219,7 @@ namespace Game.Client.Net
         {
             if (_views.ContainsKey(spawned.Id)) return;
 
-            var root = new GameObject(spawned.Kind == EntityKind.Player ? $"Jogador: {spawned.Name}" : $"{spawned.Name} (Nv {spawned.Level})");
+            var root = new GameObject(spawned.Kind == EntityKind.Player ? $"Jogador: {spawned.Name}" : Loc.T("ui.name_level", spawned.Name, spawned.Level));
             root.transform.position = new Vector3(spawned.X, 0, spawned.Z);
 
             MonsterParts parts;

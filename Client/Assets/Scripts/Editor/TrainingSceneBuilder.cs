@@ -43,9 +43,9 @@ namespace Game.Client.Editor
             playerObject.GetComponent<PlayerMotor>().SetCamera(cameraObject.transform);
             playerObject.GetComponent<TargetSelector>().SetCamera(cameraObject.GetComponent<Camera>());
 
-            CreateDummy("Boneco de treino A", new Vector3(0, 0, 6), dummy, ring);
-            CreateDummy("Boneco de treino B", new Vector3(-4.5f, 0, 9), dummy, ring);
-            CreateDummy("Boneco de treino C", new Vector3(4.5f, 0, 9), dummy, ring);
+            CreateDummy("Boneco de treino A", "dummy.a", new Vector3(0, 0, 6), dummy, ring);
+            CreateDummy("Boneco de treino B", "dummy.b", new Vector3(-4.5f, 0, 9), dummy, ring);
+            CreateDummy("Boneco de treino C", "dummy.c", new Vector3(4.5f, 0, 9), dummy, ring);
 
             var effects = new GameObject("Efeitos");
             effects.AddComponent<CombatFx>().SetMaterials(
@@ -124,7 +124,7 @@ namespace Game.Client.Editor
             return cameraObject;
         }
 
-        private static void CreateDummy(string name, Vector3 position, Material material, Material ringMaterial)
+        private static void CreateDummy(string name, string nameKey, Vector3 position, Material material, Material ringMaterial)
         {
             var root = new GameObject(name);
             root.transform.position = position;
@@ -144,7 +144,7 @@ namespace Game.Client.Editor
             ring.transform.localScale = new Vector3(1.8f, 0.01f, 1.8f);
 
             var targetable = root.AddComponent<Targetable>();
-            targetable.Configure(name, 8000, 2.2f, 0.6f, ring);
+            targetable.Configure(nameKey, 8000, 2.2f, 0.6f, ring);
             root.AddComponent<TrainingDummy>();
         }
 

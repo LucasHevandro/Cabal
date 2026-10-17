@@ -3,6 +3,7 @@ using Game.Client.Net;
 using Game.Shared.Accounts;
 using Game.Shared.Net;
 using Game.Shared.Social;
+using Game.Shared.Text;
 using UnityEngine;
 
 namespace Game.Client.UI
@@ -102,7 +103,7 @@ namespace Game.Client.UI
         {
             _session = NetworkSession.Instance;
             if (_session != null) _session.MessageReceived += OnMessage;
-            AddLine(ChatChannel.System, "Enter abre o chat. Digite /ajuda para ver os comandos.");
+            AddLine(ChatChannel.System, Loc.T("chat.hint"));
         }
 
         private void OnDestroy()
@@ -138,25 +139,25 @@ namespace Game.Client.UI
                 case PartyInvite invite:
                     _invite = invite;
                     _inviteUntil = Time.unscaledTime + invite.Seconds;
-                    AddLine(ChatChannel.System, $"{invite.InviterName} convidou você para o grupo");
+                    AddLine(ChatChannel.System, Loc.T("party.invited_you", invite.InviterName));
                     break;
             }
         }
 
         private void OnChat(ChatMessage chat)
         {
-            var text = Escape(chat.Text);
+            var text = Escape(chat.Display);
             switch (chat.Channel)
             {
                 case ChatChannel.System:
                     AddLine(chat.Channel, text);
                     break;
                 case ChatChannel.Whisper when chat.ToName.Length > 0:
-                    AddLine(chat.Channel, $"Para <b>{Escape(chat.ToName)}</b>: {text}");
+                    AddLine(chat.Channel, Loc.T("chat.whisper_to", Escape(chat.ToName), text));
                     break;
                 case ChatChannel.Whisper:
                     _lastWhisperFrom = chat.FromName;
-                    AddLine(chat.Channel, $"De <b>{Escape(chat.FromName)}</b>: {text}");
+                    AddLine(chat.Channel, Loc.T("chat.whisper_from", Escape(chat.FromName), text));
                     break;
                 default:
                     AddLine(chat.Channel, $"<b>{Escape(chat.FromName)}</b>: {text}");
@@ -293,7 +294,7 @@ namespace Game.Client.UI
             AddRect(rect);
             var channelRect = new Rect(rect.x + 8, rect.yMax - 38, 92, 30);
             Box(channelRect, new Color(ChannelColor(_channel).r, ChannelColor(_channel).g, ChannelColor(_channel).b, 0.35f));
-            GUI.Label(channelRect, _channel == ChatChannel.Party ? "Grupo" : "Mapa", _small.WithCenter());
+            GUI.Label(channelRect, _channel == ChatChannel.Party ? Loc.T("chat.channel_party") : Loc.T("chat.channel_map"), _small.WithCenter());
             GUI.SetNextControlName(InputControl);
             _draft = GUI.TextField(new Rect(channelRect.xMax + 6, rect.yMax - 38, rect.width - 114, 30), _draft, ChatRules.MaxLength, _input);
             if (_focusInput)
@@ -310,7 +311,7 @@ namespace Game.Client.UI
                 _cursorToEnd = false;
             }
             GUI.Label(new Rect(rect.x + 12, rect.y + 4, rect.width - 24, 22),
-                "<size=12>Enter envia · Esc cancela · Tab troca o canal · PgUp/PgDn rola · /ajuda</size>", _small);
+                Loc.T("chat.input_hint"), _small);
         }
 
         private void DrawParty()
@@ -322,8 +323,8 @@ namespace Game.Client.UI
             var panel = new Rect(x, y, 320, height);
             Box(panel, new Color(0, 0, 0, 0.45f));
             AddRect(panel);
-            GUI.Label(new Rect(x + 10, y + 4, 300, 26), $"<b>Grupo</b>  <size=13>({_party.Members.Count}/{PartyRules.MaxMembers})</size>", _small);
-            if (GUI.Button(new Rect(x + 240, y + 6, 70, 24), "Sair", _button))
+            GUI.Label(new Rect(x + 10, y + 4, 300, 26), Loc.T("party.title", _party.Members.Count, PartyRules.MaxMembers), _small);
+            if (GUI.Button(new Rect(x + 240, y + 6, 70, 24), Loc.T("party.leave"), _button))
                 _session.Send(new PartyCommand { Action = PartyActionKind.Leave });
             y += 36;
             foreach (var member in _party.Members)
@@ -333,12 +334,12 @@ namespace Game.Client.UI
                 var className = AccountRules.ClassDisplayName((CharacterClass)member.Class);
                 GUI.color = member.Near || me ? Color.white : new Color(1, 1, 1, 0.55f);
                 GUI.Label(new Rect(x + 10, y - 2, 300, 26),
-                    $"{leader}<b>{Escape(member.Name)}</b>{(me ? " (você)" : "")}  <size=13>Nv {member.Level} · {className}</size>", _small);
+                    Loc.T("party.member_row", leader, Escape(member.Name), me ? " " + Loc.T("party.you") : "", member.Level, className), _small);
                 var hp = new Rect(x + 10, y + 26, 300, 16);
                 Box(hp, new Color(0, 0, 0, 0.6f));
                 Box(new Rect(hp.x, hp.y, hp.width * Mathf.Clamp01(member.Hp / (float)Mathf.Max(1, member.MaxHp)), hp.height), HpColor);
                 GUI.Label(new Rect(hp.x, hp.y - 3, hp.width, 22),
-                    member.Dead ? "<size=12><b>MORTO</b></size>" : $"<size=12>{member.Hp}/{member.MaxHp}</size>", _small.WithCenter());
+                    member.Dead ? Loc.T("party.member_dead") : $"<size=12>{member.Hp}/{member.MaxHp}</size>", _small.WithCenter());
                 var mp = new Rect(x + 10, y + 44, 300, 6);
                 Box(mp, new Color(0, 0, 0, 0.6f));
                 Box(new Rect(mp.x, mp.y, mp.width * Mathf.Clamp01(member.Mp / (float)Mathf.Max(1, member.MaxMp)), mp.height), MpColor);
@@ -354,13 +355,13 @@ namespace Game.Client.UI
             Box(rect, Panel);
             AddRect(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30),
-                $"<b>Amigos</b>  <size=13>({_lists.Friends.Count}/{RelationRules.MaxFriends} · O fecha)</size>", _label);
+                Loc.T("friends.title", _lists.Friends.Count, RelationRules.MaxFriends), _label);
 
             GUI.SetNextControlName(FriendControl);
             _friendName = GUI.TextField(new Rect(rect.x + 14, rect.y + 46, 350, 30), _friendName, AccountRules.MaxCharacterNameLength, _input);
             var fieldRect = new Rect(rect.x + 14, rect.y + 46, 350, 30);
             if (Event.current.type == EventType.MouseDown && !fieldRect.Contains(Event.current.mousePosition)) GUI.FocusControl(null);
-            if (GUI.Button(new Rect(rect.x + 372, rect.y + 46, 114, 30), "Adicionar", _button)) AddFriendFromField();
+            if (GUI.Button(new Rect(rect.x + 372, rect.y + 46, 114, 30), Loc.T("friends.add"), _button)) AddFriendFromField();
             GameInput.FieldFocused = GUI.GetNameOfFocusedControl() == FriendControl;
 
             var listRect = new Rect(rect.x + 8, rect.y + 86, rect.width - 16, rect.height - 94);
@@ -370,35 +371,35 @@ namespace Game.Client.UI
             var y = 0f;
             if (_lists.Friends.Count == 0)
             {
-                GUI.Label(new Rect(6, y, 400, 26), "<size=14>Nenhum amigo ainda. Digite o nome de alguém online.</size>", _small);
+                GUI.Label(new Rect(6, y, 400, 26), Loc.T("friends.empty"), _small);
                 y += 30;
             }
             foreach (var friend in _lists.Friends)
             {
                 Box(new Rect(8, y + 13, 12, 12), friend.Online ? new Color(0.3f, 0.9f, 0.35f) : new Color(0.45f, 0.45f, 0.45f));
                 var info = friend.Online
-                    ? $"Nv {friend.Level} · {AccountRules.ClassDisplayName((CharacterClass)friend.Class)}"
-                    : "offline";
+                    ? Loc.T("friends.info", friend.Level, AccountRules.ClassDisplayName((CharacterClass)friend.Class))
+                    : Loc.T("friends.offline");
                 GUI.color = friend.Online ? Color.white : new Color(1, 1, 1, 0.6f);
                 GUI.Label(new Rect(28, y + 6, 200, 28), $"<b>{Escape(friend.Name)}</b> <size=12>{info}</size>", _small);
                 GUI.color = Color.white;
                 if (friend.Online)
                 {
-                    if (GUI.Button(new Rect(226, y + 6, 88, 26), "Sussurrar", _button)) StartWhisper(friend.Name);
-                    if (GUI.Button(new Rect(318, y + 6, 66, 26), "Grupo", _button))
+                    if (GUI.Button(new Rect(226, y + 6, 88, 26), Loc.T("friends.whisper"), _button)) StartWhisper(friend.Name);
+                    if (GUI.Button(new Rect(318, y + 6, 66, 26), Loc.T("friends.invite"), _button))
                         _session.Send(new PartyCommand { Action = PartyActionKind.Invite, TargetName = friend.Name });
                 }
-                if (GUI.Button(new Rect(388, y + 6, 76, 26), "Remover", _button)) Relation(RelationActionKind.RemoveFriend, friend.Name);
+                if (GUI.Button(new Rect(388, y + 6, 76, 26), Loc.T("friends.remove"), _button)) Relation(RelationActionKind.RemoveFriend, friend.Name);
                 y += rowHeight;
             }
 
             y += 8;
-            GUI.Label(new Rect(6, y, 400, 26), $"<b>Bloqueados</b> <size=12>({_lists.Blocked.Count} · /bloquear nome)</size>", _small);
+            GUI.Label(new Rect(6, y, 400, 26), Loc.T("friends.blocked_title", _lists.Blocked.Count), _small);
             y += 32;
             foreach (var name in _lists.Blocked)
             {
                 GUI.Label(new Rect(28, y, 220, 26), Escape(name), _small);
-                if (GUI.Button(new Rect(348, y, 116, 26), "Desbloquear", _button)) Relation(RelationActionKind.Unblock, name);
+                if (GUI.Button(new Rect(348, y, 116, 26), Loc.T("friends.unblock"), _button)) Relation(RelationActionKind.Unblock, name);
                 y += 32;
             }
             GUI.EndScrollView();
@@ -431,10 +432,10 @@ namespace Game.Client.UI
             Box(rect, Panel);
             AddRect(rect);
             var seconds = Mathf.CeilToInt(_inviteUntil - Time.unscaledTime);
-            GUI.Label(new Rect(rect.x, rect.y + 14, rect.width, 30), $"<b>{Escape(invite.InviterName)}</b> convidou você para o grupo", _label.WithCenter());
-            GUI.Label(new Rect(rect.x, rect.y + 44, rect.width, 22), $"<size=13>expira em {seconds} s</size>", _small.WithCenter());
-            if (GUI.Button(new Rect(rect.x + 60, rect.y + 76, 150, 36), "<b>Aceitar</b>", _button)) Answer(true);
-            if (GUI.Button(new Rect(rect.xMax - 210, rect.y + 76, 150, 36), "Recusar", _button)) Answer(false);
+            GUI.Label(new Rect(rect.x, rect.y + 14, rect.width, 30), Loc.T("party.invite_title", Escape(invite.InviterName)), _label.WithCenter());
+            GUI.Label(new Rect(rect.x, rect.y + 44, rect.width, 22), Loc.T("party.invite_expires", seconds), _small.WithCenter());
+            if (GUI.Button(new Rect(rect.x + 60, rect.y + 76, 150, 36), Loc.T("party.invite_accept"), _button)) Answer(true);
+            if (GUI.Button(new Rect(rect.xMax - 210, rect.y + 76, 150, 36), Loc.T("party.invite_decline"), _button)) Answer(false);
         }
 
         private void Answer(bool accept)
@@ -510,7 +511,7 @@ namespace Game.Client.UI
 
         private static string Prefix(ChatChannel channel) => channel switch
         {
-            ChatChannel.Party => "[Grupo] ",
+            ChatChannel.Party => Loc.T("chat.prefix_party") + " ",
             ChatChannel.System => "",
             ChatChannel.Whisper => "",
             _ => "",

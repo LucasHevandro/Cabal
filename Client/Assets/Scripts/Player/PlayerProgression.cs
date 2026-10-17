@@ -2,6 +2,7 @@ using System;
 using Game.Client.Fx;
 using Game.Client.UI;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 using UnityEngine;
 
 namespace Game.Client.Player
@@ -37,13 +38,13 @@ namespace Game.Client.Player
             var gained = level == before.Level ? xp - before.Xp : 0;
             _progress = new CharacterProgress(Mathf.Clamp(level, 1, LevelCurve.MaxLevel), xp);
             if (gained > 0)
-                DamageNumbers.Spawn(transform.position + Vector3.up * 2.6f, $"+{gained} XP", new Color(0.75f, 0.55f, 1f), 22f);
+                DamageNumbers.Spawn(transform.position + Vector3.up * 2.6f, Loc.T("fx.xp_gain", gained), new Color(0.75f, 0.55f, 1f), 22f);
             if (level > before.Level) CelebrateLevelUp();
         }
 
         private void CelebrateLevelUp()
         {
-            DamageNumbers.Spawn(transform.position + Vector3.up * 3.1f, $"NÍVEL {Progress.Level}!", new Color(1f, 0.9f, 0.3f), 40f);
+            DamageNumbers.Spawn(transform.position + Vector3.up * 3.1f, Loc.T("fx.level_up", Progress.Level), new Color(1f, 0.9f, 0.3f), 40f);
             SoundPlayer.Play(SoundId.Route, 1f, 0f);
             if (CombatFx.Instance != null)
                 CombatFx.Instance.Sparks(transform.position + Vector3.up, new Color(1f, 0.9f, 0.3f), 60);
@@ -54,7 +55,7 @@ namespace Game.Client.Player
         public int GainMonsterXp(int baseXp, int monsterLevel)
         {
             var xp = XpRules.Adjusted(baseXp, Progress.Level, monsterLevel);
-            DamageNumbers.Spawn(transform.position + Vector3.up * 2.6f, $"+{xp} XP", new Color(0.75f, 0.55f, 1f), 22f);
+            DamageNumbers.Spawn(transform.position + Vector3.up * 2.6f, Loc.T("fx.xp_gain", xp), new Color(0.75f, 0.55f, 1f), 22f);
 
             if (Progress.AddXp(xp) > 0) CelebrateLevelUp();
             return xp;

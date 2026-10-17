@@ -38,7 +38,7 @@ namespace Game.Client.Editor
             foreach (var zone in WorldContent.Zones())
             {
                 var tint = ZoneTints.TryGetValue(zone.Name, out var color) ? color : new Color(0.5f, 0.5f, 0.5f);
-                Zone(world, zone.Name, zone.MinLevel, zone.MaxLevel, new Vector3(zone.CenterX, 0, zone.CenterZ), zone.Radius, tint);
+                Zone(world, zone.Name, "zone." + zone.Id, zone.MinLevel, zone.MaxLevel, new Vector3(zone.CenterX, 0, zone.CenterZ), zone.Radius, tint);
             }
 
             Road(world, Village, Fields);
@@ -71,12 +71,12 @@ namespace Game.Client.Editor
             plane.GetComponent<Renderer>().sharedMaterial = TrainingSceneBuilder.MaterialFor("Chao", new Color(0.42f, 0.45f, 0.42f));
         }
 
-        private static void Zone(Transform parent, string name, int minLevel, int maxLevel, Vector3 center, float radius, Color tint)
+        private static void Zone(Transform parent, string name, string nameKey, int minLevel, int maxLevel, Vector3 center, float radius, Color tint)
         {
             var zone = new GameObject($"Zona: {name}");
             zone.transform.SetParent(parent, false);
             zone.transform.position = center;
-            zone.AddComponent<ZoneArea>().Configure(name, minLevel, maxLevel, radius);
+            zone.AddComponent<ZoneArea>().Configure(nameKey, minLevel, maxLevel, radius);
 
             // Disco colorido no chão para a zona ser reconhecível de longe.
             var disc = Visual(PrimitiveType.Cylinder, "Chão da zona", zone.transform,

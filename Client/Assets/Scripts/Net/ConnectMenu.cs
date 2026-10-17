@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Shared.Accounts;
+using Game.Shared.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -56,7 +57,7 @@ namespace Game.Client.Net
         private async Task LoginAsync()
         {
             if (!PrepareApi()) return;
-            await Run("Entrando…", async () =>
+            await Run(Loc.T("login.entering"), async () =>
             {
                 var login = await _api.LoginAsync(_account, _password);
                 if (!login.Ok)
@@ -72,15 +73,15 @@ namespace Game.Client.Net
 
         private async Task RegisterAsync()
         {
-            var error = AccountRules.ValidateAccount(_account) ?? AccountRules.ValidatePassword(_password);
-            if (error == null && _password != _passwordAgain) error = "As senhas não são iguais.";
+            var error = (AccountRules.ValidateAccount(_account) ?? AccountRules.ValidatePassword(_password))?.ToString();
+            if (error == null && _password != _passwordAgain) error = Loc.T("login.passwords_differ");
             if (error != null)
             {
                 ShowError(error);
                 return;
             }
             if (!PrepareApi()) return;
-            await Run("Criando conta…", async () =>
+            await Run(Loc.T("login.creating_account"), async () =>
             {
                 var register = await _api.RegisterAsync(_account, _password);
                 if (!register.Ok)
@@ -89,7 +90,7 @@ namespace Game.Client.Net
                     _screen = Screen.Register;
                     return;
                 }
-                ShowInfo("Conta criada!");
+                ShowInfo(Loc.T("login.account_created"));
                 await LoginAsync();
             });
         }
@@ -109,13 +110,13 @@ namespace Game.Client.Net
 
         private async Task CreateCharacterAsync()
         {
-            var error = AccountRules.ValidateCharacterName(_newName);
+            var error = AccountRules.ValidateCharacterName(_newName)?.ToString();
             if (error != null)
             {
                 ShowError(error);
                 return;
             }
-            await Run("Criando personagem…", async () =>
+            await Run(Loc.T("login.creating_character"), async () =>
             {
                 var created = await _api.CreateCharacterAsync(_newName, _newClass);
                 if (!created.Ok)
@@ -125,7 +126,7 @@ namespace Game.Client.Net
                     return;
                 }
                 _newName = "";
-                ShowInfo($"{created.Value.Name} foi criado!");
+                ShowInfo(Loc.T("login.character_created", created.Value.Name));
                 await LoadCharactersAsync();
             });
         }
@@ -143,7 +144,7 @@ namespace Game.Client.Net
             _password = GameMode.AutoLoginPassword;
             if (!PrepareApi()) return;
             _screen = Screen.Busy;
-            _busyText = "Login automático…";
+            _busyText = Loc.T("login.auto");
 
             var login = await _api.LoginAsync(_account, _password);
             if (!login.Ok)
@@ -153,7 +154,7 @@ namespace Game.Client.Net
             }
             if (!login.Ok)
             {
-                ShowError("Login automático falhou: " + login.Error);
+                ShowError(Loc.T("login.auto_failed", login.Error));
                 _screen = Screen.Login;
                 return;
             }
@@ -166,7 +167,7 @@ namespace Game.Client.Net
                 var created = await _api.CreateCharacterAsync(name, CharacterClass.Blade);
                 if (!created.Ok)
                 {
-                    ShowError("Não consegui criar o personagem: " + created.Error);
+                    ShowError(Loc.T("login.auto_create_failed", created.Error));
                     _screen = Screen.Login;
                     return;
                 }
@@ -180,7 +181,7 @@ namespace Game.Client.Net
         {
             if (!GameMode.TryParseAddress(_address, out var host, out var port))
             {
-                ShowError("Endereço inválido. Exemplo: 127.0.0.1:7777");
+                ShowError(Loc.T("login.bad_address"));
                 return false;
             }
             if (_api == null || GameMode.Host != host || GameMode.Port != port) _api = new AccountClient(host, port);
@@ -228,7 +229,7 @@ namespace Game.Client.Net
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
             GUILayout.BeginArea(area, GUI.skin.box);
             GUILayout.Space(8 * scale);
-            GUILayout.Label("Action MMORPG — protótipo", _title);
+            GUILayout.Label(Loc.T("login.title"), _title);
             GUILayout.Space(12 * scale);
 
             switch (_screen)
@@ -252,36 +253,36 @@ namespace Game.Client.Net
 
         private void DrawLogin(float scale)
         {
-            GUILayout.Label("Servidor (endereço:porta)", _label);
+            GUILayout.Label(Loc.T("login.server"), _label);
             _address = GUILayout.TextField(_address, 60, GUILayout.Height(26 * scale));
-            GUILayout.Label("Conta", _label);
+            GUILayout.Label(Loc.T("login.account"), _label);
             _account = GUILayout.TextField(_account, AccountRules.MaxAccountLength, GUILayout.Height(26 * scale));
-            GUILayout.Label("Senha", _label);
+            GUILayout.Label(Loc.T("login.password"), _label);
             _password = GUILayout.PasswordField(_password, '•', AccountRules.MaxPasswordLength, GUILayout.Height(26 * scale));
             GUILayout.Space(10 * scale);
-            if (GUILayout.Button("Entrar", GUILayout.Height(38 * scale))) _ = LoginAsync();
+            if (GUILayout.Button(Loc.T("login.enter"), GUILayout.Height(38 * scale))) _ = LoginAsync();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Criar conta", GUILayout.Height(30 * scale)))
+            if (GUILayout.Button(Loc.T("login.create_account"), GUILayout.Height(30 * scale)))
             {
                 _screen = Screen.Register;
                 _message = "";
             }
-            if (GUILayout.Button("Jogar offline", GUILayout.Height(30 * scale))) GameMode.SetOffline();
+            if (GUILayout.Button(Loc.T("login.offline"), GUILayout.Height(30 * scale))) GameMode.SetOffline();
             GUILayout.EndHorizontal();
         }
 
         private void DrawRegister(float scale)
         {
-            GUILayout.Label("Nova conta", _label);
-            GUILayout.Label($"Conta: {AccountRules.MinAccountLength} a {AccountRules.MaxAccountLength} letras sem acento, números ou _", _small);
+            GUILayout.Label(Loc.T("login.new_account"), _label);
+            GUILayout.Label(Loc.T("login.account_rule", AccountRules.MinAccountLength, AccountRules.MaxAccountLength), _small);
             _account = GUILayout.TextField(_account, AccountRules.MaxAccountLength, GUILayout.Height(26 * scale));
-            GUILayout.Label($"Senha: pelo menos {AccountRules.MinPasswordLength} caracteres, com letras e números", _small);
+            GUILayout.Label(Loc.T("login.password_rule", AccountRules.MinPasswordLength), _small);
             _password = GUILayout.PasswordField(_password, '•', AccountRules.MaxPasswordLength, GUILayout.Height(26 * scale));
-            GUILayout.Label("Repita a senha", _small);
+            GUILayout.Label(Loc.T("login.repeat_password"), _small);
             _passwordAgain = GUILayout.PasswordField(_passwordAgain, '•', AccountRules.MaxPasswordLength, GUILayout.Height(26 * scale));
             GUILayout.Space(10 * scale);
-            if (GUILayout.Button("Criar conta e entrar", GUILayout.Height(38 * scale))) _ = RegisterAsync();
-            if (GUILayout.Button("Voltar", GUILayout.Height(28 * scale)))
+            if (GUILayout.Button(Loc.T("login.create_and_enter"), GUILayout.Height(38 * scale))) _ = RegisterAsync();
+            if (GUILayout.Button(Loc.T("ui.back"), GUILayout.Height(28 * scale)))
             {
                 _screen = Screen.Login;
                 _message = "";
@@ -290,19 +291,19 @@ namespace Game.Client.Net
 
         private void DrawCharacters(float scale)
         {
-            GUILayout.Label($"Seus personagens ({_characters.Count}/{AccountRules.MaxCharactersPerAccount})", _label);
+            GUILayout.Label(Loc.T("login.your_characters", _characters.Count, AccountRules.MaxCharactersPerAccount), _label);
             foreach (var character in _characters)
             {
-                var text = $"{character.Name}   ·   {AccountRules.ClassDisplayName((CharacterClass)character.ClassId)}   ·   Nv {character.Level}";
+                var text = Loc.T("login.character_row", character.Name, AccountRules.ClassDisplayName((CharacterClass)character.ClassId), character.Level);
                 if (GUILayout.Button(text, GUILayout.Height(44 * scale))) Play(character);
             }
             GUILayout.Space(10 * scale);
-            if (_characters.Count < AccountRules.MaxCharactersPerAccount && GUILayout.Button("Criar personagem", GUILayout.Height(30 * scale)))
+            if (_characters.Count < AccountRules.MaxCharactersPerAccount && GUILayout.Button(Loc.T("login.create_character"), GUILayout.Height(30 * scale)))
             {
                 _screen = Screen.CreateCharacter;
                 _message = "";
             }
-            if (GUILayout.Button("Sair da conta", GUILayout.Height(28 * scale)))
+            if (GUILayout.Button(Loc.T("login.logout"), GUILayout.Height(28 * scale)))
             {
                 _screen = Screen.Login;
                 _api = null;
@@ -312,19 +313,19 @@ namespace Game.Client.Net
 
         private void DrawCreate(float scale)
         {
-            GUILayout.Label("Novo personagem", _label);
-            GUILayout.Label($"Nome: {AccountRules.MinCharacterNameLength} a {AccountRules.MaxCharacterNameLength} letras ou números, sem espaços", _small);
+            GUILayout.Label(Loc.T("login.new_character"), _label);
+            GUILayout.Label(Loc.T("login.name_rule", AccountRules.MinCharacterNameLength, AccountRules.MaxCharacterNameLength), _small);
             _newName = GUILayout.TextField(_newName, AccountRules.MaxCharacterNameLength, GUILayout.Height(26 * scale));
-            GUILayout.Label("Classe", _label);
+            GUILayout.Label(Loc.T("login.class"), _label);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(_newClass == CharacterClass.Blade, " Lâmina — corpo a corpo", GUI.skin.button, GUILayout.Height(34 * scale)))
+            if (GUILayout.Toggle(_newClass == CharacterClass.Blade, " " + Loc.T("login.class_blade"), GUI.skin.button, GUILayout.Height(34 * scale)))
                 _newClass = CharacterClass.Blade;
-            if (GUILayout.Toggle(_newClass == CharacterClass.Arcanist, " Arcanista — à distância", GUI.skin.button, GUILayout.Height(34 * scale)))
+            if (GUILayout.Toggle(_newClass == CharacterClass.Arcanist, " " + Loc.T("login.class_arcanist"), GUI.skin.button, GUILayout.Height(34 * scale)))
                 _newClass = CharacterClass.Arcanist;
             GUILayout.EndHorizontal();
             GUILayout.Space(10 * scale);
-            if (GUILayout.Button("Criar", GUILayout.Height(38 * scale))) _ = CreateCharacterAsync();
-            if (_characters.Count > 0 && GUILayout.Button("Voltar", GUILayout.Height(28 * scale)))
+            if (GUILayout.Button(Loc.T("login.create"), GUILayout.Height(38 * scale))) _ = CreateCharacterAsync();
+            if (_characters.Count > 0 && GUILayout.Button(Loc.T("ui.back"), GUILayout.Height(28 * scale)))
             {
                 _screen = Screen.Characters;
                 _message = "";

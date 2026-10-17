@@ -4,8 +4,9 @@ using Game.Client.Net;
 using Game.Shared.Economy;
 using Game.Shared.Items;
 using Game.Shared.Progression;
-using UnityEngine;
+using Game.Shared.Text;
 using Msg = Game.Shared.Net;
+using UnityEngine;
 
 namespace Game.Client.UI
 {
@@ -29,7 +30,7 @@ namespace Game.Client.UI
 
         private void DrawShop(NpcDefinition npc)
         {
-            var rect = Window(ShopRect, $"{npc.Name} — loja");
+            var rect = Window(ShopRect, Loc.T("shop.title", npc.Name));
             var x = rect.x + 14;
             var y = rect.y + 44;
             var alz = Player.GetComponent<PlayerLoot>()?.Alz ?? 0;
@@ -60,13 +61,13 @@ namespace Game.Client.UI
             // Vender
             y = listRect.yMax + 12;
             Box(new Rect(x, y - 6, rect.width - 28, 1), new Color(1, 1, 1, 0.2f));
-            GUI.Label(new Rect(x, y, rect.width - 28, 24), "<b>Vender</b>  <size=13>(botão direito ou arraste um item da bolsa)</size>", _small);
+            GUI.Label(new Rect(x, y, rect.width - 28, 24), Loc.T("shop.sell_title"), _small);
             var slot = _sellUid != 0 ? CharacterState.Bag.SlotOf(_sellUid) : -1;
             var item = slot >= 0 ? CharacterState.Bag[slot] : null;
             if (item == null)
             {
                 _sellUid = 0;
-                GUI.Label(new Rect(x, y + 32, rect.width - 28, 24), "Nenhum item escolhido", _tiny);
+                GUI.Label(new Rect(x, y + 32, rect.width - 28, 24), Loc.T("smith.no_item"), _tiny);
                 return;
             }
             var sold = ItemCatalog.Get(item.ItemId);
@@ -79,12 +80,12 @@ namespace Game.Client.UI
             }
             var unit = EconomyRules.SellPrice(sold, item.Upgrade);
             GUI.Label(new Rect(x + 62, y + 30, rect.width - 90, 24),
-                $"{sold.Name}{(item.Upgrade > 0 ? $" +{item.Upgrade}" : "")}{(item.Quantity > 1 ? $" x{item.Quantity}" : "")}", _small);
-            GUI.Label(new Rect(x + 62, y + 52, rect.width - 90, 22), $"{unit:N0} Alz cada", _tiny);
+                (item.Upgrade > 0 ? Loc.T("item.with_upgrade", sold.Name, item.Upgrade) : sold.Name) + (item.Quantity > 1 ? $" x{item.Quantity}" : ""), _small);
+            GUI.Label(new Rect(x + 62, y + 52, rect.width - 90, 22), Loc.T("shop.unit_price", unit), _tiny);
             if (item.Upgrade > 0 || !string.IsNullOrEmpty(item.OptionId) || sold.Rarity >= Game.Shared.Loot.ItemRarity.Epic)
-                GUI.Label(new Rect(x, y + 86, rect.width - 28, 22), "<color=#ff7766>Atenção: item valioso, não dá para desfazer.</color>", _tiny);
-            if (item.Quantity > 1 && GUI.Button(new Rect(x, y + 112, 150, 34), "Vender 1", _button)) Sell(slot, 1);
-            if (GUI.Button(new Rect(rect.xMax - 214, y + 112, 200, 34), $"Vender tudo ({unit * item.Quantity:N0})", _button)) Sell(slot, 0);
+                GUI.Label(new Rect(x, y + 86, rect.width - 28, 22), Loc.T("shop.sell_warning"), _tiny);
+            if (item.Quantity > 1 && GUI.Button(new Rect(x, y + 112, 150, 34), Loc.T("shop.sell_one"), _button)) Sell(slot, 1);
+            if (GUI.Button(new Rect(rect.xMax - 214, y + 112, 200, 34), Loc.T("shop.sell_all", unit * item.Quantity), _button)) Sell(slot, 0);
         }
 
         private static void Buy(ShopEntry entry, int quantity) =>
@@ -101,20 +102,20 @@ namespace Game.Client.UI
         private void DrawTrade()
         {
             var state = CharacterState.Trade;
-            var rect = Window(TradeRect, $"Troca com {state.PartnerName}");
+            var rect = Window(TradeRect, Loc.T("trade.title", state.PartnerName));
             var x = rect.x + 14;
             var y = rect.y + 44;
 
             // Do outro lado
-            GUI.Label(new Rect(x, y, 300, 24), $"<b>{state.PartnerName} oferece</b>  {Status(state.TheirLocked, state.TheirConfirmed)}", _small);
+            GUI.Label(new Rect(x, y, 300, 24), Loc.T("trade.they_offer", state.PartnerName, Status(state.TheirLocked, state.TheirConfirmed)), _small);
             DrawOfferRow(state.TheirItems, new Vector2(x, y + 28), mine: false);
             GUI.Label(new Rect(x, y + 28 + SlotSize + 6, 300, 22), $"<b>{state.TheirAlz:N0}</b> Alz", _small);
 
             // Do meu lado
             y += 140;
             Box(new Rect(x, y - 8, rect.width - 28, 1), new Color(1, 1, 1, 0.2f));
-            GUI.Label(new Rect(x, y, 420, 24), $"<b>Você oferece</b>  {Status(state.MyLocked, state.MyConfirmed)}", _small);
-            GUI.Label(new Rect(x, y + 22, 420, 20), "<size=12>Botão direito ou arraste da bolsa; clique num item seu para tirar.</size>", _tiny);
+            GUI.Label(new Rect(x, y, 420, 24), Loc.T("trade.you_offer", Status(state.MyLocked, state.MyConfirmed)), _small);
+            GUI.Label(new Rect(x, y + 22, 420, 20), Loc.T("trade.offer_hint"), _tiny);
             DrawOfferRow(state.MyItems, new Vector2(x, y + 46), mine: true);
 
             y += 46 + SlotSize + 10;
@@ -125,25 +126,25 @@ namespace Game.Client.UI
                 if (GUI.Button(new Rect(bx, y, 70, 28), $"+{step:N0}", _button)) SetAlz(state.MyAlz + step);
                 bx += 74;
             }
-            if (GUI.Button(new Rect(bx, y, 66, 28), "Zerar", _button)) SetAlz(0);
+            if (GUI.Button(new Rect(bx, y, 66, 28), Loc.T("trade.zero"), _button)) SetAlz(0);
 
             // Confirmações
             y = rect.yMax - 96;
             GUI.Label(new Rect(x, y, rect.width - 28, 40),
-                !state.BothLocked() ? "<size=13>1) Os dois apertam <b>Pronto</b>. Mudar a oferta destrava os dois.</size>"
-                                    : "<size=13>2) Confira tudo e aperte <b>Confirmar</b>. A troca acontece quando os dois confirmam.</size>", _tiny);
+                !state.BothLocked() ? Loc.T("trade.step_1")
+                                    : Loc.T("trade.step_2"), _tiny);
             GUI.enabled = !state.MyLocked;
-            if (GUI.Button(new Rect(x, rect.yMax - 50, 130, 36), "Pronto", _button)) Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Lock });
+            if (GUI.Button(new Rect(x, rect.yMax - 50, 130, 36), Loc.T("trade.ready"), _button)) Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Lock });
             GUI.enabled = state.BothLocked() && !state.MyConfirmed;
-            if (GUI.Button(new Rect(x + 140, rect.yMax - 50, 150, 36), "<b>Confirmar</b>", _button))
+            if (GUI.Button(new Rect(x + 140, rect.yMax - 50, 150, 36), Loc.T("trade.confirm"), _button))
                 Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Confirm });
             GUI.enabled = true;
-            if (GUI.Button(new Rect(rect.xMax - 134, rect.yMax - 50, 120, 36), "Cancelar", _button))
+            if (GUI.Button(new Rect(rect.xMax - 134, rect.yMax - 50, 120, 36), Loc.T("ui.cancel"), _button))
                 Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Cancel });
         }
 
         private static string Status(bool locked, bool confirmed) =>
-            confirmed ? "<color=#77ee77>✔ confirmou</color>" : locked ? "<color=#ffd25a>pronto</color>" : "<color=#aaaaaa>montando</color>";
+            confirmed ? Loc.T("trade.status_confirmed") : locked ? Loc.T("trade.status_ready") : Loc.T("trade.status_building");
 
         private void DrawOfferRow(List<Msg.TradeItemInfo> items, Vector2 origin, bool mine)
         {
@@ -207,15 +208,15 @@ namespace Game.Client.UI
         {
             var invite = CharacterState.PendingTradeInvite;
             if (invite == null) return;
-            var rect = Window(new Rect(VirtualWidth / 2 - 230, 440, 460, 130), "Pedido de troca");
-            GUI.Label(new Rect(rect.x, rect.y + 40, rect.width, 26), $"<b>{invite.FromName}</b> quer trocar com você", _label.WithCenter());
-            if (GUI.Button(new Rect(rect.x + 60, rect.y + 80, 150, 36), "<b>Aceitar</b>", _button))
+            var rect = Window(new Rect(VirtualWidth / 2 - 230, 440, 460, 130), Loc.T("trade.invite_title"));
+            GUI.Label(new Rect(rect.x, rect.y + 40, rect.width, 26), Loc.T("trade.invite_text", invite.FromName), _label.WithCenter());
+            if (GUI.Button(new Rect(rect.x + 60, rect.y + 80, 150, 36), Loc.T("party.invite_accept"), _button))
             {
                 Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Accept, TargetId = invite.FromId });
                 CharacterState.ClearTradeInvite();
                 _inventoryOpen = true;
             }
-            if (GUI.Button(new Rect(rect.xMax - 210, rect.y + 80, 150, 36), "Recusar", _button))
+            if (GUI.Button(new Rect(rect.xMax - 210, rect.y + 80, 150, 36), Loc.T("party.invite_decline"), _button))
             {
                 Send(new Msg.TradeCommand { Action = Msg.TradeActionKind.Decline, TargetId = invite.FromId });
                 CharacterState.ClearTradeInvite();
