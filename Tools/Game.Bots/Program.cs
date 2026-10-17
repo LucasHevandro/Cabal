@@ -11,6 +11,8 @@ using Game.Shared.Social;
 //     --guests --dungeon-test, para bots de nível 1). Mede o tempo e a medalha de cada grupo.
 //   --arena-passive: como --arena, mas os bots não atacam (teste do cliente na arena).
 //   --arena: todos entram na fila da arena, jogam as partidas (pontos e lutas) e voltam para a fila até o fim.
+//   --crowd: todos caçam juntos no começo dos Campos do Vento (perto da vila), para medir o FPS do cliente com
+//     muitos jogadores na tela (cliente com -onlineperf).
 //   --accounts: cada bot entra com conta (bot01, bot02... senha senha12345), como jogador de verdade (amigos,
 //     bloqueio e denúncia só funcionam com conta); sem isso entram como convidados.
 var host = "127.0.0.1";
@@ -22,6 +24,7 @@ var accounts = args.Contains("--accounts");
 var dungeon = args.Contains("--dungeon");
 var arenaPassive = args.Contains("--arena-passive");
 var arena = args.Contains("--arena") || arenaPassive;
+var crowd = args.Contains("--crowd");
 if (dungeon) party = true;
 var inviteName = "";
 for (var i = 0; i < args.Length - 1; i++)
@@ -51,6 +54,7 @@ for (var i = 0; i < count; i++)
     if (party) prey = forest ? new[] { "javali_furioso", "aranha_da_mata" } : new[] { "coelho_saltador", "lobo_cinzento" };
     var bot = forest ? new Bot($"Bot{i + 1:00}", 1000 + i, prey, 45, 85) : new Bot($"Bot{i + 1:00}", 1000 + i, prey, 0, 40);
     // No --invite o primeiro bot fica parado perto da mercadora (sem caçar), para o cliente poder trocar com ele.
+    if (crowd) bot = new Bot($"Bot{i + 1:00}", 1000 + i, new[] { "coelho_saltador" }, 0, 30);
     if (inviteName.Length > 0 && i == 0) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), 6.5f, -8);
     // Na dungeon todos esperam no portal da Guardiã Selene.
     if (dungeon) bot = new Bot($"Bot{i + 1:00}", 1000 + i, Array.Empty<string>(), -5, -4);
