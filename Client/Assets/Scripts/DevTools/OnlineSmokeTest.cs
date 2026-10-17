@@ -104,6 +104,12 @@ namespace Game.Client.DevTools
             }
             Log($"Vendo {monsters} monstros e {players} outros jogadores");
 
+            // Tutorial do começo (o personagem de teste sempre recomeça do primeiro passo).
+            Tutorial.Restart();
+            yield return new WaitForSecondsRealtime(0.5f);
+            Capture("0-tutorial");
+            yield return new WaitForSecondsRealtime(0.3f); // a próxima foto não pode cair no mesmo quadro
+
             // Seleciona o monstro mais perto para a foto mostrar o anel e a plaquinha.
             var selector = PlayerCombat.Local != null ? PlayerCombat.Local.GetComponent<TargetSelector>() : null;
             if (selector != null) selector.SelectNext();

@@ -226,6 +226,11 @@ namespace Game.Client.UI
                 GameSettings.ResetDefaults();
                 GameSettings.Apply();
             }
+            if (GUI.Button(new Rect(x + 232, _rect.yMax - 60, 200, 40), Loc.T("options.tutorial_again"), _button))
+            {
+                Tutorial.Restart();
+                Close();
+            }
         }
 
         /// <summary>Lista dos atalhos em duas colunas; clicar na tecla espera a nova.</summary>

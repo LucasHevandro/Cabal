@@ -153,6 +153,8 @@ volumes e idioma, salvos entre uma sessão e outra. Na aba Atalhos dá para troc
 (andar, skills, combo, janelas); os textos da tela mostram a tecla escolhida.
 Minimapa no canto de cima à direita (zonas, NPCs, monstros, chefes, grupo, itens; corredor da dungeon e pontos
 da arena) e mapa grande na tecla M.
+Tutorial nos primeiros minutos: andar, alvo, ataque, esquiva e, quando a missão libera, o combo (começar, 3 acertos
+na janela e finalizar). Fica salvo por personagem; dá para pular e rever nas opções.
 Fases 1 a 6 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30, grupo, chat, amigos, loja, troca,
 dungeon em instância, duelo e arena 5v5) concluídas. Veja o Backlog do
 MVP no GDD.

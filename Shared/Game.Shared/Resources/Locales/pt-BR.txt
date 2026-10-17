@@ -863,3 +863,21 @@ key.backslash = \\
 map.title = mapa
 map.big_hint = {0} ou Esc fecha o mapa
 map.zone_levels = Nv {0}
+
+# ===== Cliente: tutorial =====
+options.tutorial_again = Rever tutorial
+tutorial.title = Tutorial · passo {0} de {1}
+tutorial.title_done = Tutorial concluído
+tutorial.skip = Pular tutorial
+tutorial.ok = Entendi
+tutorial.move = Ande com <b>{0}</b>. Segure <b>{1}</b> para correr. Gire a câmera com o botão direito do mouse.
+tutorial.target = Chegue perto de um monstro e aperte <b>{0}</b> (ou clique nele) para escolher o alvo. O anel embaixo dele mostra quem está selecionado.
+tutorial.skill = Ataque com a skill <b>{0}</b>. Golpes corpo a corpo precisam de você perto do alvo; os mágicos alcançam mais longe.
+tutorial.dodge = Monstros avisam antes de bater (o chão pisca em vermelho). Aperte <b>{0}</b> para esquivar: na esquiva você não leva dano.
+tutorial.unlock = O combo é a alma do jogo, e se libera com uma missão. Fale com <b>{0}</b> na vila (<b>{1}</b>) e siga as missões até concluir <b>"{2}"</b>.
+tutorial.start_combo = Combo liberado! Aperte <b>{0}</b> para começar um combo (gasta SP, que enche ao acertar golpes).
+tutorial.combo_hits = Aperte uma skill (<b>{0}</b>) quando o marcador branco passar pela <color=#5fd35f>faixa verde</color>. No centro <color=#ffe14d>amarelo</color> é Excellent e dá mais dano. A faixa encolhe a cada acerto. Acertos: <b>{1}/{2}</b>
+tutorial.combo_miss = Fora da janela: o combo quebrou. Comece outro e espere o marcador entrar no verde.
+tutorial.finisher = Agora aperte <b>{0}</b> para o finalizador: ele soma todo o bônus acumulado num golpe só. Quanto mais longa a corrente, maior o dano.
+tutorial.routes = Dica: a ordem das skills forma <b>rotas</b> com bônus extra. Por exemplo, físico → mágico dá +10%. As rotas da sua classe aparecem na ajuda à esquerda.
+tutorial.done = Pronto, você já sabe fazer combo! Dá para rever o tutorial nas opções (<b>{0}</b>).

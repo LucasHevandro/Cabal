@@ -89,6 +89,12 @@ namespace Game.Client.Combat
         public ComboGrade LastGrade { get; private set; }
         public float LastGradeAt { get; private set; } = float.NegativeInfinity;
 
+        /// <summary>Golpes deste jogador que acertaram (confirmados pelo servidor no online); o tutorial acompanha.</summary>
+        public int HitsLanded { get; private set; }
+
+        /// <summary>Finalizadores que acertaram.</summary>
+        public int FinishersLanded { get; private set; }
+
         /// <summary>Última rota de combo completada e quando (para o HUD).</summary>
         public ComboRoute LastRoute { get; private set; }
         public float LastRouteAt { get; private set; } = float.NegativeInfinity;
@@ -224,6 +230,7 @@ namespace Game.Client.Combat
             }
             var hit = RollDamage(finisherBaseDamage, multiplier, target);
             var dealt = target.ApplyDamage(hit.Amount, hit.Critical);
+            FinishersLanded++;
             DamageNumbers.Spawn(target.HeadPosition, Loc.T("fx.final", dealt), new Color(1f, 0.45f, 0.1f), 38f);
             SoundPlayer.Play(SoundId.Finisher, 1f, 0f);
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(target.CenterPosition, new Color(1f, 0.5f, 0.15f), 45);
@@ -358,6 +365,7 @@ namespace Game.Client.Combat
                 _hitBuffer.Add(mainTarget);
             }
 
+            if (_hitBuffer.Count > 0) HitsLanded++;
             foreach (var target in _hitBuffer)
             {
                 var hit = RollDamage(skill.BaseDamage, multiplier, target);
@@ -572,6 +580,8 @@ namespace Game.Client.Combat
             if (target == null) return;
             var grade = hit.Grade == 255 ? (ComboGrade?)null : (ComboGrade)hit.Grade;
             var finisher = hit.Source == Msg.CombatSource.Finisher;
+            if (mine && finisher) FinishersLanded++;
+            else if (mine) HitsLanded++;
             var color = finisher ? new Color(1f, 0.45f, 0.1f) : DamageColor(grade, hit.Critical);
             if (!mine) color = Color.Lerp(color, Color.gray, 0.5f);
 
