@@ -10,6 +10,9 @@ namespace Game.Shared.Progression
         QuestGiver = 0,
         Smith = 1,
         Warehouse = 2,
+
+        /// <summary>Loja: vende consumíveis e equipamento básico, compra drops.</summary>
+        Merchant = 3,
     }
 
     /// <summary>NPC da vila: posição fixa e o que ele faz.</summary>
@@ -31,12 +34,14 @@ namespace Game.Shared.Progression
         public const string Elder = "anciao_doran";
         public const string Smith = "ferreira_ilsa";
         public const string Warehouse = "guarda_volumes_bento";
+        public const string Merchant = "mercadora_lia";
 
         public static readonly IReadOnlyList<NpcDefinition> All = new List<NpcDefinition>
         {
             new NpcDefinition { Id = Elder, Name = "Ancião Doran", Role = NpcRole.QuestGiver, X = 0, Z = 8 },
             new NpcDefinition { Id = Smith, Name = "Ferreira Ilsa", Role = NpcRole.Smith, X = 7, Z = 3 },
             new NpcDefinition { Id = Warehouse, Name = "Bento do Armazém", Role = NpcRole.Warehouse, X = -7, Z = 3 },
+            new NpcDefinition { Id = Merchant, Name = "Mercadora Lia", Role = NpcRole.Merchant, X = 5, Z = -6 },
         };
 
         public static NpcDefinition? Find(string id) => All.FirstOrDefault(n => n.Id == id);

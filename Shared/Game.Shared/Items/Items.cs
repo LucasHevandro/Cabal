@@ -222,6 +222,11 @@ namespace Game.Shared.Items
                 Id = "pocao_hp_p", Name = "Poção de vida (P)", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
                 MaxStack = 50, HealHp = 400, Description = "Recupera 400 de vida.",
             });
+            list.Add(new ItemDefinition
+            {
+                Id = "pocao_hp_m", Name = "Poção de vida (M)", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
+                MaxStack = 50, HealHp = 1200, Description = "Recupera 1.200 de vida.",
+            });
 
             // ===== Materiais dos monstros (vendáveis e para missões) =====
             foreach (var (id, name, rarity) in new[]

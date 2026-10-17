@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Shared.Economy;
 using Game.Shared.Social;
 
 namespace Game.Shared.Net
@@ -32,7 +33,95 @@ namespace Game.Shared.Net
         Report = 4,
     }
 
+    public enum ShopActionKind : byte
+    {
+        /// <summary>Compra <see cref="ShopCommand.Quantity"/> de <see cref="ShopCommand.ItemId"/>.</summary>
+        Buy = 0,
+
+        /// <summary>Vende <see cref="ShopCommand.Quantity"/> do item da posição <see cref="ShopCommand.Slot"/> da bolsa.</summary>
+        Sell = 1,
+    }
+
+    public enum TradeActionKind : byte
+    {
+        /// <summary>Pede troca a <see cref="TradeCommand.TargetName"/>.</summary>
+        Request = 0,
+
+        /// <summary>Aceita o pedido de <see cref="TradeCommand.TargetId"/>.</summary>
+        Accept = 1,
+
+        Decline = 2,
+        Cancel = 3,
+
+        /// <summary>Troca a oferta inteira (itens e Alz); destrava os dois lados.</summary>
+        SetOffer = 4,
+
+        /// <summary>Primeira confirmação: "Pronto".</summary>
+        Lock = 5,
+
+        /// <summary>Segunda confirmação (com os dois travados).</summary>
+        Confirm = 6,
+    }
+
     // ===== Cliente → servidor =====
+
+    /// <summary>Comprar ou vender na loja (perto do NPC).</summary>
+    public sealed class ShopCommand : INetMessage
+    {
+        public MessageType Type => MessageType.ShopCommand;
+        public ShopActionKind Action;
+        public string ItemId = "";
+        public ushort Slot;
+        public int Quantity;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteByte((byte)Action);
+            w.WriteString(ItemId);
+            w.WriteUShort(Slot);
+            w.WriteInt(Quantity);
+        }
+
+        public static ShopCommand Read(PacketReader r) =>
+            new ShopCommand { Action = (ShopActionKind)r.ReadByte(), ItemId = r.ReadString(), Slot = r.ReadUShort(), Quantity = r.ReadInt() };
+    }
+
+    public sealed class TradeCommand : INetMessage
+    {
+        public MessageType Type => MessageType.TradeCommand;
+        public TradeActionKind Action;
+        public int TargetId;
+        public string TargetName = "";
+
+        /// <summary>Só em <see cref="TradeActionKind.SetOffer"/>.</summary>
+        public List<TradeItem> Items = new List<TradeItem>();
+
+        public long Alz;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteByte((byte)Action);
+            w.WriteInt(TargetId);
+            w.WriteString(TargetName);
+            w.WriteByte((byte)Items.Count);
+            foreach (var item in Items)
+            {
+                w.WriteUShort((ushort)item.Slot);
+                w.WriteLong(item.Uid);
+                w.WriteInt(item.Quantity);
+            }
+            w.WriteLong(Alz);
+        }
+
+        public static TradeCommand Read(PacketReader r)
+        {
+            var command = new TradeCommand { Action = (TradeActionKind)r.ReadByte(), TargetId = r.ReadInt(), TargetName = r.ReadString() };
+            var count = r.ReadByte();
+            for (var i = 0; i < count; i++) command.Items.Add(new TradeItem(r.ReadUShort(), r.ReadLong(), r.ReadInt()));
+            command.Alz = r.ReadLong();
+            return command;
+        }
+    }
 
     /// <summary>Amigos, bloqueio e denúncia, sempre pelo nome do personagem.</summary>
     public sealed class SocialCommand : INetMessage
@@ -192,6 +281,106 @@ namespace Game.Shared.Net
             for (var i = 0; i < blocked; i++) lists.Blocked.Add(r.ReadString());
             return lists;
         }
+    }
+
+    /// <summary>Um item na tela da troca (o do outro lado só se vê por aqui).</summary>
+    public struct TradeItemInfo
+    {
+        public int Slot;
+        public long Uid;
+        public string ItemId;
+        public int Quantity;
+        public byte Upgrade;
+        public string OptionId;
+    }
+
+    /// <summary>Estado da troca aberta (Active falso = fechou). Chega a cada mudança.</summary>
+    public sealed class TradeState : INetMessage
+    {
+        public MessageType Type => MessageType.TradeState;
+        public bool Active;
+        public int PartnerId;
+        public string PartnerName = "";
+        public List<TradeItemInfo> MyItems = new List<TradeItemInfo>();
+        public long MyAlz;
+        public List<TradeItemInfo> TheirItems = new List<TradeItemInfo>();
+        public long TheirAlz;
+        public bool MyLocked;
+        public bool TheirLocked;
+        public bool MyConfirmed;
+        public bool TheirConfirmed;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteBool(Active);
+            w.WriteInt(PartnerId);
+            w.WriteString(PartnerName);
+            WriteItems(w, MyItems);
+            w.WriteLong(MyAlz);
+            WriteItems(w, TheirItems);
+            w.WriteLong(TheirAlz);
+            w.WriteBool(MyLocked);
+            w.WriteBool(TheirLocked);
+            w.WriteBool(MyConfirmed);
+            w.WriteBool(TheirConfirmed);
+        }
+
+        public static TradeState Read(PacketReader r)
+        {
+            var state = new TradeState { Active = r.ReadBool(), PartnerId = r.ReadInt(), PartnerName = r.ReadString() };
+            ReadItems(r, state.MyItems);
+            state.MyAlz = r.ReadLong();
+            ReadItems(r, state.TheirItems);
+            state.TheirAlz = r.ReadLong();
+            state.MyLocked = r.ReadBool();
+            state.TheirLocked = r.ReadBool();
+            state.MyConfirmed = r.ReadBool();
+            state.TheirConfirmed = r.ReadBool();
+            return state;
+        }
+
+        private static void WriteItems(PacketWriter w, List<TradeItemInfo> items)
+        {
+            w.WriteByte((byte)items.Count);
+            foreach (var item in items)
+            {
+                w.WriteUShort((ushort)item.Slot);
+                w.WriteLong(item.Uid);
+                w.WriteString(item.ItemId);
+                w.WriteInt(item.Quantity);
+                w.WriteByte(item.Upgrade);
+                w.WriteString(item.OptionId);
+            }
+        }
+
+        private static void ReadItems(PacketReader r, List<TradeItemInfo> items)
+        {
+            var count = r.ReadByte();
+            for (var i = 0; i < count; i++)
+                items.Add(new TradeItemInfo
+                {
+                    Slot = r.ReadUShort(), Uid = r.ReadLong(), ItemId = r.ReadString(), Quantity = r.ReadInt(), Upgrade = r.ReadByte(),
+                    OptionId = r.ReadString(),
+                });
+        }
+    }
+
+    /// <summary>Alguém pediu para trocar com este jogador.</summary>
+    public sealed class TradeInvite : INetMessage
+    {
+        public MessageType Type => MessageType.TradeInvite;
+        public int FromId;
+        public string FromName = "";
+        public float Seconds;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteInt(FromId);
+            w.WriteString(FromName);
+            w.WriteFloat(Seconds);
+        }
+
+        public static TradeInvite Read(PacketReader r) => new TradeInvite { FromId = r.ReadInt(), FromName = r.ReadString(), Seconds = r.ReadFloat() };
     }
 
     /// <summary>Alguém convidou este jogador para um grupo.</summary>
