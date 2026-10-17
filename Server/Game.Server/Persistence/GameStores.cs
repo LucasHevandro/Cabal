@@ -102,7 +102,8 @@ public sealed class EfGameStore : IGameStore
     public async Task<CharacterRecord?> LoadCharacterAsync(int characterId)
     {
         await using var db = await _factory.CreateDbContextAsync();
-        var character = await db.Characters.AsNoTracking().Include(c => c.Items).Include(c => c.Quests).AsSplitQuery()
+        var character = await db.Characters.AsNoTracking().Include(c => c.Items).Include(c => c.Quests).Include(c => c.Relations)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(c => c.Id == characterId);
         return character == null ? null : ToRecord(character);
     }
@@ -110,7 +111,7 @@ public sealed class EfGameStore : IGameStore
     public async Task SaveCharacterAsync(CharacterSnapshot snapshot, IReadOnlyList<ItemLogEntry> logs)
     {
         await using var db = await _factory.CreateDbContextAsync();
-        var character = await db.Characters.Include(c => c.Items).Include(c => c.Quests).AsSplitQuery()
+        var character = await db.Characters.Include(c => c.Items).Include(c => c.Quests).Include(c => c.Relations).AsSplitQuery()
             .FirstOrDefaultAsync(c => c.Id == snapshot.CharacterId);
         if (character == null) return;
 
@@ -149,6 +150,25 @@ public sealed class EfGameStore : IGameStore
             row.Counts = string.Join(",", quest.Counts);
         }
 
+        var relations = snapshot.Relations.ToDictionary(r => ((int)r.Kind, r.OtherId));
+        character.Relations.RemoveAll(r => !relations.ContainsKey((r.Kind, r.OtherId)));
+        foreach (var relation in snapshot.Relations)
+        {
+            var row = character.Relations.FirstOrDefault(r => r.Kind == (int)relation.Kind && r.OtherId == relation.OtherId);
+            if (row == null)
+                character.Relations.Add(row = new CharacterRelationEntity { CharacterId = character.Id, Kind = (int)relation.Kind, OtherId = relation.OtherId });
+            row.OtherName = relation.OtherName;
+        }
+
+        foreach (var report in snapshot.Reports)
+        {
+            db.Reports.Add(new PlayerReportEntity
+            {
+                ReporterId = report.ReporterId, ReporterName = report.ReporterName, TargetId = report.TargetId,
+                TargetName = report.TargetName, Reason = report.Reason, ChatExcerpt = report.ChatExcerpt, At = report.At,
+            });
+        }
+
         foreach (var log in logs)
         {
             db.ItemLog.Add(new ItemLogEntity
@@ -179,6 +199,16 @@ public sealed class EfGameStore : IGameStore
         return await db.Items.MaxAsync(i => (long?)i.Uid) ?? 0;
     }
 
+    public async Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.Reports.AsNoTracking()
+            .OrderByDescending(r => r.Id)
+            .Take(max)
+            .Select(r => new ReportRecord(r.ReporterId, r.ReporterName, r.TargetId, r.TargetName, r.Reason, r.ChatExcerpt, r.At))
+            .ToListAsync();
+    }
+
     private static CharacterRecord ToRecord(CharacterEntity c) => new(
         c.Id, c.AccountId, c.Name, (CharacterClass)c.ClassId, c.Level, c.Xp, c.Alz, c.PositionX, c.PositionZ,
         c.Hp, c.Mp, c.Sp,
@@ -186,7 +216,11 @@ public sealed class EfGameStore : IGameStore
             i.Upgrade, i.PityFails, i.PityLevel, i.RegainGuaranteed, i.OptionId)).ToList(),
         new Attributes { Strength = c.Strength, Dexterity = c.Dexterity, Intelligence = c.Intelligence },
         c.AwakeningGauge,
-        c.Quests.Select(q => new QuestRecord(q.QuestId, q.Completed, ParseCounts(q.Counts))).ToList());
+        c.Quests.Select(q => new QuestRecord(q.QuestId, q.Completed, ParseCounts(q.Counts))).ToList())
+    {
+        Relations = c.Relations.OrderBy(r => r.Kind).ThenBy(r => r.OtherName)
+            .Select(r => new RelationRecord((RelationKind)r.Kind, r.OtherId, r.OtherName)).ToList(),
+    };
 
     private static int[] ParseCounts(string counts) => string.IsNullOrEmpty(counts)
         ? Array.Empty<int>()
@@ -223,6 +257,7 @@ public sealed class InMemoryGameStore : IGameStore
     private readonly Dictionary<int, AccountRecord> _accounts = new();
     private readonly Dictionary<int, CharacterRecord> _characters = new();
     private readonly List<ItemLogEntry> _log = new();
+    private readonly List<ReportRecord> _reports = new();
     private int _nextAccountId = 1;
     private int _nextCharacterId = 1;
 
@@ -294,8 +329,10 @@ public sealed class InMemoryGameStore : IGameStore
                 Level = s.Level, Xp = s.Xp, Alz = s.Alz, X = s.X, Z = s.Z, Hp = s.Hp, Mp = s.Mp, Sp = s.Sp,
                 Items = s.Items.ToList(), Attributes = s.Attributes, AwakeningGauge = s.AwakeningGauge,
                 Quests = s.Quests.Select(q => q with { Counts = q.Counts.ToArray() }).ToList(),
+                Relations = s.Relations.ToList(),
             };
             _log.AddRange(logs);
+            _reports.AddRange(s.Reports);
             SaveCount++;
         }
         return Task.CompletedTask;
@@ -313,5 +350,14 @@ public sealed class InMemoryGameStore : IGameStore
     public Task<long> MaxItemUidAsync()
     {
         lock (_lock) return Task.FromResult(_characters.Values.SelectMany(c => c.Items).Select(i => i.Uid).DefaultIfEmpty(0).Max());
+    }
+
+    public Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100)
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<ReportRecord> list = Enumerable.Reverse(_reports).Take(max).ToList();
+            return Task.FromResult(list);
+        }
     }
 }

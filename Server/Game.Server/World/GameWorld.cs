@@ -99,6 +99,7 @@ public sealed partial class GameWorld
             PlayerId = player.Id, ServerTime = now, TickRate = TickRate, SpawnX = spawnX, SpawnZ = spawnZ,
         });
         _players.Add(player.Id, player);
+        NotifyWatchers(player, $"{player.Name} entrou no jogo");
         return player;
     }
 
@@ -122,7 +123,12 @@ public sealed partial class GameWorld
         var snapshot = new CharacterSnapshot(
             player.CharacterId, player.Progress.Level, player.Progress.Xp, player.Alz, x, z,
             player.IsDead ? player.Hp.Max : player.Hp.Current, player.IsDead ? player.Mp.Max : player.Mp.Current, player.Sp.Current,
-            items, player.Attributes, player.Awakening.Gauge, quests);
+            items, player.Attributes, player.Awakening.Gauge, quests)
+        {
+            Relations = player.Relations.ToList(),
+            Reports = player.PendingReports.ToList(),
+        };
+        player.PendingReports.Clear();
         var logs = player.PendingLogs.ToList();
         player.PendingLogs.Clear();
         return (snapshot, logs);
@@ -133,6 +139,7 @@ public sealed partial class GameWorld
         if (!_players.TryGetValue(playerId, out var leaving)) return;
         _players.Remove(playerId);
         if (leaving.PartyId != 0) LeaveParty(leaving, $"{leaving.Name} saiu do jogo e deixou o grupo");
+        NotifyWatchers(leaving, $"{leaving.Name} saiu do jogo");
         foreach (var monster in _monsters.Values)
         {
             if (monster.AggroPlayerId == playerId) monster.AggroPlayerId = 0;
@@ -195,6 +202,9 @@ public sealed partial class GameWorld
                 break;
             case ChatSend chat:
                 HandleChat(player, chat, now);
+                break;
+            case SocialCommand social:
+                HandleRelation(player, social, now);
                 break;
         }
     }
@@ -307,6 +317,7 @@ public sealed partial class GameWorld
             _outbox.Send(player.Id, ComboMessage(player));
         }
         SendPartyState(player);
+        SendSocialLists(player);
     }
 
     /// <summary>Manda a mensagem a todos os jogadores perto do ponto.</summary>
@@ -389,6 +400,13 @@ public sealed partial class GameWorld
         player.Quests.Restore(
             character.Quests.Where(q => q.Completed).Select(q => q.QuestId),
             character.Quests.Where(q => !q.Completed).Select(q => new QuestProgress(q.QuestId, q.Counts.ToArray())));
+
+        // Relações repetidas ou consigo mesmo (dados estragados) ficam de fora.
+        foreach (var relation in character.Relations)
+        {
+            if (relation.OtherId == 0 || relation.OtherId == character.Id || player.HasRelation(relation.Kind, relation.OtherId)) continue;
+            player.Relations.Add(relation);
+        }
 
         player.RecalculateStats();
         player.Hp.Add(Math.Clamp(character.Hp, 1, player.Hp.Max) - player.Hp.Current);

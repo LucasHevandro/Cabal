@@ -7,11 +7,14 @@ using Game.Shared.Social;
 // Uso: Game.Bots [--host 127.0.0.1] [--port 7777] [--count 20] [--seconds 60] [--party] [--invite Nome]
 //   --party: os bots formam grupos de 4 (o primeiro de cada grupo convida, os outros aceitam) e conversam no chat.
 //   --invite Nome: o primeiro bot convida esse personagem (um cliente de verdade) e fala no grupo quando ele entra.
+//   --accounts: cada bot entra com conta (bot01, bot02... senha senha12345), como jogador de verdade (amigos,
+//     bloqueio e denúncia só funcionam com conta); sem isso entram como convidados.
 var host = "127.0.0.1";
 var port = Protocol.DefaultPort;
 var count = 20;
 var seconds = 60.0;
 var party = args.Contains("--party");
+var accounts = args.Contains("--accounts");
 var inviteName = "";
 for (var i = 0; i < args.Length - 1; i++)
 {
@@ -42,7 +45,8 @@ for (var i = 0; i < count; i++)
     bot.AutoAcceptInvites = party && i % 4 != 0;
     try
     {
-        await bot.StartAsync(host, port);
+        if (accounts) await bot.StartAsync(host, port, $"bot{i + 1:00}", "senha12345");
+        else await bot.StartAsync(host, port);
         bots.Add(bot);
     }
     catch (Exception ex)
@@ -91,6 +95,7 @@ while (clock.Elapsed.TotalSeconds < seconds)
     {
         clientJoined = true;
         bots[0].Say(ChatChannel.Party, "bem-vindo ao grupo!");
+        if (accounts) bots[0].AddFriend(inviteName);
         bots[0].Say(ChatChannel.Whisper, "oi, sussurro do bot", inviteName);
         Console.WriteLine($"[{now:0}s] {inviteName} entrou no grupo do {bots[0].Name}");
     }

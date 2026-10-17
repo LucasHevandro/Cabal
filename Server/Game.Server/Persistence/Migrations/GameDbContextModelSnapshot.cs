@@ -152,6 +152,27 @@ namespace Game.Server.Persistence.Migrations
                     b.ToTable("character_quests", (string)null);
                 });
 
+            modelBuilder.Entity("Game.Server.Persistence.CharacterRelationEntity", b =>
+                {
+                    b.Property<int>("CharacterId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OtherId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OtherName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("CharacterId", "Kind", "OtherId");
+
+                    b.ToTable("character_relations", (string)null);
+                });
+
             modelBuilder.Entity("Game.Server.Persistence.ItemInstanceEntity", b =>
                 {
                     b.Property<long>("Uid")
@@ -239,6 +260,55 @@ namespace Game.Server.Persistence.Migrations
                     b.ToTable("item_log", (string)null);
                 });
 
+            modelBuilder.Entity("Game.Server.Persistence.PlayerReportEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ChatExcerpt")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<bool>("Handled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ReporterId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReporterName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("TargetId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Handled");
+
+                    b.HasIndex("TargetId", "At");
+
+                    b.ToTable("player_reports", (string)null);
+                });
+
             modelBuilder.Entity("Game.Server.Persistence.CharacterEntity", b =>
                 {
                     b.HasOne("Game.Server.Persistence.AccountEntity", "Account")
@@ -254,6 +324,15 @@ namespace Game.Server.Persistence.Migrations
                 {
                     b.HasOne("Game.Server.Persistence.CharacterEntity", null)
                         .WithMany("Quests")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Game.Server.Persistence.CharacterRelationEntity", b =>
+                {
+                    b.HasOne("Game.Server.Persistence.CharacterEntity", null)
+                        .WithMany("Relations")
                         .HasForeignKey("CharacterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -278,6 +357,8 @@ namespace Game.Server.Persistence.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("Quests");
+
+                    b.Navigation("Relations");
                 });
 #pragma warning restore 612, 618
         }

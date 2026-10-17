@@ -14,6 +14,7 @@ namespace Game.Server.Tests;
 /// sem ela passam sem fazer nada, para o <c>dotnet test</c> funcionar sem Docker.
 /// O banco de teste é apagado e recriado a cada teste.
 /// </summary>
+[Collection("Postgres")]
 public class PostgresStoreTests
 {
     private static readonly string? Connection = Environment.GetEnvironmentVariable("GAME_DB_TEST");

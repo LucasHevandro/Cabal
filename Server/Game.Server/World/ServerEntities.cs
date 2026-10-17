@@ -95,6 +95,28 @@ public sealed class ServerPlayer
 
     public ChatRateLimiter ChatLimiter { get; } = new();
 
+    /// <summary>Amigos e bloqueados (salvos com o personagem).</summary>
+    public List<RelationRecord> Relations { get; } = new();
+
+    /// <summary>Precisa mandar a lista de amigos e bloqueados.</summary>
+    public bool SocialDirty { get; set; } = true;
+
+    /// <summary>Últimas mensagens enviadas (texto original), que vão junto se alguém denunciar.</summary>
+    public Queue<(double At, ChatChannel Channel, string Text)> RecentChat { get; } = new();
+
+    /// <summary>Denúncias feitas: horários (limite por hora) e quando denunciou cada nome.</summary>
+    public List<double> ReportTimes { get; } = new();
+    public Dictionary<string, double> ReportedAt { get; } = new();
+
+    /// <summary>Denúncias desde o último salvamento (vão junto no próximo).</summary>
+    public List<ReportRecord> PendingReports { get; } = new();
+
+    public bool HasRelation(RelationKind kind, int characterId) =>
+        characterId != 0 && Relations.Any(r => r.Kind == kind && r.OtherId == characterId);
+
+    /// <summary>Este jogador bloqueou o outro (não recebe mensagens nem convites dele).</summary>
+    public bool HasBlocked(ServerPlayer other) => HasRelation(RelationKind.Blocked, other.CharacterId);
+
     public ServerPlayer(CharacterClass characterClass = CharacterClass.Blade)
     {
         Class = characterClass;

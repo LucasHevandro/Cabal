@@ -520,6 +520,7 @@ public sealed partial class GameWorld
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);
         Notify(player, $"Nível {player.Progress.Level}! +{levels * Attributes.PointsPerLevel} pontos de atributo", announcement: true);
+        NotifyWatchers(player, null); // o nível aparece na lista de amigos
         if (player.CharacterId != 0)
             player.PendingLogs.Add(new ItemLogEntry(player.CharacterId, DateTimeOffset.UtcNow, "nivel", null, 0, 0, $"nível {player.Progress.Level}"));
         return levels;

@@ -14,6 +14,19 @@ public sealed record ItemRecord(
 /// <summary>Missão aceita (com contadores) ou concluída.</summary>
 public sealed record QuestRecord(string QuestId, bool Completed, IReadOnlyList<int> Counts);
 
+public enum RelationKind
+{
+    Friend = 0,
+    Blocked = 1,
+}
+
+/// <summary>Amigo ou bloqueado: o outro personagem pelo id e o nome (para mostrar quando ele está offline).</summary>
+public sealed record RelationRecord(RelationKind Kind, int OtherId, string OtherName);
+
+/// <summary>Denúncia de um jogador, com as últimas mensagens do denunciado (texto original, sem filtro).</summary>
+public sealed record ReportRecord(
+    int ReporterId, string ReporterName, int TargetId, string TargetName, string Reason, string ChatExcerpt, DateTimeOffset At);
+
 public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level);
 
 /// <summary>Personagem como está no banco.</summary>
@@ -23,6 +36,7 @@ public sealed record CharacterRecord(
     Attributes Attributes = default, int AwakeningGauge = 0, IReadOnlyList<QuestRecord>? Quests = null)
 {
     public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
+    public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
 }
 
 /// <summary>Estado do personagem para salvar (o que muda durante o jogo).</summary>
@@ -32,6 +46,12 @@ public sealed record CharacterSnapshot(
     IReadOnlyList<QuestRecord>? Quests = null)
 {
     public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
+
+    /// <summary>Amigos e bloqueados (o banco fica igual a esta lista).</summary>
+    public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
+
+    /// <summary>Denúncias feitas desde o último salvamento (só acrescenta).</summary>
+    public IReadOnlyList<ReportRecord> Reports { get; init; } = Array.Empty<ReportRecord>();
 }
 
 /// <summary>Movimento de item ou Alz, para auditoria e suporte (quem ganhou o quê, quando).</summary>
@@ -74,6 +94,9 @@ public interface IGameStore
 
     /// <summary>Maior id único de item já guardado (o servidor continua a contar daí).</summary>
     Task<long> MaxItemUidAsync();
+
+    /// <summary>Denúncias, mais recentes primeiro (moderação e testes).</summary>
+    Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100);
 }
 
 /// <summary>

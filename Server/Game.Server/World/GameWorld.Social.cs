@@ -73,6 +73,8 @@ public sealed partial class GameWorld
             party != null && party.LeaderId != player.Id ? "Só o líder pode convidar" :
             party != null && party.IsFull ? $"O grupo está cheio ({PartyRules.MaxMembers})" :
             target.PartyId != 0 ? $"{target.Name} já está em um grupo" :
+            target.HasBlocked(player) ? $"{target.Name} não está aceitando convites" :
+            player.HasBlocked(target) ? $"Desbloqueie {target.Name} para convidar" :
             target.PendingInvite is { } pending && pending.ExpiresAt > now && pending.InviterId != player.Id
                 ? $"{target.Name} já tem um convite esperando resposta" :
             null;
@@ -244,13 +246,17 @@ public sealed partial class GameWorld
             SystemChat(player, "Calma! Espere um pouco para mandar outra mensagem");
             return;
         }
+        RememberChat(player, message.Channel, text, now);
         text = ProfanityFilter.Clean(text);
 
         switch (message.Channel)
         {
             case ChatChannel.Map:
                 var line = new ChatMessage { Channel = ChatChannel.Map, FromId = player.Id, FromName = player.Name, Text = text };
-                foreach (var other in _players.Values) _outbox.Send(other.Id, line);
+                foreach (var other in _players.Values)
+                {
+                    if (!other.HasBlocked(player)) _outbox.Send(other.Id, line);
+                }
                 break;
             case ChatChannel.Party:
                 var party = FindParty(player.PartyId);
@@ -260,7 +266,10 @@ public sealed partial class GameWorld
                     return;
                 }
                 var partyLine = new ChatMessage { Channel = ChatChannel.Party, FromId = player.Id, FromName = player.Name, Text = text };
-                foreach (var member in PartyMembers(player)) _outbox.Send(member.Id, partyLine);
+                foreach (var member in PartyMembers(player))
+                {
+                    if (!member.HasBlocked(player)) _outbox.Send(member.Id, partyLine);
+                }
                 break;
             case ChatChannel.Whisper:
                 var target = FindPlayerByName(message.Target);
@@ -272,6 +281,16 @@ public sealed partial class GameWorld
                 if (target == player)
                 {
                     SystemChat(player, "Você não pode sussurrar para si mesmo");
+                    return;
+                }
+                if (player.HasBlocked(target))
+                {
+                    SystemChat(player, $"Desbloqueie {target.Name} para sussurrar");
+                    return;
+                }
+                if (target.HasBlocked(player))
+                {
+                    SystemChat(player, $"{target.Name} não está recebendo suas mensagens");
                     return;
                 }
                 _outbox.Send(target.Id, new ChatMessage { Channel = ChatChannel.Whisper, FromId = player.Id, FromName = player.Name, Text = text });

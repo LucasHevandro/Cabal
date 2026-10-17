@@ -40,6 +40,30 @@ public sealed class CharacterEntity
     public DateTimeOffset SavedAt { get; set; }
     public List<ItemInstanceEntity> Items { get; set; } = new();
     public List<CharacterQuestEntity> Quests { get; set; } = new();
+    public List<CharacterRelationEntity> Relations { get; set; } = new();
+}
+
+/// <summary>Amigo (0) ou bloqueado (1). O nome do outro fica guardado para mostrar quando ele está offline.</summary>
+public sealed class CharacterRelationEntity
+{
+    public int CharacterId { get; set; }
+    public int Kind { get; set; }
+    public int OtherId { get; set; }
+    public string OtherName { get; set; } = "";
+}
+
+/// <summary>Denúncia de jogador, para a moderação olhar.</summary>
+public sealed class PlayerReportEntity
+{
+    public long Id { get; set; }
+    public int ReporterId { get; set; }
+    public string ReporterName { get; set; } = "";
+    public int TargetId { get; set; }
+    public string TargetName { get; set; } = "";
+    public string Reason { get; set; } = "";
+    public string ChatExcerpt { get; set; } = "";
+    public DateTimeOffset At { get; set; }
+    public bool Handled { get; set; }
 }
 
 /// <summary>Um item de verdade, com id único: bolsa (0), vestido (1, posição = encaixe) ou armazém (2).</summary>
@@ -89,6 +113,8 @@ public sealed class GameDbContext : DbContext
     public DbSet<ItemInstanceEntity> Items => Set<ItemInstanceEntity>();
     public DbSet<CharacterQuestEntity> CharacterQuests => Set<CharacterQuestEntity>();
     public DbSet<ItemLogEntity> ItemLog => Set<ItemLogEntity>();
+    public DbSet<CharacterRelationEntity> Relations => Set<CharacterRelationEntity>();
+    public DbSet<PlayerReportEntity> Reports => Set<PlayerReportEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -110,6 +136,25 @@ public sealed class GameDbContext : DbContext
             e.HasOne(c => c.Account).WithMany(a => a.Characters).HasForeignKey(c => c.AccountId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(c => c.Items).WithOne().HasForeignKey(i => i.CharacterId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(c => c.Quests).WithOne().HasForeignKey(q => q.CharacterId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(c => c.Relations).WithOne().HasForeignKey(r => r.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CharacterRelationEntity>(e =>
+        {
+            e.ToTable("character_relations");
+            e.HasKey(r => new { r.CharacterId, r.Kind, r.OtherId });
+            e.Property(r => r.OtherName).HasMaxLength(32);
+        });
+
+        model.Entity<PlayerReportEntity>(e =>
+        {
+            e.ToTable("player_reports");
+            e.HasIndex(r => new { r.TargetId, r.At });
+            e.HasIndex(r => r.Handled);
+            e.Property(r => r.ReporterName).HasMaxLength(32);
+            e.Property(r => r.TargetName).HasMaxLength(32);
+            e.Property(r => r.Reason).HasMaxLength(200);
+            e.Property(r => r.ChatExcerpt).HasMaxLength(4000);
         });
 
         model.Entity<ItemInstanceEntity>(e =>

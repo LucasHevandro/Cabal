@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.Net.Http.Json;
 using System.Net.Sockets;
+using System.Text.Json;
+using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Net;
 using Game.Shared.Social;
@@ -173,11 +176,43 @@ public sealed class Bot
         _huntZ = huntZ;
     }
 
-    public async Task StartAsync(string host, int port)
+    /// <summary>
+    /// Conecta. Sem <paramref name="password"/> entra como convidado; com ela, usa a API de login (porta do jogo + 1):
+    /// cria a conta e um personagem com o nome do bot se faltarem, e entra com o token, como um jogador de verdade.
+    /// </summary>
+    public async Task StartAsync(string host, int port, string? account = null, string? password = null)
     {
+        var hello = new Hello { Name = _name };
+        if (!string.IsNullOrEmpty(account) && !string.IsNullOrEmpty(password))
+            (hello.Token, hello.CharacterId) = await LoginAsync(host, port + 1, account, password);
         await Connection.ConnectAsync(host, port);
-        Connection.Send(new Hello { Name = _name });
+        Connection.Send(hello);
     }
+
+    private static readonly JsonSerializerOptions Json = new() { IncludeFields = true, PropertyNamingPolicy = null };
+
+    private async Task<(string Token, int CharacterId)> LoginAsync(string host, int apiPort, string account, string password)
+    {
+        using var http = new HttpClient { BaseAddress = new Uri($"http://{host}:{apiPort}") };
+        var credentials = new Credentials { Account = account, Password = password };
+        await http.PostAsJsonAsync("/api/register", credentials, Json); // já existir não tem problema
+        var login = await http.PostAsJsonAsync("/api/login", credentials, Json);
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(Json))!.Token;
+        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var list = (await http.GetFromJsonAsync<CharacterList>("/api/characters", Json))!;
+        var character = list.Characters.FirstOrDefault();
+        if (character == null)
+        {
+            var created = await http.PostAsJsonAsync("/api/characters", new CreateCharacterRequest { Name = _name, ClassId = 0 }, Json);
+            created.EnsureSuccessStatusCode();
+            character = (await created.Content.ReadFromJsonAsync<CharacterSummary>(Json))!;
+        }
+        return (token, character.Id);
+    }
+
+    public void AddFriend(string name) => Connection.Send(new SocialCommand { Action = RelationActionKind.AddFriend, TargetName = name });
 
     /// <summary>Um passo do bot (chamado a ~50 Hz).</summary>
     public void Update(double localNow, float dt)
