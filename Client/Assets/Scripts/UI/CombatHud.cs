@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Client.Combat;
 using Game.Client.Loot;
 using Game.Client.Net;
@@ -73,6 +74,9 @@ namespace Game.Client.UI
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Minimap.BigOpen = false;
         }
 
+        // Só GUI (sem GUILayout): sem a passada de layout, o OnGUI roda menos vezes por quadro.
+        private void OnEnable() => useGUILayout = false;
+
         private void OnGUI()
         {
             if (combat == null || combat.Combo == null) return;
@@ -108,21 +112,45 @@ namespace Game.Client.UI
             GUI.color = Color.white;
         }
 
+        private readonly string[] _skillKeys = new string[8];
+        private int _skillKeysVersion = -1;
+
+        /// <summary>Tecla da skill em negrito, guardada até os atalhos mudarem (a barra é desenhada todo quadro).</summary>
+        private string SkillKeyLabel(int index)
+        {
+            if (_skillKeysVersion != KeyBindings.Version)
+            {
+                for (var i = 0; i < _skillKeys.Length; i++) _skillKeys[i] = "<b>" + KeyBindings.Label(GameAction.Skill1 + i) + "</b>";
+                _skillKeysVersion = KeyBindings.Version;
+            }
+            return index < _skillKeys.Length ? _skillKeys[index] : "";
+        }
+
+        private string _helpText;
+        private (int Language, int Keys, bool Online, int BestChain) _helpKey;
+
         private void DrawHelp()
         {
             var online = GameMode.IsOnline;
+            // O texto só muda com o idioma, os atalhos, o modo ou a melhor corrente: montado de novo só nessa hora.
+            var key = (Loc.Version, KeyBindings.Version, online, combat.BestChain);
+            if (_helpText == null || key != _helpKey)
+            {
+                _helpKey = key;
+                _helpText =
+                    Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
+                        KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map)) + "\n" +
+                    (online
+                        ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
+                            KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
+                            KeyBindings.Label(GameAction.QuestLog), KeyBindings.Label(GameAction.Awakening), KeyBindings.Label(GameAction.Friends))
+                        : Loc.T("help.keys_offline", KeyBindings.SkillsLabel(4), KeyBindings.Label(GameAction.Pickup),
+                            KeyBindings.Label(GameAction.Inventory))) + "\n" +
+                    Loc.T("help.combo", KeyBindings.Label(GameAction.StartCombo), KeyBindings.Label(GameAction.Finisher)) + "\n\n" +
+                    Loc.T("help.best_chain", combat.BestChain);
+            }
             Box(new Rect(20, 20, 470, online ? 346 : 270), Panel);
-            GUI.Label(new Rect(36, 30, 450, online ? 336 : 260),
-                Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
-                    KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map)) + "\n" +
-                (online
-                    ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
-                        KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
-                        KeyBindings.Label(GameAction.QuestLog), KeyBindings.Label(GameAction.Awakening), KeyBindings.Label(GameAction.Friends))
-                    : Loc.T("help.keys_offline", KeyBindings.SkillsLabel(4), KeyBindings.Label(GameAction.Pickup),
-                        KeyBindings.Label(GameAction.Inventory))) + "\n" +
-                Loc.T("help.combo", KeyBindings.Label(GameAction.StartCombo), KeyBindings.Label(GameAction.Finisher)) + "\n\n" +
-                Loc.T("help.best_chain", combat.BestChain), _small);
+            GUI.Label(new Rect(36, 30, 450, online ? 336 : 260), _helpText, _small);
         }
 
         private void DrawTargetFrame()
@@ -135,7 +163,7 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x, rect.y + 6, rect.width, 24), target.DisplayName, _center);
             var hp = target.Hp;
             Bar(new Rect(rect.x + 16, rect.y + 34, rect.width - 32, 16), (float)hp.Current / Mathf.Max(1, hp.Max), HpColor);
-            GUI.Label(new Rect(rect.x, rect.y + 32, rect.width, 20), $"{hp.Current} / {hp.Max}", _small.WithCenter());
+            GUI.Label(new Rect(rect.x, rect.y + 32, rect.width, 20), Loc.T("hud.hp_value", hp.Current, hp.Max), _small.WithCenter());
 
             var dummy = target.GetComponent<TrainingDummy>();
             if (dummy != null)
@@ -305,7 +333,7 @@ namespace Game.Client.UI
                 var selected = target == combat.Target;
                 GUI.color = selected ? new Color(1f, 0.9f, 0.4f) : Color.white;
                 _small.fontSize = Mathf.RoundToInt(14 * scale);
-                GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), Loc.T("hud.target", target.DisplayName, target.Level), _small.WithCenter());
+                GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), target.NameplateText, _small.WithCenter());
                 _small.fontSize = 16;
                 GUI.color = Color.white;
                 Bar(new Rect(x, y + 16 * scale, width, 6 * scale), (float)target.Hp.Current / Mathf.Max(1, target.Hp.Max), HpColor);
@@ -370,7 +398,7 @@ namespace Game.Client.UI
                 var rect = new Rect(x + i * (size + gap), y, size, 120);
                 var skill = skills[i];
                 Box(rect, Panel);
-                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{KeyBindings.Label(GameAction.Skill1 + i)}</b>", _big);
+                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(i), _big);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.Name, _small.WithCenter());
                 var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
                 if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
@@ -382,7 +410,7 @@ namespace Game.Client.UI
                 if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i))
                 {
                     Box(rect, new Color(0.05f, 0.05f, 0.07f, 0.95f));
-                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{KeyBindings.Label(GameAction.Skill1 + i)}</b>", _big);
+                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(i), _big);
                     GUI.Label(new Rect(rect.x + 4, rect.y + 36, rect.width - 8, 80), $"<color=#999999>{skill.Name}</color>\n{combat.UnlockText(i, compact: true)}", _small.WithCenter());
                     continue;
                 }
@@ -472,9 +500,35 @@ namespace Game.Client.UI
 
     internal static class GuiStyleExtensions
     {
+        private sealed class ByReference : IEqualityComparer<GUIStyle>
+        {
+            public bool Equals(GUIStyle a, GUIStyle b) => ReferenceEquals(a, b);
+            public int GetHashCode(GUIStyle style) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(style);
+        }
+
+        // Criar um GUIStyle por chamada (dezenas por quadro, em cada passada do OnGUI) gerava lixo e coletas frequentes.
+        private static readonly Dictionary<GUIStyle, GUIStyle[]> Aligned = new Dictionary<GUIStyle, GUIStyle[]>(new ByReference());
+
         public static GUIStyle WithCenter(this GUIStyle style) => style.WithAlignment(TextAnchor.MiddleCenter);
 
-        public static GUIStyle WithAlignment(this GUIStyle style, TextAnchor alignment) =>
-            new GUIStyle(style) { alignment = alignment };
+        /// <summary>
+        /// O mesmo estilo com outro alinhamento, criado uma vez e reaproveitado. O tamanho, a cor e o negrito são copiados
+        /// do original a cada uso, porque o HUD muda o tamanho da fonte na hora (ex.: plaquinhas que crescem com a tela).
+        /// </summary>
+        public static GUIStyle WithAlignment(this GUIStyle style, TextAnchor alignment)
+        {
+            if (!Aligned.TryGetValue(style, out var variants))
+            {
+                variants = new GUIStyle[9];
+                Aligned[style] = variants;
+            }
+            var variant = variants[(int)alignment] ??= new GUIStyle(style) { alignment = alignment };
+            variant.fontSize = style.fontSize;
+            variant.fontStyle = style.fontStyle;
+            variant.richText = style.richText;
+            variant.wordWrap = style.wordWrap;
+            variant.normal.textColor = style.normal.textColor;
+            return variant;
+        }
     }
 }

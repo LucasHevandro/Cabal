@@ -43,6 +43,7 @@ namespace Game.Client.UI
             new Color(0.55f, 0.52f, 0.6f), new Color(0.6f, 0.35f, 0.3f),
         };
 
+        private static readonly HashSet<int> PartyIds = new HashSet<int>(); // reaproveitado a cada quadro
         private static List<ZoneDefinition> _zones;
         private static HashSet<string> _bossIds;
         private static Texture2D _disc;
@@ -120,7 +121,10 @@ namespace Game.Client.UI
             }
 
             // Monstros e outros jogadores
-            var party = new HashSet<int>(SocialWindows.Instance?.Party?.Members.Select(m => m.Id) ?? Enumerable.Empty<int>());
+            var party = PartyIds;
+            party.Clear();
+            var members = SocialWindows.Instance?.Party?.Members;
+            if (members != null) foreach (var member in members) party.Add(member.Id);
             if (session != null)
             {
                 foreach (var view in session.Views.Values)

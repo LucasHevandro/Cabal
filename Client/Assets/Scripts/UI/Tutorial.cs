@@ -178,6 +178,9 @@ namespace Game.Client.UI
 
         private static void SoundPlayerHint() => Fx.SoundPlayer.Play(Fx.SoundId.Good, 0.5f, 0f);
 
+        // Só GUI (sem GUILayout): sem a passada de layout, o OnGUI roda menos vezes por quadro.
+        private void OnEnable() => useGUILayout = false;
+
         private void OnGUI()
         {
             var player = PlayerCombat.Local;

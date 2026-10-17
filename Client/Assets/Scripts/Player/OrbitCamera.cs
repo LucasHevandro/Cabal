@@ -35,6 +35,9 @@ namespace Game.Client.Player
 
         public void SetTarget(Transform newTarget) => target = newTarget;
 
+        /// <summary>Gira a câmera para olhar na direção dada (testes automáticos).</summary>
+        public void LookAlong(Vector3 direction) => _yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+
         /// <summary>Treme a câmera. Uma tremida mais forte substitui a atual.</summary>
         public void Shake(float amplitude, float duration)
         {

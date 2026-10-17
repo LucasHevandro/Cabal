@@ -174,6 +174,9 @@ namespace Game.Client.UI
 
         // ----- Desenho -----
 
+        // Só GUI (sem GUILayout): sem a passada de layout, o OnGUI roda menos vezes por quadro.
+        private void OnEnable() => useGUILayout = false;
+
         private void OnGUI()
         {
             if (ConnectMenu.IsOpen || _session == null || !_session.IsWelcomed) return;

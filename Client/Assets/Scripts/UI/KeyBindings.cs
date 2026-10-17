@@ -42,6 +42,9 @@ namespace Game.Client.UI
 
         public static IEnumerable<GameAction> All => Defaults.Keys;
 
+        /// <summary>Muda a cada troca de atalho: quem guarda textos com as teclas sabe quando montar de novo.</summary>
+        public static int Version { get; private set; }
+
         /// <summary>Teclas que não podem virar atalho.</summary>
         public static bool IsReserved(Key key) =>
             key == Key.None || key == Key.Escape || key == Key.Enter || key == Key.NumpadEnter;
@@ -66,6 +69,7 @@ namespace Game.Client.UI
             // Atalhos salvos repetidos (arquivo mexido à mão): quem repete volta ao padrão.
             foreach (var group in Current.GroupBy(p => p.Value).Where(g => g.Count() > 1).ToList())
                 foreach (var pair in group.Skip(1)) Current[pair.Key] = Defaults[pair.Key];
+            Version++;
         }
 
         public static void Save()
@@ -91,6 +95,7 @@ namespace Game.Client.UI
             foreach (var pair in Current.ToList())
                 if (pair.Key != action && pair.Value == key) Current[pair.Key] = old;
             Current[action] = key;
+            Version++;
             Save();
             return true;
         }
@@ -98,6 +103,7 @@ namespace Game.Client.UI
         public static void ResetDefaults()
         {
             foreach (var pair in Defaults) Current[pair.Key] = pair.Value;
+            Version++;
             Save();
         }
 

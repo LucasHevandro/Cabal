@@ -27,6 +27,7 @@ namespace Game.Client.DevTools
         private float _stayOnline;
         private bool _fight;
         private bool _uiTour;
+        private float _perfSeconds;
         private bool _social;
         private bool _dungeon;
         private bool _arena;
@@ -49,6 +50,8 @@ namespace Game.Client.DevTools
             test._social = Array.IndexOf(args, "-onlinesocial") >= 0;
             test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0;
             test._arena = Array.IndexOf(args, "-onlinearena") >= 0;
+            var perf = Array.IndexOf(args, "-onlineperf");
+            if (perf >= 0) test._perfSeconds = perf + 1 < args.Length && float.TryParse(args[perf + 1], out var s) ? s : 20f;
             DontDestroyOnLoad(test.gameObject);
         }
 
@@ -172,6 +175,18 @@ namespace Game.Client.DevTools
             {
                 var outcome = new FightOutcome();
                 yield return ArenaRun(session, outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
+            }
+
+            if (_perfSeconds > 0)
+            {
+                var outcome = new FightOutcome();
+                yield return Performance(session, outcome);
                 if (!outcome.Ok)
                 {
                     Finish("FALHA: " + outcome.Message);
@@ -872,6 +887,112 @@ namespace Game.Client.DevTools
         {
             foreach (var line in social.RecentLines) if (line.Contains(text)) return true;
             return false;
+        }
+
+        /// <summary>
+        /// Medição de desempenho (-onlineperf segundos): vai para a entrada dos Campos do Vento olhando para o campo, onde
+        /// os bots do --crowd caçam, tira o limite de FPS e mede os quadros. Relata FPS médio, o 1% pior e quantos
+        /// jogadores e monstros estavam na tela.
+        /// </summary>
+        private IEnumerator Performance(NetworkSession session, FightOutcome outcome)
+        {
+            var me = PlayerCombat.Local;
+            var motor = me.GetComponent<PlayerMotor>();
+            var target = new Vector3(0, 0, 14f);
+            var giveUp = Time.realtimeSinceStartup + 20f;
+            while (Time.realtimeSinceStartup < giveUp)
+            {
+                var flat = target - motor.transform.position;
+                flat.y = 0;
+                if (flat.magnitude < 0.2f) break;
+                motor.Teleport(motor.transform.position + Vector3.ClampMagnitude(flat, 6f * Time.deltaTime));
+                yield return null;
+            }
+            motor.FacePoint(new Vector3(0, 0, 40f));
+            var orbit = Camera.main != null ? Camera.main.GetComponent<OrbitCamera>() : null;
+            if (orbit != null) orbit.LookAlong(Vector3.forward);
+
+            var previousRate = Application.targetFrameRate;
+            var previousVSync = QualitySettings.vSyncCount;
+            Application.targetFrameRate = -1;
+            QualitySettings.vSyncCount = 0;
+            yield return new WaitForSecondsRealtime(2f); // estabiliza (GC, primeiras alocações)
+
+            var frames = new List<float>();
+            var onScreen = 0;
+            var monstersOnScreen = 0;
+            var gcBefore = GC.CollectionCount(0);
+            long allocated = 0;
+            var lastMemory = GC.GetTotalMemory(false);
+            var until = Time.realtimeSinceStartup + _perfSeconds;
+            var cam = Camera.main;
+            while (Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+                frames.Add(Time.unscaledDeltaTime);
+                var memory = GC.GetTotalMemory(false);
+                if (memory > lastMemory) allocated += memory - lastMemory; // queda = coleta; só conta o que subiu
+                lastMemory = memory;
+                var players = 0;
+                var monsters = 0;
+                foreach (var view in session.Views.Values)
+                {
+                    if (view == null || cam == null) continue;
+                    var p = cam.WorldToViewportPoint(view.transform.position + Vector3.up);
+                    if (p.z <= 0 || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) continue;
+                    if (view.Kind == EntityKind.Player) players++;
+                    else monsters++;
+                }
+                onScreen = Mathf.Max(onScreen, players);
+                monstersOnScreen = Mathf.Max(monstersOnScreen, monsters);
+            }
+            var gcRuns = GC.CollectionCount(0) - gcBefore;
+            Capture("perf");
+            yield return new WaitForSecondsRealtime(0.3f);
+            Application.targetFrameRate = previousRate;
+            QualitySettings.vSyncCount = previousVSync;
+
+            frames.Sort();
+            var average = 0f;
+            foreach (var f in frames) average += f;
+            average /= Mathf.Max(1, frames.Count);
+            var worst = frames.Count > 0 ? frames[Mathf.Clamp((int)(frames.Count * 0.99f), 0, frames.Count - 1)] : 0f;
+            var max = frames.Count > 0 ? frames[frames.Count - 1] : 0f;
+            Log($"Desempenho em {Screen.width}x{Screen.height}, qualidade {QualitySettings.names[QualitySettings.GetQualityLevel()]}: " +
+                $"{1f / average:0} FPS médio, 1% pior {1f / worst:0} FPS ({worst * 1000:0.0} ms), pior quadro {max * 1000:0.0} ms, " +
+                $"{frames.Count} quadros, {gcRuns} coletas de lixo, {allocated / 1024f / Mathf.Max(1, frames.Count):0.0} KB alocados por quadro, " +
+                $"até {onScreen} jogadores e {monstersOnScreen} monstros na tela");
+            // Onde está a alocação: mede 4 s com cada grupo de componentes da interface desligado.
+            var groups = new (string Name, Behaviour[] Parts)[]
+            {
+                ("sem HUD", FindObjectsByType<CombatHud>(FindObjectsSortMode.None)),
+                ("sem janelas", FindObjectsByType<GameWindows>(FindObjectsSortMode.None)),
+                ("sem chat/grupo", FindObjectsByType<SocialWindows>(FindObjectsSortMode.None)),
+                ("sem números de dano", FindObjectsByType<DamageNumbers>(FindObjectsSortMode.None)),
+                ("sem tutorial", FindObjectsByType<Tutorial>(FindObjectsSortMode.None)),
+            };
+            foreach (var (name, parts) in groups)
+            {
+                foreach (var part in parts) part.enabled = false;
+                yield return new WaitForSecondsRealtime(0.5f);
+                long phaseAllocated = 0;
+                var phaseFrames = 0;
+                var phaseLast = GC.GetTotalMemory(false);
+                var phaseUntil = Time.realtimeSinceStartup + 4f;
+                while (Time.realtimeSinceStartup < phaseUntil)
+                {
+                    yield return null;
+                    phaseFrames++;
+                    var memory = GC.GetTotalMemory(false);
+                    if (memory > phaseLast) phaseAllocated += memory - phaseLast;
+                    phaseLast = memory;
+                }
+                Log($"  {name}: {phaseAllocated / 1024f / Mathf.Max(1, phaseFrames):0.0} KB por quadro");
+                foreach (var part in parts) part.enabled = true;
+            }
+
+            outcome.Ok = true;
+            outcome.Message = $"desempenho: {1f / average:0} FPS médio, 1% pior {1f / worst:0} FPS com {onScreen} jogadores na tela";
         }
 
         private IEnumerator WalkTo(string npcId)

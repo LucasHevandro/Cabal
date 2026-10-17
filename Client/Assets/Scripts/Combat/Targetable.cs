@@ -49,6 +49,25 @@ namespace Game.Client.Combat
         /// <summary>Nível mostrado na plaquinha (0 = não mostrar).</summary>
         public int Level { get; set; }
 
+        private string _nameplate;
+        private int _nameplateLevel = -1;
+        private int _nameplateLanguage = -1;
+
+        /// <summary>"Nome Nv X" da plaquinha, montado só quando o nível ou o idioma muda (não a cada quadro).</summary>
+        public string NameplateText
+        {
+            get
+            {
+                if (_nameplate == null || _nameplateLevel != Level || _nameplateLanguage != Loc.Version)
+                {
+                    _nameplate = Loc.T("hud.target", DisplayName, Level);
+                    _nameplateLevel = Level;
+                    _nameplateLanguage = Loc.Version;
+                }
+                return _nameplate;
+            }
+        }
+
         public void Configure(string newName, int newMaxHp, float newHeight, float newRadius, GameObject ring, int newDefense = 100)
         {
             displayName = newName;
