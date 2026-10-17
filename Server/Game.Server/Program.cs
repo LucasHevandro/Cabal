@@ -78,7 +78,7 @@ else
     Log("Banco PostgreSQL pronto (migrações aplicadas).");
 }
 
-var auth = new AuthService(store, new PasswordHasher(), new SessionTokens());
+var auth = new AuthService(store, new PasswordHasher(), new SessionTokens(), uids: new ItemUidAllocator(await store.MaxItemUidAsync()));
 await using var saver = new CharacterSaver(store, Log);
 await using var api = new LoginApi(auth, apiPort, Log);
 await api.StartAsync();

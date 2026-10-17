@@ -68,13 +68,22 @@ namespace Game.Server.Persistence.Migrations
                     b.Property<long>("Alz")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("AwakeningGauge")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ClassId")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Dexterity")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Hp")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Intelligence")
                         .HasColumnType("integer");
 
                     b.Property<int>("Level")
@@ -105,6 +114,9 @@ namespace Game.Server.Persistence.Migrations
                     b.Property<int>("Sp")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Strength")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Xp")
                         .HasColumnType("integer");
 
@@ -118,29 +130,72 @@ namespace Game.Server.Persistence.Migrations
                     b.ToTable("characters", (string)null);
                 });
 
-            modelBuilder.Entity("Game.Server.Persistence.InventoryItemEntity", b =>
+            modelBuilder.Entity("Game.Server.Persistence.CharacterQuestEntity", b =>
                 {
                     b.Property<int>("CharacterId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ItemId")
+                    b.Property<string>("QuestId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("Name")
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Counts")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("CharacterId", "QuestId");
+
+                    b.ToTable("character_quests", (string)null);
+                });
+
+            modelBuilder.Entity("Game.Server.Persistence.ItemInstanceEntity", b =>
+                {
+                    b.Property<long>("Uid")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CharacterId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Container")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ItemId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("OptionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("PityFails")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PityLevel")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Rarity")
+                    b.Property<bool>("RegainGuaranteed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Slot")
                         .HasColumnType("integer");
 
-                    b.HasKey("CharacterId", "ItemId");
+                    b.Property<int>("Upgrade")
+                        .HasColumnType("integer");
 
-                    b.ToTable("inventory_items", (string)null);
+                    b.HasKey("Uid");
+
+                    b.HasIndex("CharacterId");
+
+                    b.ToTable("item_instances", (string)null);
                 });
 
             modelBuilder.Entity("Game.Server.Persistence.ItemLogEntity", b =>
@@ -195,10 +250,19 @@ namespace Game.Server.Persistence.Migrations
                     b.Navigation("Account");
                 });
 
-            modelBuilder.Entity("Game.Server.Persistence.InventoryItemEntity", b =>
+            modelBuilder.Entity("Game.Server.Persistence.CharacterQuestEntity", b =>
                 {
                     b.HasOne("Game.Server.Persistence.CharacterEntity", null)
-                        .WithMany("Inventory")
+                        .WithMany("Quests")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Game.Server.Persistence.ItemInstanceEntity", b =>
+                {
+                    b.HasOne("Game.Server.Persistence.CharacterEntity", null)
+                        .WithMany("Items")
                         .HasForeignKey("CharacterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -211,7 +275,9 @@ namespace Game.Server.Persistence.Migrations
 
             modelBuilder.Entity("Game.Server.Persistence.CharacterEntity", b =>
                 {
-                    b.Navigation("Inventory");
+                    b.Navigation("Items");
+
+                    b.Navigation("Quests");
                 });
 #pragma warning restore 612, 618
         }

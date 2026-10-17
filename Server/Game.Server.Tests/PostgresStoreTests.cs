@@ -1,7 +1,8 @@
 using Game.Server.Accounts;
 using Game.Server.Persistence;
 using Game.Shared.Accounts;
-using Game.Shared.Loot;
+using Game.Shared.Items;
+using Game.Shared.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -66,19 +67,37 @@ public class PostgresStoreTests
         if (store == null) return;
         var account = await store.CreateAccountAsync("lucas", "hash");
         var character = await store.CreateCharacterAsync(account.Id, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        var uid = await store.MaxItemUidAsync() + 1;
 
         await store.SaveCharacterAsync(new CharacterSnapshot(character.Id, 7, 120, 5000, 12.5f, 40f, 900, 300, 1500,
-                new[] { new InventoryEntry("pele", "Pele", ItemRarity.Common, 3), new InventoryEntry("nucleo", "Núcleo", ItemRarity.Rare, 1) }),
-            new[] { new ItemLogEntry(character.Id, DateTimeOffset.UtcNow, "coleta", "pele", 3, 0, "teste") });
+                new[]
+                {
+                    new ItemRecord(uid, ItemContainerKind.Bag, 0, "pelo_macio", 3),
+                    new ItemRecord(uid + 1, ItemContainerKind.Bag, 1, "nucleo_baixo", 1),
+                    new ItemRecord(uid + 2, ItemContainerKind.Equipment, 0, "espada_ferro", 1, Upgrade: 6, PityFails: 2, PityLevel: 6),
+                },
+                Attributes: new Attributes { Strength = 15, Dexterity = 6, Intelligence = 2 }, AwakeningGauge: 40,
+                Quests: new[] { new QuestRecord("primeiros_passos", true, Array.Empty<int>()), new QuestRecord("arte_do_combo", false, new[] { 4 }) }),
+            new[] { new ItemLogEntry(character.Id, DateTimeOffset.UtcNow, "coleta", "pelo_macio", 3, 0, "teste") });
         // Segundo salvamento: um item some, outro muda de quantidade.
         await store.SaveCharacterAsync(new CharacterSnapshot(character.Id, 8, 10, 5100, 13f, 41f, 950, 320, 1400,
-                new[] { new InventoryEntry("pele", "Pele", ItemRarity.Common, 5) }),
+                new[]
+                {
+                    new ItemRecord(uid, ItemContainerKind.Bag, 5, "pelo_macio", 5),
+                    new ItemRecord(uid + 2, ItemContainerKind.Equipment, 0, "espada_ferro", 1, Upgrade: 7),
+                },
+                Quests: new[] { new QuestRecord("primeiros_passos", true, Array.Empty<int>()), new QuestRecord("arte_do_combo", false, new[] { 9 }) }),
             new[] { new ItemLogEntry(character.Id, DateTimeOffset.UtcNow, "alz_monstro", null, 0, 100, "teste") });
 
         var loaded = await store.LoadCharacterAsync(character.Id);
         Assert.Equal((8, 10, 5100L, 13f, 950), (loaded!.Level, loaded.Xp, loaded.Alz, loaded.X, loaded.Hp));
-        var item = Assert.Single(loaded.Inventory);
-        Assert.Equal(("pele", 5), (item.ItemId, item.Quantity));
+        Assert.Equal(2, loaded.Items.Count);
+        var pelt = loaded.Items.Single(i => i.Uid == uid);
+        Assert.Equal(("pelo_macio", 5, 5), (pelt.ItemId, pelt.Quantity, pelt.Slot)); // mudou de posição e quantidade
+        Assert.Equal(7, loaded.Items.Single(i => i.Uid == uid + 2).Upgrade);
+        Assert.Equal(9, loaded.Quests.Single(q => q.QuestId == "arte_do_combo").Counts[0]);
+        Assert.True(loaded.Quests.Single(q => q.QuestId == "primeiros_passos").Completed);
+        Assert.True(await store.MaxItemUidAsync() >= uid + 2);
         Assert.Equal(2, (await store.ItemLogAsync(character.Id)).Count);
     }
 

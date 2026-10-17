@@ -34,7 +34,7 @@ public class CombatTests
         Id = "teste", Name = "Monstro de teste", Level = 1, MaxHp = hp, AttackDamage = attack, AttackPower = 0,
         Defense = 0, AttackRange = 1.5f, AttackCooldownSeconds = 2f, AttackWindupSeconds = windup, MoveSpeed = 3f,
         Aggressive = aggressive, AggroRadius = 8, LeashRadius = 30, WanderRadius = 0, XpReward = 50, RespawnSeconds = 5,
-        Drops = new DropTable(10, 20, new DropEntry("pele", "Pele", ItemRarity.Common, 0.9)),
+        Drops = new DropTable(10, 20, new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 0.9)),
     };
 
     private static (GameWorld World, FakeOutbox Outbox, ServerPlayer Player, ServerMonster Monster) Setup(
@@ -58,9 +58,10 @@ public class CombatTests
 
         var hit = Assert.Single(outbox.To<CombatEvent>(player.Id));
         Assert.Equal((player.Id, monster.Id, (byte)0), (hit.AttackerId, hit.TargetId, hit.Source));
-        // (120 + ataque 60 do nível 1) × 1, sem defesa, sem variação.
-        Assert.Equal(180, hit.Damage);
-        Assert.Equal(5000 - 180, monster.Hp.Current);
+        // (120 + ataque do personagem: nível, força e espada) × 1, sem defesa, sem variação.
+        var expected = 120 + player.Stats.AttackPower;
+        Assert.Equal(expected, hit.Damage);
+        Assert.Equal(5000 - expected, monster.Hp.Current);
         Assert.Contains("Corte em recarga", outbox.Notices(player.Id));
     }
 
@@ -78,13 +79,14 @@ public class CombatTests
     [Fact]
     public void Magia_gasta_mana()
     {
-        var (world, outbox, player, monster) = Setup(Dummy(), monsterZ: 8);
+        var (world, outbox, player, monster) = Setup(Dummy());
 
-        world.Handle(player.Id, new UseSkill { Slot = 2, TargetId = monster.Id }, now: 1);
+        world.Handle(player.Id, new UseSkill { Slot = 2, TargetId = monster.Id }, now: 1); // Golpe Rúnico (mágica)
+        var cost = player.Skills[2].MpCost;
 
-        Assert.Equal(player.Mp.Max - 40, player.Mp.Current);
+        Assert.Equal(player.Mp.Max - cost, player.Mp.Current);
         world.Tick(1.0); // no tick a mana já começa a voltar (20/s) e o cliente é avisado
-        Assert.InRange(outbox.To<PlayerStats>(player.Id).Last().Mp, player.Mp.Max - 40, player.Mp.Max - 39);
+        Assert.InRange(outbox.To<PlayerStats>(player.Id).Last().Mp, player.Mp.Max - cost, player.Mp.Max - cost + 1);
     }
 
     [Fact]
@@ -102,7 +104,7 @@ public class CombatTests
         Assert.Equal(50, stats.Xp);  // monstro do mesmo nível: XP cheia
         Assert.Equal(10, stats.Alz); // sorteio 0 = mínimo da faixa
         var loot = Assert.Single(outbox.To<LootSpawned>(player.Id));
-        Assert.Equal("pele", loot.ItemId);
+        Assert.Equal("pelo_macio", loot.ItemId);
 
         world.Tick(1.0 + monster.Data.RespawnSeconds + 0.1);
         Assert.False(monster.IsDead);
@@ -119,7 +121,7 @@ public class CombatTests
 
         world.Handle(player.Id, new PickupLoot { LootId = loot.Id }, now: 1.1);
 
-        Assert.Equal(1, player.Inventory["pele"].Quantity);
+        Assert.Equal(1, player.Bag.Count("pelo_macio"));
         Assert.Equal(loot.Id, Assert.Single(outbox.To<LootRemoved>(player.Id)).LootId);
         Assert.Empty(world.Loot);
     }
@@ -136,7 +138,7 @@ public class CombatTests
 
         var hit = Assert.Single(outbox.To<CombatEvent>(player.Id));
         Assert.Equal((byte)ComboGrade.Excellent, hit.Grade);
-        Assert.Equal(216, hit.Damage); // 180 × 1,20
+        Assert.Equal((int)Math.Round((120 + player.Stats.AttackPower) * 1.2), hit.Damage); // excelente: +20%
         Assert.Equal(1, player.Combo.HitCount);
         Assert.Equal(PlayerRulesStartingSpMinusCombo(), player.Sp.Current);
     }

@@ -32,18 +32,39 @@ public sealed class CharacterEntity
     public int Hp { get; set; }
     public int Mp { get; set; }
     public int Sp { get; set; }
+    public int Strength { get; set; }
+    public int Dexterity { get; set; }
+    public int Intelligence { get; set; }
+    public int AwakeningGauge { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset SavedAt { get; set; }
-    public List<InventoryItemEntity> Inventory { get; set; } = new();
+    public List<ItemInstanceEntity> Items { get; set; } = new();
+    public List<CharacterQuestEntity> Quests { get; set; } = new();
 }
 
-public sealed class InventoryItemEntity
+/// <summary>Um item de verdade, com id único: bolsa (0), vestido (1, posição = encaixe) ou armazém (2).</summary>
+public sealed class ItemInstanceEntity
+{
+    public long Uid { get; set; }
+    public int CharacterId { get; set; }
+    public int Container { get; set; }
+    public int Slot { get; set; }
+    public string ItemId { get; set; } = "";
+    public int Quantity { get; set; }
+    public int Upgrade { get; set; }
+    public int PityFails { get; set; }
+    public int PityLevel { get; set; }
+    public bool RegainGuaranteed { get; set; }
+    public string OptionId { get; set; } = "";
+}
+
+/// <summary>Missão aceita ou concluída. Contadores separados por vírgula ("3,10").</summary>
+public sealed class CharacterQuestEntity
 {
     public int CharacterId { get; set; }
-    public string ItemId { get; set; } = "";
-    public string Name { get; set; } = "";
-    public int Rarity { get; set; }
-    public int Quantity { get; set; }
+    public string QuestId { get; set; } = "";
+    public bool Completed { get; set; }
+    public string Counts { get; set; } = "";
 }
 
 public sealed class ItemLogEntity
@@ -65,7 +86,8 @@ public sealed class GameDbContext : DbContext
 
     public DbSet<AccountEntity> Accounts => Set<AccountEntity>();
     public DbSet<CharacterEntity> Characters => Set<CharacterEntity>();
-    public DbSet<InventoryItemEntity> InventoryItems => Set<InventoryItemEntity>();
+    public DbSet<ItemInstanceEntity> Items => Set<ItemInstanceEntity>();
+    public DbSet<CharacterQuestEntity> CharacterQuests => Set<CharacterQuestEntity>();
     public DbSet<ItemLogEntity> ItemLog => Set<ItemLogEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -86,15 +108,26 @@ public sealed class GameDbContext : DbContext
             e.HasIndex(c => c.NameKey).IsUnique();
             e.HasIndex(c => c.AccountId);
             e.HasOne(c => c.Account).WithMany(a => a.Characters).HasForeignKey(c => c.AccountId).OnDelete(DeleteBehavior.Cascade);
-            e.HasMany(c => c.Inventory).WithOne().HasForeignKey(i => i.CharacterId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(c => c.Items).WithOne().HasForeignKey(i => i.CharacterId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(c => c.Quests).WithOne().HasForeignKey(q => q.CharacterId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        model.Entity<InventoryItemEntity>(e =>
+        model.Entity<ItemInstanceEntity>(e =>
         {
-            e.ToTable("inventory_items");
-            e.HasKey(i => new { i.CharacterId, i.ItemId });
+            e.ToTable("item_instances");
+            e.HasKey(i => i.Uid);
+            e.Property(i => i.Uid).ValueGeneratedNever(); // o servidor dá o id (ItemUidAllocator)
+            e.HasIndex(i => i.CharacterId);
             e.Property(i => i.ItemId).HasMaxLength(64);
-            e.Property(i => i.Name).HasMaxLength(100);
+            e.Property(i => i.OptionId).HasMaxLength(64);
+        });
+
+        model.Entity<CharacterQuestEntity>(e =>
+        {
+            e.ToTable("character_quests");
+            e.HasKey(q => new { q.CharacterId, q.QuestId });
+            e.Property(q => q.QuestId).HasMaxLength(64);
+            e.Property(q => q.Counts).HasMaxLength(200);
         });
 
         model.Entity<ItemLogEntity>(e =>

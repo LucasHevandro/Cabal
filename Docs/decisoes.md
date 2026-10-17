@@ -36,3 +36,16 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   novos.
 - **Motivo:** manter duas versões completas de cada sistema (cliente offline e servidor) dobraria o trabalho e os
   testes; o MVP é um jogo online.
+
+## 2026-10-17 — Itens com id único, armazém por personagem e convidados liberados
+
+- **Cada item é uma linha própria** (`item_instances`) com id único dado pelo servidor (`ItemUidAllocator`, que
+  continua a partir do maior id do banco). Isso permite rastrear um item nos registros e impede duplicação. Um
+  único servidor dá os ids; com vários servidores no futuro, trocar por faixas por servidor ou sequência do banco.
+- **Armazém por personagem** no MVP (40 posições, só perto do NPC). Compartilhar entre personagens da conta fica
+  para depois.
+- **Convidados** (`--guests`, usados por bots e testes) têm todas as skills e o combo liberados sem precisar das
+  missões, para os testes de carga continuarem medindo o combate. Personagens de conta seguem as regras normais
+  (combo liberado pela missão "A arte do combo").
+- **Coletar** em missão é conferido na bolsa na hora de entregar (os itens são consumidos), em vez de contar o que
+  foi pego: assim guardar ou jogar fora no caminho não dessincroniza nada.

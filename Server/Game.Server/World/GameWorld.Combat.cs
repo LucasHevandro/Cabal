@@ -1,6 +1,7 @@
 using System.Numerics;
 using Game.Server.Persistence;
 using Game.Shared.Combat;
+using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
@@ -50,6 +51,11 @@ public sealed partial class GameWorld
     private void HandleStartCombo(ServerPlayer player, StartCombo message, double now)
     {
         if (player.IsDead || player.Combo.State == ComboPhase.Active) return;
+        if (!player.ComboUnlocked)
+        {
+            Notify(player, $"Conclua a missão \"{QuestCatalog.Get(ClassCatalog.ComboQuestId).Name}\" para liberar o combo");
+            return;
+        }
         var target = FindMonster(message.TargetId);
         if (target == null || target.IsDead)
         {
@@ -71,6 +77,11 @@ public sealed partial class GameWorld
     {
         if (player.IsDead || message.Slot >= player.Skills.Count) return;
         var skill = player.Skills[message.Slot];
+        if (!player.SkillUnlocked(message.Slot))
+        {
+            Notify(player, $"{skill.Name} ainda não foi liberada");
+            return;
+        }
         var target = FindMonster(message.TargetId);
         double? distance = target != null && !target.IsDead ? EdgeDistance(player, target) : (double?)null;
 
@@ -116,6 +127,9 @@ public sealed partial class GameWorld
             {
                 multiplier = result.DamageMultiplier;
                 grade = (byte)result.Grade;
+                var gauge = player.Awakening.Gauge;
+                player.Awakening.AddFromGrade(result.Grade, now);
+                if (player.Awakening.Gauge != gauge) player.SheetDirty = true;
                 routeName = result.Route?.Name ?? "";
             }
         }
@@ -123,11 +137,13 @@ public sealed partial class GameWorld
         SkillRules.TryUse(skill, message.Slot, player.Cooldowns, player.Mp, distance, now);
         player.StatsDirty = true;
 
+        multiplier *= player.Awakening.DamageMultiplier(now);
+        var power = ClassCatalog.PowerFor(skill.Kind, player.Stats);
         var hits = 0;
         foreach (var victim in SkillTargets(skill, target!))
         {
             var hit = DamageFormula.Calculate(
-                new DamageInput(skill.BaseDamage, player.Stats.AttackPower, multiplier, PlayerRules.CritChance,
+                new DamageInput(skill.BaseDamage, power, multiplier, CritChance(player),
                     PlayerRules.CritMultiplier, victim.Data.Defense), _random);
             hits++;
             DamagePlayerToMonster(player, victim, hit, message.Slot, grade, routeName, now);
@@ -148,9 +164,11 @@ public sealed partial class GameWorld
         var chain = player.Combo.HitCount;
         player.Combo.TryFinish(out var multiplier);
         player.ComboDirty = true;
+        // O finalizador usa o poder principal da classe (o maior dos dois).
+        var power = Math.Max(player.Stats.AttackPower, player.Stats.MagicPower);
         var hit = DamageFormula.Calculate(
-            new DamageInput(PlayerRules.FinisherBaseDamage, player.Stats.AttackPower, multiplier, PlayerRules.CritChance,
-                PlayerRules.CritMultiplier, target.Data.Defense), _random);
+            new DamageInput(PlayerRules.FinisherBaseDamage, power, multiplier * player.Awakening.DamageMultiplier(now),
+                CritChance(player), PlayerRules.CritMultiplier, target.Data.Defense), _random);
         DamagePlayerToMonster(player, target, hit, CombatSource.Finisher, 255, "", now);
         Notify(player, $"Finalizador x{multiplier:0.00} depois de {chain} acertos");
     }
@@ -329,16 +347,8 @@ public sealed partial class GameWorld
         if (!_players.TryGetValue(killerId, out var killer)) return;
 
         var xp = XpRules.Adjusted(monster.Data.XpReward, killer.Progress.Level, monster.Data.Level);
-        var levels = killer.Progress.AddXp(xp);
-        if (levels > 0)
-        {
-            var stats = killer.Stats;
-            killer.Hp.SetMax(stats.MaxHp);
-            killer.Mp.SetMax(stats.MaxMp);
-            killer.Hp.Add(killer.Hp.Max);
-            killer.Mp.Add(killer.Mp.Max);
-            Notify(killer, $"Nível {killer.Progress.Level}!", announcement: true);
-        }
+        GrantXp(killer, xp);
+        if (killer.Quests.OnKill(monster.Data.Id).Count > 0) killer.QuestsDirty = true;
 
         var loot = monster.Data.Drops.Roll(_random);
         killer.Alz += loot.Alz;
@@ -348,8 +358,6 @@ public sealed partial class GameWorld
             var at = DateTimeOffset.UtcNow;
             if (loot.Alz > 0)
                 killer.PendingLogs.Add(new ItemLogEntry(killer.CharacterId, at, "alz_monstro", null, 0, loot.Alz, $"{monster.Data.Id} (id {monster.Id})"));
-            if (levels > 0)
-                killer.PendingLogs.Add(new ItemLogEntry(killer.CharacterId, at, "nivel", null, 0, 0, $"nível {killer.Progress.Level}"));
         }
         Notify(killer, $"+{xp} XP, +{loot.Alz} Alz");
 
@@ -439,9 +447,18 @@ public sealed partial class GameWorld
         }
 
         var drop = loot.Drop;
-        var current = player.Inventory.TryGetValue(drop.ItemId, out var stack) ? stack.Quantity : 0;
-        player.Inventory[drop.ItemId] = (drop.Name, drop.Rarity, current + drop.Quantity);
+        if (ItemCatalog.Find(drop.ItemId) == null)
+        {
+            RemoveLoot(loot, 0); // item que não existe mais no catálogo: só some do chão
+            return;
+        }
+        if (!player.Bag.TryAdd(drop.ItemId, drop.Quantity, _uids.Next))
+        {
+            Notify(player, "Bolsa cheia");
+            return;
+        }
         player.InventoryDirty = true;
+        player.QuestsDirty |= player.Quests.Active.Any();
         // O item sai do chão no mesmo passo em que entra no inventário: não existe momento com dois.
         RemoveLoot(loot, player.Id);
         if (player.CharacterId != 0)
@@ -464,6 +481,25 @@ public sealed partial class GameWorld
                 _outbox.Send(player.Id, new LootRemoved { LootId = loot.Id, PickedById = pickedBy });
         }
     }
+
+    /// <summary>
+    /// Soma XP e trata a subida de nível (vida e MP cheios, novos máximos, pontos de atributo). Retorna os níveis ganhos.
+    /// </summary>
+    private int GrantXp(ServerPlayer player, long xp)
+    {
+        var levels = player.Progress.AddXp((int)Math.Min(int.MaxValue, Math.Max(0, xp)));
+        player.StatsDirty = true;
+        if (levels == 0) return 0;
+        player.RecalculateStats();
+        player.Hp.Add(player.Hp.Max);
+        player.Mp.Add(player.Mp.Max);
+        Notify(player, $"Nível {player.Progress.Level}! +{levels * Attributes.PointsPerLevel} pontos de atributo", announcement: true);
+        if (player.CharacterId != 0)
+            player.PendingLogs.Add(new ItemLogEntry(player.CharacterId, DateTimeOffset.UtcNow, "nivel", null, 0, 0, $"nível {player.Progress.Level}"));
+        return levels;
+    }
+
+    private static double CritChance(ServerPlayer player) => player.Stats.CritPercent / 100.0;
 
     private static double EdgeDistance(ServerPlayer player, ServerMonster monster) =>
         Distance(player.X, player.Z, monster.X, monster.Z) - monster.Data.BodyRadius;

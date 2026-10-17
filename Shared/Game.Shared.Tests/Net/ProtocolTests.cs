@@ -98,6 +98,54 @@ public class ProtocolTests
     }
 
     [Fact]
+    public void Mensagens_de_itens_missoes_e_ficha_vao_e_voltam()
+    {
+        var bag = RoundTrip(new Inventory
+        {
+            Items =
+            {
+                new InventoryStack
+                {
+                    ItemId = "espada_ferro", Name = "Espada", Rarity = 0, Quantity = 1, Container = ItemContainerKind.Equipment,
+                    Slot = 0, Uid = 123456789012, Upgrade = 7, PityFails = 2, PityLevel = 7, RegainGuaranteed = true, OptionId = "pedra_furia",
+                },
+            },
+        }).Items[0];
+        Assert.Equal((ItemContainerKind.Equipment, 123456789012L, (byte)7, true, "pedra_furia"),
+            (bag.Container, bag.Uid, bag.Upgrade, bag.RegainGuaranteed, bag.OptionId));
+
+        var move = RoundTrip(new ItemCommand
+        {
+            Action = ItemActionKind.Move, From = ItemContainerKind.Bag, FromSlot = 3, To = ItemContainerKind.Warehouse, ToSlot = 39, Quantity = 2,
+        });
+        Assert.Equal((ItemActionKind.Move, ItemContainerKind.Warehouse, (ushort)39, 2), (move.Action, move.To, move.ToSlot, move.Quantity));
+        Assert.Equal((ushort)4, RoundTrip(new UpgradeItem { Container = ItemContainerKind.Bag, Slot = 4 }).Slot);
+        Assert.Equal((ushort)9, RoundTrip(new ApplyOption { Slot = 1, StoneSlot = 9 }).StoneSlot);
+        Assert.Equal((ushort)3, RoundTrip(new AllocateAttributes { Strength = 1, Dexterity = 2, Intelligence = 3 }).Intelligence);
+        Assert.Equal("ferreira_ilsa", RoundTrip(new TalkToNpc { NpcId = "ferreira_ilsa" }).NpcId);
+        Assert.Equal(QuestActionKind.TurnIn, RoundTrip(new QuestCommand { Action = QuestActionKind.TurnIn, QuestId = "x" }).Action);
+        RoundTrip(new ActivateAwakening());
+
+        var sheet = RoundTrip(new CharacterSheet
+        {
+            Class = 1, Strength = 3, FreePoints = 5, MagicPower = 80, CritPercent = 6.5f, ComboUnlocked = true,
+            SkillUnlocked = { true, false }, AwakeningGauge = 40, AwakeningUntil = 12.5,
+        });
+        Assert.Equal((80, 6.5f, true, 2, (byte)40, 12.5),
+            (sheet.MagicPower, sheet.CritPercent, sheet.ComboUnlocked, sheet.SkillUnlocked.Count, sheet.AwakeningGauge, sheet.AwakeningUntil));
+
+        var quests = RoundTrip(new QuestState
+        {
+            Completed = { "primeiros_passos" }, Active = { new QuestEntry { QuestId = "pele_e_presa", Counts = new List<int> { 4, 6 } } },
+        });
+        Assert.Equal(new[] { 4, 6 }, quests.Active[0].Counts);
+        var dialog = RoundTrip(new NpcDialog { NpcId = "anciao_doran", Offered = { "a" }, ReadyToTurnIn = { "b", "c" } });
+        Assert.Equal(2, dialog.ReadyToTurnIn.Count);
+        var upgrade = RoundTrip(new UpgradeResult { Outcome = 3, Uid = 9, NewLevel = 6, Message = "Falhou" });
+        Assert.Equal(((byte)3, (byte)6, "Falhou"), (upgrade.Outcome, upgrade.NewLevel, upgrade.Message));
+    }
+
+    [Fact]
     public void Mensagem_chegando_byte_a_byte_so_sai_quando_completa()
     {
         var frame = NetCodec.Encode(new Hello { Name = "Lento" });

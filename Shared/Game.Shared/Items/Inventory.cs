@@ -256,6 +256,14 @@ namespace Game.Shared.Items
             return null;
         }
 
+        /// <summary>Tira o item da posição sem colocar em lugar nenhum (quem chama decide onde ele vai).</summary>
+        public bool TryRemove(EquipSlot slot, out ItemInstance? item)
+        {
+            if (!_worn.TryGetValue(slot, out item)) return false;
+            _worn.Remove(slot);
+            return true;
+        }
+
         /// <summary>Veste direto (carregar do banco).</summary>
         public void Put(EquipSlot slot, ItemInstance item) => _worn[slot] = item;
     }

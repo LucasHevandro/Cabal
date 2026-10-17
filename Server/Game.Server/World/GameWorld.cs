@@ -1,9 +1,12 @@
 using System.Numerics;
 using Game.Server.Persistence;
+using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Core;
+using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
+using Game.Shared.Progression;
 using Game.Shared.World;
 using ComboPhase = Game.Shared.Combat.ComboState;
 using ComboStateMessage = Game.Shared.Net.ComboState;
@@ -31,6 +34,7 @@ public sealed partial class GameWorld
 
     private readonly IOutbox _outbox;
     private readonly IRandomSource _random;
+    private readonly ItemUidAllocator _uids;
     private readonly Dictionary<int, ServerPlayer> _players = new();
     private readonly Dictionary<int, ServerMonster> _monsters = new();
     private readonly Dictionary<int, ServerLoot> _loot = new();
@@ -43,10 +47,12 @@ public sealed partial class GameWorld
     /// Cria o mundo. <paramref name="spawns"/> nulo usa o conteúdo padrão (<see cref="WorldContent"/>);
     /// os testes passam grupos próprios e uma fonte aleatória fixa.
     /// </summary>
-    public GameWorld(IOutbox outbox, IEnumerable<SpawnDefinition>? spawns = null, IRandomSource? random = null)
+    public GameWorld(IOutbox outbox, IEnumerable<SpawnDefinition>? spawns = null, IRandomSource? random = null,
+        ItemUidAllocator? uids = null)
     {
         _outbox = outbox;
         _random = random ?? new SystemRandomSource();
+        _uids = uids ?? new ItemUidAllocator();
 
         var seed = 1;
         foreach (var spawn in spawns ?? WorldContent.Spawns())
@@ -68,7 +74,7 @@ public sealed partial class GameWorld
     /// Entra um jogador. <paramref name="onIdAssigned"/> roda antes de qualquer mensagem sair, para a rede saber para
     /// onde mandar. As entidades por perto chegam no primeiro tick.
     /// Com <paramref name="character"/> (vindo do banco), volta exatamente como estava: nível, XP, recursos, Alz,
-    /// inventário e posição. Sem ele, é um convidado novo (não é salvo).
+    /// itens, atributos, missões e posição. Sem ele, é um convidado novo (não é salvo) com a arma inicial.
     /// </summary>
     public ServerPlayer AddPlayer(string name, double now, Action<int>? onIdAssigned = null, CharacterRecord? character = null)
     {
@@ -77,7 +83,7 @@ public sealed partial class GameWorld
         var id = _nextEntityId++;
         var (spawnX, spawnZ) = SpawnPointFor(id);
         if (character != null && IsInsideWorld(character.X, character.Z)) (spawnX, spawnZ) = (character.X, character.Z);
-        var player = new ServerPlayer
+        var player = new ServerPlayer(character?.Class ?? CharacterClass.Blade)
         {
             Id = id,
             Name = cleanName.Length > 20 ? cleanName[..20] : cleanName,
@@ -85,6 +91,7 @@ public sealed partial class GameWorld
             Movement = new MovementValidator(spawnX, spawnZ, now),
         };
         if (character != null) Restore(player, character);
+        else GiveGuestKit(player);
         onIdAssigned?.Invoke(player.Id);
 
         _outbox.Send(player.Id, new Welcome
@@ -105,10 +112,17 @@ public sealed partial class GameWorld
     public (CharacterSnapshot Snapshot, List<ItemLogEntry> Logs) CaptureForSave(ServerPlayer player)
     {
         var (x, z) = player.IsDead ? SpawnPointFor(player.Id) : (player.X, player.Z);
+        var items = new List<ItemRecord>();
+        foreach (var (slot, item) in player.Bag.Items()) items.Add(ToRecord(item, ItemContainerKind.Bag, slot));
+        foreach (var (slot, item) in player.Warehouse.Items()) items.Add(ToRecord(item, ItemContainerKind.Warehouse, slot));
+        foreach (var (slot, item) in player.Equipment.Worn) items.Add(ToRecord(item, ItemContainerKind.Equipment, (int)slot));
+        var quests = player.Quests.Completed.Select(id => new QuestRecord(id, true, Array.Empty<int>()))
+            .Concat(player.Quests.Active.Select(q => new QuestRecord(q.QuestId, false, q.Counts.ToArray())))
+            .ToList();
         var snapshot = new CharacterSnapshot(
             player.CharacterId, player.Progress.Level, player.Progress.Xp, player.Alz, x, z,
             player.IsDead ? player.Hp.Max : player.Hp.Current, player.IsDead ? player.Mp.Max : player.Mp.Current, player.Sp.Current,
-            player.Inventory.Select(kv => new InventoryEntry(kv.Key, kv.Value.Name, kv.Value.Rarity, kv.Value.Quantity)).ToList());
+            items, player.Attributes, player.Awakening.Gauge, quests);
         var logs = player.PendingLogs.ToList();
         player.PendingLogs.Clear();
         return (snapshot, logs);
@@ -152,6 +166,27 @@ public sealed partial class GameWorld
                 break;
             case PickupLoot pickup:
                 HandlePickup(player, pickup, now);
+                break;
+            case ItemCommand command:
+                HandleItemCommand(player, command, now);
+                break;
+            case UpgradeItem upgrade:
+                HandleUpgrade(player, upgrade);
+                break;
+            case ApplyOption option:
+                HandleApplyOption(player, option);
+                break;
+            case AllocateAttributes allocate:
+                HandleAllocate(player, allocate);
+                break;
+            case TalkToNpc talk:
+                HandleTalk(player, talk);
+                break;
+            case QuestCommand quest:
+                HandleQuest(player, quest);
+                break;
+            case ActivateAwakening:
+                HandleAwakening(player, now);
                 break;
         }
     }
@@ -246,10 +281,17 @@ public sealed partial class GameWorld
         if (player.InventoryDirty)
         {
             player.InventoryDirty = false;
-            var inventory = new Inventory();
-            foreach (var (itemId, stack) in player.Inventory)
-                inventory.Items.Add(new InventoryStack { ItemId = itemId, Name = stack.Name, Rarity = (byte)stack.Rarity, Quantity = stack.Quantity });
-            _outbox.Send(player.Id, inventory);
+            _outbox.Send(player.Id, InventoryMessage(player));
+        }
+        if (player.SheetDirty)
+        {
+            player.SheetDirty = false;
+            _outbox.Send(player.Id, SheetMessage(player));
+        }
+        if (player.QuestsDirty)
+        {
+            player.QuestsDirty = false;
+            _outbox.Send(player.Id, QuestMessage(player));
         }
         if (player.ComboDirty)
         {
@@ -288,22 +330,83 @@ public sealed partial class GameWorld
         _monsters.Add(monster.Id, monster);
     }
 
-    private static void Restore(ServerPlayer player, CharacterRecord character)
+    private void Restore(ServerPlayer player, CharacterRecord character)
     {
-        player.Progress = new Game.Shared.Progression.CharacterProgress(
-            Math.Clamp(character.Level, 1, Game.Shared.Progression.LevelCurve.MaxLevel), Math.Max(0, character.Xp));
-        var stats = player.Stats;
-        player.Hp.SetMax(stats.MaxHp);
-        player.Mp.SetMax(stats.MaxMp);
-        player.Hp.Add(Math.Clamp(character.Hp, 1, stats.MaxHp) - player.Hp.Current);
-        player.Mp.Add(Math.Clamp(character.Mp, 0, stats.MaxMp) - player.Mp.Current);
-        player.Sp.Add(Math.Clamp(character.Sp, 0, player.Sp.Max) - player.Sp.Current);
+        player.Progress = new CharacterProgress(Math.Clamp(character.Level, 1, LevelCurve.MaxLevel), Math.Max(0, character.Xp));
+        // Atributos estragados (ou de antes dos atributos) voltam para os iniciais da classe.
+        var attributes = character.Attributes;
+        var starting = Attributes.StartingFor(player.Class);
+        if (attributes.Strength < starting.Strength || attributes.Dexterity < starting.Dexterity ||
+            attributes.Intelligence < starting.Intelligence || Attributes.FreePoints(player.Progress.Level, player.Class, attributes) < 0)
+            attributes = starting;
+        player.Attributes = attributes;
         player.Alz = Math.Max(0, character.Alz);
-        foreach (var item in character.Inventory)
+        player.Awakening.Restore(character.AwakeningGauge);
+
+        // Itens: cada um volta para o lugar salvo; se o lugar não servir mais, vai para a primeira posição livre da bolsa.
+        var misplaced = new List<ItemInstance>();
+        var overflow = new List<(string ItemId, int Quantity)>();
+        foreach (var record in character.Items)
         {
-            if (item.Quantity > 0) player.Inventory[item.ItemId] = (item.Name, item.Rarity, item.Quantity);
+            var definition = ItemCatalog.Find(record.ItemId);
+            if (definition == null || record.Quantity <= 0) continue;
+            var item = new ItemInstance
+            {
+                Uid = record.Uid, ItemId = record.ItemId, Quantity = Math.Min(record.Quantity, definition.MaxStack),
+                Upgrade = Math.Clamp(record.Upgrade, 0, UpgradeRules.MaxLevel), PityFails = Math.Max(0, record.PityFails),
+                PityLevel = record.PityLevel, RegainGuaranteed = record.RegainGuaranteed, OptionId = record.OptionId ?? "",
+            };
+            var placed = record.Container switch
+            {
+                ItemContainerKind.Equipment when definition.Kind == ItemKind.Equipment && (int)definition.Slot == record.Slot
+                    && player.Equipment[definition.Slot] == null => Wear(player, definition.Slot, item),
+                ItemContainerKind.Warehouse => player.Warehouse.TryPut(record.Slot, item),
+                ItemContainerKind.Bag => player.Bag.TryPut(record.Slot, item),
+                _ => false,
+            };
+            if (!placed) misplaced.Add(item);
+            if (record.Quantity > item.Quantity) overflow.Add((item.ItemId, record.Quantity - item.Quantity));
         }
+        foreach (var item in misplaced)
+        {
+            if (!player.Bag.TryPlace(item, out _)) player.Warehouse.TryPlace(item, out _);
+        }
+        // Pilhas maiores que o limite (dados antigos) viram várias pilhas.
+        foreach (var (itemId, quantity) in overflow)
+        {
+            if (!player.Bag.TryAdd(itemId, quantity, _uids.Next)) player.Warehouse.TryAdd(itemId, quantity, _uids.Next);
+        }
+
+        player.Quests.Restore(
+            character.Quests.Where(q => q.Completed).Select(q => q.QuestId),
+            character.Quests.Where(q => !q.Completed).Select(q => new QuestProgress(q.QuestId, q.Counts.ToArray())));
+
+        player.RecalculateStats();
+        player.Hp.Add(Math.Clamp(character.Hp, 1, player.Hp.Max) - player.Hp.Current);
+        player.Mp.Add(Math.Clamp(character.Mp, 0, player.Mp.Max) - player.Mp.Current);
+        player.Sp.Add(Math.Clamp(character.Sp, 0, player.Sp.Max) - player.Sp.Current);
     }
+
+    private static bool Wear(ServerPlayer player, EquipSlot slot, ItemInstance item)
+    {
+        player.Equipment.Put(slot, item);
+        return true;
+    }
+
+    /// <summary>Convidado começa com a arma da classe vestida e algumas poções.</summary>
+    private void GiveGuestKit(ServerPlayer player)
+    {
+        var weapon = player.Class == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
+        player.Equipment.Put(EquipSlot.Weapon, new ItemInstance { Uid = _uids.Next(), ItemId = weapon });
+        player.Bag.TryAdd("pocao_hp_p", 5, _uids.Next);
+        player.RecalculateStats();
+        player.Hp.Add(player.Hp.Max);
+        player.Mp.Add(player.Mp.Max);
+    }
+
+    private static ItemRecord ToRecord(ItemInstance item, ItemContainerKind container, int slot) => new(
+        item.Uid, container, slot, item.ItemId, item.Quantity, item.Upgrade, item.PityFails, item.PityLevel,
+        item.RegainGuaranteed, item.OptionId);
 
     /// <summary>Posição salva dentro do chão do mapa (protege contra dados estragados).</summary>
     private static bool IsInsideWorld(float x, float z) =>
@@ -350,6 +453,55 @@ public sealed partial class GameWorld
         Hp = player.Hp.Current, MaxHp = player.Hp.Max, Mp = player.Mp.Current, MaxMp = player.Mp.Max,
         Sp = player.Sp.Current, MaxSp = player.Sp.Max, Alz = player.Alz,
     };
+
+    private static Inventory InventoryMessage(ServerPlayer player)
+    {
+        var message = new Inventory();
+        void Add(ItemInstance item, ItemContainerKind container, int slot)
+        {
+            var definition = ItemCatalog.Get(item.ItemId);
+            message.Items.Add(new InventoryStack
+            {
+                ItemId = item.ItemId, Name = definition.Name, Rarity = (byte)definition.Rarity, Quantity = item.Quantity,
+                Container = container, Slot = (ushort)slot, Uid = item.Uid, Upgrade = (byte)item.Upgrade,
+                PityFails = (byte)Math.Min(item.PityFails, 255), PityLevel = (byte)item.PityLevel,
+                RegainGuaranteed = item.RegainGuaranteed, OptionId = item.OptionId,
+            });
+        }
+        foreach (var (slot, item) in player.Bag.Items()) Add(item, ItemContainerKind.Bag, slot);
+        foreach (var (slot, item) in player.Equipment.Worn) Add(item, ItemContainerKind.Equipment, (int)slot);
+        foreach (var (slot, item) in player.Warehouse.Items()) Add(item, ItemContainerKind.Warehouse, slot);
+        return message;
+    }
+
+    private static CharacterSheet SheetMessage(ServerPlayer player)
+    {
+        var sheet = new CharacterSheet
+        {
+            Class = (byte)player.Class, Strength = (ushort)player.Attributes.Strength, Dexterity = (ushort)player.Attributes.Dexterity,
+            Intelligence = (ushort)player.Attributes.Intelligence, FreePoints = (ushort)Math.Max(0, player.FreeAttributePoints),
+            AttackPower = player.Stats.AttackPower, MagicPower = player.Stats.MagicPower, Defense = player.Stats.Defense,
+            CritPercent = player.Stats.CritPercent, ComboUnlocked = player.ComboUnlocked,
+            AwakeningGauge = (byte)player.Awakening.Gauge,
+            AwakeningUntil = double.IsInfinity(player.Awakening.ActiveUntil) ? 0 : player.Awakening.ActiveUntil,
+        };
+        for (var i = 0; i < player.ClassSkills.Count; i++) sheet.SkillUnlocked.Add(player.SkillUnlocked(i));
+        return sheet;
+    }
+
+    private static QuestState QuestMessage(ServerPlayer player)
+    {
+        var state = new QuestState();
+        state.Completed.AddRange(player.Quests.Completed);
+        foreach (var progress in player.Quests.Active)
+        {
+            // Coletar mostra o que está na bolsa agora (o diário não guarda contador para isso).
+            var counts = new List<int>();
+            for (var i = 0; i < progress.Counts.Length; i++) counts.Add(QuestLog.Done(progress, i, player.Bag));
+            state.Active.Add(new QuestEntry { QuestId = progress.QuestId, Counts = counts });
+        }
+        return state;
+    }
 
     private static ComboStateMessage ComboMessage(ServerPlayer player)
     {

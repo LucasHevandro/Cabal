@@ -13,6 +13,13 @@ namespace Game.Shared.Net
         Finisher = 5,
         PickupLoot = 6,
         Ping = 7,
+        ItemCommand = 8,
+        UpgradeItem = 9,
+        ApplyOption = 10,
+        AllocateAttributes = 11,
+        TalkToNpc = 12,
+        QuestCommand = 13,
+        ActivateAwakening = 14,
 
         // Servidor → cliente
         Welcome = 100,
@@ -30,6 +37,10 @@ namespace Game.Shared.Net
         Pong = 112,
         AreaWarning = 113,
         Inventory = 114,
+        CharacterSheet = 115,
+        QuestState = 116,
+        NpcDialog = 117,
+        UpgradeResult = 118,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -42,7 +53,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 3;
+        public const int Version = 4;
         public const int DefaultPort = 7777;
     }
 
@@ -564,13 +575,21 @@ namespace Game.Shared.Net
         };
     }
 
-    /// <summary>Uma pilha de itens no inventário.</summary>
+    /// <summary>Um item (ou pilha) num lugar: bolsa, equipamento ou armazém.</summary>
     public struct InventoryStack
     {
         public string ItemId;
         public string Name;
         public byte Rarity;
         public int Quantity;
+        public ItemContainerKind Container;
+        public ushort Slot;
+        public long Uid;
+        public byte Upgrade;
+        public byte PityFails;
+        public byte PityLevel;
+        public bool RegainGuaranteed;
+        public string OptionId;
     }
 
     /// <summary>Inventário completo do jogador segundo o servidor (ao entrar e sempre que muda).</summary>
@@ -588,6 +607,14 @@ namespace Game.Shared.Net
                 w.WriteString(item.Name);
                 w.WriteByte(item.Rarity);
                 w.WriteInt(item.Quantity);
+                w.WriteByte((byte)item.Container);
+                w.WriteUShort(item.Slot);
+                w.WriteLong(item.Uid);
+                w.WriteByte(item.Upgrade);
+                w.WriteByte(item.PityFails);
+                w.WriteByte(item.PityLevel);
+                w.WriteBool(item.RegainGuaranteed);
+                w.WriteString(item.OptionId);
             }
         }
 
@@ -600,6 +627,9 @@ namespace Game.Shared.Net
                 inventory.Items.Add(new InventoryStack
                 {
                     ItemId = r.ReadString(), Name = r.ReadString(), Rarity = r.ReadByte(), Quantity = r.ReadInt(),
+                    Container = (ItemContainerKind)r.ReadByte(), Slot = r.ReadUShort(), Uid = r.ReadLong(),
+                    Upgrade = r.ReadByte(), PityFails = r.ReadByte(), PityLevel = r.ReadByte(),
+                    RegainGuaranteed = r.ReadBool(), OptionId = r.ReadString(),
                 });
             }
             return inventory;
@@ -645,6 +675,17 @@ namespace Game.Shared.Net
                 MessageType.Pong => Pong.Read(reader),
                 MessageType.AreaWarning => AreaWarning.Read(reader),
                 MessageType.Inventory => Inventory.Read(reader),
+                MessageType.ItemCommand => ItemCommand.Read(reader),
+                MessageType.UpgradeItem => UpgradeItem.Read(reader),
+                MessageType.ApplyOption => ApplyOption.Read(reader),
+                MessageType.AllocateAttributes => AllocateAttributes.Read(reader),
+                MessageType.TalkToNpc => TalkToNpc.Read(reader),
+                MessageType.QuestCommand => QuestCommand.Read(reader),
+                MessageType.ActivateAwakening => ActivateAwakening.Read(reader),
+                MessageType.CharacterSheet => CharacterSheet.Read(reader),
+                MessageType.QuestState => QuestState.Read(reader),
+                MessageType.NpcDialog => NpcDialog.Read(reader),
+                MessageType.UpgradeResult => UpgradeResult.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

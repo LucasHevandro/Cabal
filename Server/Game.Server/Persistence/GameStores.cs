@@ -1,5 +1,6 @@
 using Game.Shared.Accounts;
-using Game.Shared.Loot;
+using Game.Shared.Items;
+using Game.Shared.Net;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -77,7 +78,10 @@ public sealed class EfGameStore : IGameStore
             AccountId = accountId, Name = name.Trim(), NameKey = AccountRules.NameKey(name), ClassId = (int)characterClass,
             Level = initial.Level, Xp = initial.Xp, Alz = initial.Alz, PositionX = initial.X, PositionZ = initial.Z,
             Hp = initial.Hp, Mp = initial.Mp, Sp = initial.Sp, CreatedAt = now, SavedAt = now,
+            Strength = initial.Attributes.Strength, Dexterity = initial.Attributes.Dexterity,
+            Intelligence = initial.Attributes.Intelligence, AwakeningGauge = initial.AwakeningGauge,
         };
+        foreach (var item in initial.Items) character.Items.Add(ToEntity(item, 0));
         db.Characters.Add(character);
         try
         {
@@ -98,14 +102,16 @@ public sealed class EfGameStore : IGameStore
     public async Task<CharacterRecord?> LoadCharacterAsync(int characterId)
     {
         await using var db = await _factory.CreateDbContextAsync();
-        var character = await db.Characters.AsNoTracking().Include(c => c.Inventory).FirstOrDefaultAsync(c => c.Id == characterId);
+        var character = await db.Characters.AsNoTracking().Include(c => c.Items).Include(c => c.Quests).AsSplitQuery()
+            .FirstOrDefaultAsync(c => c.Id == characterId);
         return character == null ? null : ToRecord(character);
     }
 
     public async Task SaveCharacterAsync(CharacterSnapshot snapshot, IReadOnlyList<ItemLogEntry> logs)
     {
         await using var db = await _factory.CreateDbContextAsync();
-        var character = await db.Characters.Include(c => c.Inventory).FirstOrDefaultAsync(c => c.Id == snapshot.CharacterId);
+        var character = await db.Characters.Include(c => c.Items).Include(c => c.Quests).AsSplitQuery()
+            .FirstOrDefaultAsync(c => c.Id == snapshot.CharacterId);
         if (character == null) return;
 
         character.Level = snapshot.Level;
@@ -116,27 +122,31 @@ public sealed class EfGameStore : IGameStore
         character.Hp = snapshot.Hp;
         character.Mp = snapshot.Mp;
         character.Sp = snapshot.Sp;
+        character.Strength = snapshot.Attributes.Strength;
+        character.Dexterity = snapshot.Attributes.Dexterity;
+        character.Intelligence = snapshot.Attributes.Intelligence;
+        character.AwakeningGauge = snapshot.AwakeningGauge;
         character.SavedAt = DateTimeOffset.UtcNow;
 
-        // Inventário: o servidor é a fonte da verdade; o banco fica igual ao que está na memória.
-        var wanted = snapshot.Inventory.ToDictionary(i => i.ItemId);
-        character.Inventory.RemoveAll(i => !wanted.ContainsKey(i.ItemId));
-        foreach (var entry in snapshot.Inventory)
+        // Itens e missões: o servidor é a fonte da verdade; o banco fica igual ao que está na memória.
+        // Compara pelo id único do item (atualiza, remove o que sumiu, cria o que é novo).
+        var wanted = snapshot.Items.ToDictionary(i => i.Uid);
+        character.Items.RemoveAll(i => !wanted.ContainsKey(i.Uid));
+        var existing = character.Items.ToDictionary(i => i.Uid);
+        foreach (var item in snapshot.Items)
         {
-            var row = character.Inventory.FirstOrDefault(i => i.ItemId == entry.ItemId);
-            if (row == null)
-            {
-                character.Inventory.Add(new InventoryItemEntity
-                {
-                    CharacterId = character.Id, ItemId = entry.ItemId, Name = entry.Name, Rarity = (int)entry.Rarity, Quantity = entry.Quantity,
-                });
-            }
-            else
-            {
-                row.Quantity = entry.Quantity;
-                row.Name = entry.Name;
-                row.Rarity = (int)entry.Rarity;
-            }
+            if (existing.TryGetValue(item.Uid, out var row)) Copy(item, row);
+            else character.Items.Add(ToEntity(item, character.Id));
+        }
+
+        var quests = snapshot.Quests.ToDictionary(q => q.QuestId);
+        character.Quests.RemoveAll(q => !quests.ContainsKey(q.QuestId));
+        foreach (var quest in snapshot.Quests)
+        {
+            var row = character.Quests.FirstOrDefault(q => q.QuestId == quest.QuestId);
+            if (row == null) character.Quests.Add(row = new CharacterQuestEntity { CharacterId = character.Id, QuestId = quest.QuestId });
+            row.Completed = quest.Completed;
+            row.Counts = string.Join(",", quest.Counts);
         }
 
         foreach (var log in logs)
@@ -163,10 +173,44 @@ public sealed class EfGameStore : IGameStore
             .ToListAsync();
     }
 
+    public async Task<long> MaxItemUidAsync()
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.Items.MaxAsync(i => (long?)i.Uid) ?? 0;
+    }
+
     private static CharacterRecord ToRecord(CharacterEntity c) => new(
         c.Id, c.AccountId, c.Name, (CharacterClass)c.ClassId, c.Level, c.Xp, c.Alz, c.PositionX, c.PositionZ,
         c.Hp, c.Mp, c.Sp,
-        c.Inventory.Select(i => new InventoryEntry(i.ItemId, i.Name, (ItemRarity)i.Rarity, i.Quantity)).ToList());
+        c.Items.OrderBy(i => i.Uid).Select(i => new ItemRecord(i.Uid, (ItemContainerKind)i.Container, i.Slot, i.ItemId, i.Quantity,
+            i.Upgrade, i.PityFails, i.PityLevel, i.RegainGuaranteed, i.OptionId)).ToList(),
+        new Attributes { Strength = c.Strength, Dexterity = c.Dexterity, Intelligence = c.Intelligence },
+        c.AwakeningGauge,
+        c.Quests.Select(q => new QuestRecord(q.QuestId, q.Completed, ParseCounts(q.Counts))).ToList());
+
+    private static int[] ParseCounts(string counts) => string.IsNullOrEmpty(counts)
+        ? Array.Empty<int>()
+        : counts.Split(',').Select(c => int.TryParse(c, out var n) ? n : 0).ToArray();
+
+    private static ItemInstanceEntity ToEntity(ItemRecord item, int characterId)
+    {
+        var row = new ItemInstanceEntity { Uid = item.Uid, CharacterId = characterId };
+        Copy(item, row);
+        return row;
+    }
+
+    private static void Copy(ItemRecord item, ItemInstanceEntity row)
+    {
+        row.Container = (int)item.Container;
+        row.Slot = item.Slot;
+        row.ItemId = item.ItemId;
+        row.Quantity = item.Quantity;
+        row.Upgrade = item.Upgrade;
+        row.PityFails = item.PityFails;
+        row.PityLevel = item.PityLevel;
+        row.RegainGuaranteed = item.RegainGuaranteed;
+        row.OptionId = item.OptionId ?? "";
+    }
 
     private static bool IsUniqueViolation(DbUpdateException ex) =>
         ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
@@ -248,7 +292,8 @@ public sealed class InMemoryGameStore : IGameStore
             _characters[s.CharacterId] = c with
             {
                 Level = s.Level, Xp = s.Xp, Alz = s.Alz, X = s.X, Z = s.Z, Hp = s.Hp, Mp = s.Mp, Sp = s.Sp,
-                Inventory = s.Inventory.ToList(),
+                Items = s.Items.ToList(), Attributes = s.Attributes, AwakeningGauge = s.AwakeningGauge,
+                Quests = s.Quests.Select(q => q with { Counts = q.Counts.ToArray() }).ToList(),
             };
             _log.AddRange(logs);
             SaveCount++;
@@ -263,5 +308,10 @@ public sealed class InMemoryGameStore : IGameStore
             IReadOnlyList<ItemLogEntry> list = _log.Where(l => l.CharacterId == characterId).Reverse().Take(max).ToList();
             return Task.FromResult(list);
         }
+    }
+
+    public Task<long> MaxItemUidAsync()
+    {
+        lock (_lock) return Task.FromResult(_characters.Values.SelectMany(c => c.Items).Select(i => i.Uid).DefaultIfEmpty(0).Max());
     }
 }

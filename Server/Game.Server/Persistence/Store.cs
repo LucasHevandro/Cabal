@@ -1,23 +1,38 @@
 using Game.Shared.Accounts;
-using Game.Shared.Loot;
+using Game.Shared.Items;
+using Game.Shared.Net;
 
 namespace Game.Server.Persistence;
 
 public sealed record AccountRecord(int Id, string Name, string PasswordHash);
 
-public sealed record InventoryEntry(string ItemId, string Name, ItemRarity Rarity, int Quantity);
+/// <summary>Um item guardado: onde está (bolsa, vestido ou armazém), quantos e o estado da melhoria.</summary>
+public sealed record ItemRecord(
+    long Uid, ItemContainerKind Container, int Slot, string ItemId, int Quantity,
+    int Upgrade = 0, int PityFails = 0, int PityLevel = 0, bool RegainGuaranteed = false, string OptionId = "");
+
+/// <summary>Missão aceita (com contadores) ou concluída.</summary>
+public sealed record QuestRecord(string QuestId, bool Completed, IReadOnlyList<int> Counts);
 
 public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level);
 
 /// <summary>Personagem como está no banco.</summary>
 public sealed record CharacterRecord(
     int Id, int AccountId, string Name, CharacterClass Class, int Level, int Xp, long Alz,
-    float X, float Z, int Hp, int Mp, int Sp, IReadOnlyList<InventoryEntry> Inventory);
+    float X, float Z, int Hp, int Mp, int Sp, IReadOnlyList<ItemRecord> Items,
+    Attributes Attributes = default, int AwakeningGauge = 0, IReadOnlyList<QuestRecord>? Quests = null)
+{
+    public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
+}
 
 /// <summary>Estado do personagem para salvar (o que muda durante o jogo).</summary>
 public sealed record CharacterSnapshot(
     int CharacterId, int Level, int Xp, long Alz, float X, float Z, int Hp, int Mp, int Sp,
-    IReadOnlyList<InventoryEntry> Inventory);
+    IReadOnlyList<ItemRecord> Items, Attributes Attributes = default, int AwakeningGauge = 0,
+    IReadOnlyList<QuestRecord>? Quests = null)
+{
+    public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
+}
 
 /// <summary>Movimento de item ou Alz, para auditoria e suporte (quem ganhou o quê, quando).</summary>
 public sealed record ItemLogEntry(int CharacterId, DateTimeOffset At, string Kind, string? ItemId, int Quantity, long AlzDelta, string Details);
@@ -56,4 +71,20 @@ public interface IGameStore
 
     /// <summary>Registros de itens de um personagem, mais recentes primeiro (suporte e testes).</summary>
     Task<IReadOnlyList<ItemLogEntry>> ItemLogAsync(int characterId, int max = 100);
+
+    /// <summary>Maior id único de item já guardado (o servidor continua a contar daí).</summary>
+    Task<long> MaxItemUidAsync();
+}
+
+/// <summary>
+/// Dá ids únicos de item para o servidor inteiro (mundo e criação de personagem). Começa depois do maior id do banco.
+/// Seguro entre threads.
+/// </summary>
+public sealed class ItemUidAllocator
+{
+    private long _last;
+
+    public ItemUidAllocator(long lastUsed = 0) => _last = lastUsed;
+
+    public long Next() => Interlocked.Increment(ref _last);
 }

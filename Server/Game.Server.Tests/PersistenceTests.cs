@@ -4,7 +4,7 @@ using Game.Server.Net;
 using Game.Server.Persistence;
 using Game.Server.World;
 using Game.Shared.Accounts;
-using Game.Shared.Loot;
+using Game.Shared.Items;
 using Game.Shared.Net;
 
 namespace Game.Server.Tests;
@@ -82,7 +82,7 @@ public class PersistenceTests
         var (token, characterId) = await f.AccountWithCharacterAsync();
         // Estado salvo antes: nível 5, 1234 Alz e um item.
         await f.Store.SaveCharacterAsync(new CharacterSnapshot(characterId, 5, 40, 1234, 3, 4, 100, 50, 900,
-            new[] { new InventoryEntry("pele", "Pele", ItemRarity.Common, 7) }), Array.Empty<ItemLogEntry>());
+            new[] { new ItemRecord(500, ItemContainerKind.Bag, 3, "pelo_macio", 7) }), Array.Empty<ItemLogEntry>());
 
         using (var client = new TestClient())
         {
@@ -99,7 +99,8 @@ public class PersistenceTests
         var saved = await f.Store.LoadCharacterAsync(characterId);
         Assert.True(f.Store.SaveCount >= 2);
         Assert.Equal((5, 1234L), (saved!.Level, saved.Alz));
-        Assert.Equal(7, Assert.Single(saved.Inventory).Quantity);
+        var pelt = Assert.Single(saved.Items, i => i.ItemId == "pelo_macio");
+        Assert.Equal((500L, 3, 7), (pelt.Uid, pelt.Slot, pelt.Quantity)); // mesmo item, mesma posição
     }
 
     [Fact]
@@ -179,13 +180,13 @@ public class SaveAndLogTests
         var world = new GameWorld(new Outbox(), Array.Empty<Game.Shared.World.SpawnDefinition>());
         var record = AuthService.InitialCharacter() with { Id = 9, AccountId = 1, Name = "Ana" };
         var player = world.AddPlayer("", 0, null, record);
-        player.Inventory["pele"] = ("Pele", ItemRarity.Common, 2);
-        player.PendingLogs.Add(new ItemLogEntry(9, DateTimeOffset.UtcNow, "coleta", "pele", 2, 0, "teste"));
+        player.Bag.TryAdd("pelo_macio", 2, () => 77);
+        player.PendingLogs.Add(new ItemLogEntry(9, DateTimeOffset.UtcNow, "coleta", "pelo_macio", 2, 0, "teste"));
 
         var (snapshot, logs) = world.CaptureForSave(player);
 
         Assert.Equal(9, snapshot.CharacterId);
-        Assert.Equal(2, Assert.Single(snapshot.Inventory).Quantity);
+        Assert.Equal(2, Assert.Single(snapshot.Items, i => i.Uid == 77).Quantity);
         Assert.Single(logs);
         Assert.Empty(player.PendingLogs); // não repete no próximo salvamento
         Assert.Equal("Ana", player.Name);
@@ -235,6 +236,7 @@ public class SaveAndLogTests
         public Task<CharacterRecord> CreateCharacterAsync(int id, string n, CharacterClass c, CharacterRecord i) => _inner.CreateCharacterAsync(id, n, c, i);
         public Task<CharacterRecord?> LoadCharacterAsync(int id) => _inner.LoadCharacterAsync(id);
         public Task<IReadOnlyList<ItemLogEntry>> ItemLogAsync(int id, int max = 100) => _inner.ItemLogAsync(id, max);
+        public Task<long> MaxItemUidAsync() => _inner.MaxItemUidAsync();
     }
 
     [Fact]
@@ -244,7 +246,7 @@ public class SaveAndLogTests
         var character = await store.CreateCharacterAsync(1, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
         await using var saver = new CharacterSaver(store);
 
-        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 500, 0, 0, 100, 100, 100, Array.Empty<InventoryEntry>()),
+        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 500, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()),
             new List<ItemLogEntry> { new(character.Id, DateTimeOffset.UtcNow, "alz_monstro", null, 0, 500, "teste") });
         await saver.FlushAndStopAsync(TimeSpan.FromSeconds(10));
 

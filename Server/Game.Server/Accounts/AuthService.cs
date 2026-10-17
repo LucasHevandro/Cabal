@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Game.Server.Persistence;
 using Game.Shared.Accounts;
+using Game.Shared.Items;
+using Game.Shared.Net;
 using Game.Shared.Progression;
 using Game.Shared.World;
 
@@ -33,8 +35,13 @@ public sealed class AuthService
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset LockedUntil)> _throttle = new();
     private readonly string _dummyHash;
 
-    public AuthService(IGameStore store, PasswordHasher hasher, SessionTokens tokens, Func<DateTimeOffset>? now = null)
+    /// <summary>Ids únicos de item do servidor (o mundo usa o mesmo contador).</summary>
+    public ItemUidAllocator Uids { get; }
+
+    public AuthService(IGameStore store, PasswordHasher hasher, SessionTokens tokens, Func<DateTimeOffset>? now = null,
+        ItemUidAllocator? uids = null)
     {
+        Uids = uids ?? new ItemUidAllocator();
         _store = store;
         _hasher = hasher;
         _tokens = tokens;
@@ -107,7 +114,8 @@ public sealed class AuthService
 
         try
         {
-            var created = await _store.CreateCharacterAsync(accountId, request.Name, (CharacterClass)request.ClassId, InitialCharacter());
+            var created = await _store.CreateCharacterAsync(accountId, request.Name, (CharacterClass)request.ClassId,
+                InitialCharacter((CharacterClass)request.ClassId, Uids.Next));
             return AuthResult<CharacterSummary>.Success(new CharacterSummary
             {
                 Id = created.Id, Name = created.Name, ClassId = (int)created.Class, Level = created.Level,
@@ -129,11 +137,23 @@ public sealed class AuthService
     }
 
     /// <summary>Valores de um personagem novo: nível 1 com a vida e a mana cheias, na vila.</summary>
-    public static CharacterRecord InitialCharacter()
+    /// <summary>
+    /// Personagem novo: atributos iniciais da classe e, com <paramref name="newUid"/>, a arma inicial vestida e
+    /// algumas poções na bolsa.
+    /// </summary>
+    public static CharacterRecord InitialCharacter(CharacterClass characterClass = CharacterClass.Blade, Func<long>? newUid = null)
     {
-        var stats = CharacterStats.ForLevel(1);
-        return new CharacterRecord(0, 0, "", CharacterClass.Blade, 1, 0, 0, WorldContent.PlayerSpawnX, WorldContent.PlayerSpawnZ,
-            stats.MaxHp, stats.MaxMp, PlayerRules.StartingSp, Array.Empty<InventoryEntry>());
+        var attributes = Attributes.StartingFor(characterClass);
+        var stats = StatCalculator.Compute(1, attributes, new Equipment());
+        var items = new List<ItemRecord>();
+        if (newUid != null)
+        {
+            var weapon = characterClass == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
+            items.Add(new ItemRecord(newUid(), ItemContainerKind.Equipment, (int)EquipSlot.Weapon, weapon, 1));
+            items.Add(new ItemRecord(newUid(), ItemContainerKind.Bag, 0, "pocao_hp_p", 5));
+        }
+        return new CharacterRecord(0, 0, "", characterClass, 1, 0, 0, WorldContent.PlayerSpawnX, WorldContent.PlayerSpawnZ,
+            stats.MaxHp, stats.MaxMp, PlayerRules.StartingSp, items, attributes);
     }
 
     private void RegisterFailure(string name, DateTimeOffset now)

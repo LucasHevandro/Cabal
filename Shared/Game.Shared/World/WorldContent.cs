@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Shared.Combat;
+using Game.Shared.Items;
 using Game.Shared.Loot;
 using Game.Shared.Monsters;
 
@@ -73,7 +74,8 @@ namespace Game.Shared.World
                 XpReward = 30, RespawnSeconds = 6,
                 Drops = new DropTable(3, 8,
                     new DropEntry("pelo_macio", "Pelo macio", ItemRarity.Common, 0.6, 1, 2),
-                    new DropEntry("pocao_hp_p", "Poção de vida (P)", ItemRarity.Common, 0.15)),
+                    new DropEntry("pocao_hp_p", "Poção de vida (P)", ItemRarity.Common, 0.15),
+                    Equip("armadura_ferro", 0.02), Equip("anel_ferro", 0.01)),
             }),
             Spawn(10, 46, 4, 7, new MonsterData
             {
@@ -83,7 +85,9 @@ namespace Game.Shared.World
                 Drops = new DropTable(10, 25,
                     new DropEntry("pele_lobo", "Pele de lobo", ItemRarity.Common, 0.5, 1, 2),
                     new DropEntry("presa_lobo", "Presa de lobo", ItemRarity.Uncommon, 0.15),
-                    new DropEntry("nucleo_baixo", "Núcleo de melhoria (baixo)", ItemRarity.Rare, 0.03)),
+                    new DropEntry("nucleo_baixo", "Núcleo de melhoria (baixo)", ItemRarity.Rare, 0.03),
+                    Equip("luvas_ferro", 0.03), Equip("botas_ferro", 0.03), Equip("espada_ferro", 0.02),
+                    Equip("cajado_ferro", 0.02), Equip("pedra_vigor", 0.01)),
             }),
 
             // Mata Sombria (Nv 10–20)
@@ -94,7 +98,8 @@ namespace Game.Shared.World
                 AggroRadius = 9, XpReward = 200, RespawnSeconds = 10,
                 Drops = new DropTable(30, 70,
                     new DropEntry("couro_javali", "Couro de javali", ItemRarity.Common, 0.5, 1, 3),
-                    new DropEntry("nucleo_baixo", "Núcleo de melhoria (baixo)", ItemRarity.Rare, 0.06)),
+                    new DropEntry("nucleo_baixo", "Núcleo de melhoria (baixo)", ItemRarity.Rare, 0.06),
+                    Equip("armadura_aco_negro", 0.02), Equip("botas_aco_negro", 0.03), Equip("pedra_furia", 0.01)),
             }),
             Spawn(54, 92, 4, 8, new MonsterData
             {
@@ -104,7 +109,9 @@ namespace Game.Shared.World
                 Drops = new DropTable(40, 90,
                     new DropEntry("seda", "Seda de aranha", ItemRarity.Common, 0.5, 1, 2),
                     new DropEntry("veneno", "Glândula de veneno", ItemRarity.Uncommon, 0.2),
-                    new DropEntry("nucleo_medio", "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.04)),
+                    new DropEntry("nucleo_medio", "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.04),
+                    Equip("luvas_aco_negro", 0.03), Equip("anel_aco_negro", 0.02), Equip("espada_aco_negro", 0.015),
+                    Equip("cajado_aco_negro", 0.015)),
             }),
 
             // Ruínas Esquecidas (Nv 20–30)
@@ -115,7 +122,8 @@ namespace Game.Shared.World
                 AttackWindupSeconds = 1.0f, MoveSpeed = 2.2f, BodyRadius = 0.8f, AggroRadius = 7, XpReward = 700, RespawnSeconds = 15,
                 Drops = new DropTable(80, 160,
                     new DropEntry("fragmento_pedra", "Fragmento de pedra viva", ItemRarity.Common, 0.6, 1, 3),
-                    new DropEntry("nucleo_medio", "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.08)),
+                    new DropEntry("nucleo_medio", "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.08),
+                    Equip("armadura_astralita", 0.015), Equip("botas_astralita", 0.02), Equip("pedra_precisao", 0.01)),
             }),
             Spawn(-53, 133, 4, 8, new MonsterData
             {
@@ -124,7 +132,9 @@ namespace Game.Shared.World
                 AttackWindupSeconds = 0.45f, MoveSpeed = 5.5f, AggroRadius = 11, XpReward = 900, RespawnSeconds = 12,
                 Drops = new DropTable(100, 200,
                     new DropEntry("essencia", "Essência espectral", ItemRarity.Uncommon, 0.4),
-                    new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.05)),
+                    new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.05),
+                    Equip("luvas_astralita", 0.02), Equip("anel_astralita", 0.015), Equip("espada_astralita", 0.01),
+                    Equip("cajado_astralita", 0.01)),
             }),
 
             // Chefe de campo
@@ -139,10 +149,18 @@ namespace Game.Shared.World
                     LeashRadius = 30, WanderRadius = 0, XpReward = 15000, RespawnSeconds = 120,
                     Drops = new DropTable(2000, 4000,
                         new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.6, 1, 3),
-                        new DropEntry("fragmento_guardiao", "Fragmento do Guardião", ItemRarity.Epic, 0.25)),
+                        new DropEntry("fragmento_guardiao", "Fragmento do Guardião", ItemRarity.Epic, 0.25),
+                        Equip("espada_astralita", 0.25), Equip("cajado_astralita", 0.25), Equip("armadura_astralita", 0.3)),
                 },
             },
         };
+
+        /// <summary>Drop de um item do catálogo (nome e raridade vêm dele).</summary>
+        private static DropEntry Equip(string itemId, double chance)
+        {
+            var item = ItemCatalog.Get(itemId);
+            return new DropEntry(itemId, item.Name, item.Rarity, chance);
+        }
 
         private static SpawnDefinition Spawn(float x, float z, int count, float radius, MonsterData data) =>
             new SpawnDefinition { CenterX = x, CenterZ = z, Count = count, Radius = radius, Data = data };

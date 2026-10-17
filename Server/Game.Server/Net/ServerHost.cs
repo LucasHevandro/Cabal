@@ -78,7 +78,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         _saver = saver;
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
-        World = new GameWorld(this);
+        World = new GameWorld(this, uids: auth?.Uids);
     }
 
     private bool SimulatingLatency => _options.SimulatedLatencyMs > 0 || _options.SimulatedJitterMs > 0;

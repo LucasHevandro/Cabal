@@ -1,6 +1,8 @@
 using Game.Server.Persistence;
+using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Core;
+using Game.Shared.Items;
 using Game.Shared.Loot;
 using Game.Shared.Monsters;
 using Game.Shared.Progression;
@@ -8,11 +10,14 @@ using Game.Shared.World;
 
 namespace Game.Server.World;
 
-/// <summary>Jogador conectado, do ponto de vista do servidor (que decide tudo de combate).</summary>
+/// <summary>Jogador conectado, do ponto de vista do servidor (que decide tudo de combate, itens e missões).</summary>
 public sealed class ServerPlayer
 {
     /// <summary>Folga de timing do combo no servidor, além da compensação de latência.</summary>
     public const double ComboGraceSeconds = 0.08;
+
+    /// <summary>Intervalo mínimo entre poções.</summary>
+    public const double PotionCooldownSeconds = 1.0;
 
     public int Id { get; init; }
     public string Name { get; init; } = "";
@@ -20,25 +25,45 @@ public sealed class ServerPlayer
     /// <summary>Id do personagem no banco; 0 = convidado (testes e bots, não é salvo).</summary>
     public int CharacterId { get; init; }
 
+    /// <summary>
+    /// Convidado é para testes e bots: tem tudo liberado (skills e combo) sem precisar das missões, e não é salvo.
+    /// </summary>
+    public bool IsGuest => CharacterId == 0;
+
+    public CharacterClass Class { get; }
+
     public required MovementValidator Movement { get; init; }
     public float Yaw { get; set; }
     public uint LastMoveSequence { get; set; }
 
     public CharacterProgress Progress { get; set; } = new();
-    public CharacterStats Stats => CharacterStats.ForLevel(Progress.Level);
+    public Attributes Attributes { get; set; }
+
+    /// <summary>Valores finais (nível + atributos + equipamento). Recalcular com <see cref="RecalculateStats"/>.</summary>
+    public StatBlock Stats { get; private set; }
+
     public ResourcePool Hp { get; }
     public ResourcePool Mp { get; }
     public ResourcePool Sp { get; } = new(PlayerRules.MaxSp, PlayerRules.StartingSp);
-    public List<SkillData> Skills { get; } = PlayerRules.StarterSkills();
+
+    /// <summary>Skills da classe, na ordem da barra (o <c>Slot</c> do <c>UseSkill</c> é o índice aqui).</summary>
+    public IReadOnlyList<ClassSkill> ClassSkills { get; }
+    public IReadOnlyList<SkillData> Skills { get; }
     public SkillCooldowns Cooldowns { get; }
-    public ComboSession Combo { get; } = new(new ComboConfig { GraceSeconds = ComboGraceSeconds });
+    public ComboSession Combo { get; }
+    public AwakeningState Awakening { get; } = new();
     public long Alz { get; set; }
-    public Dictionary<string, (string Name, ItemRarity Rarity, int Quantity)> Inventory { get; } = new();
+
+    public ItemContainer Bag { get; } = new();
+    public ItemContainer Warehouse { get; } = new();
+    public Equipment Equipment { get; } = new();
+    public QuestLog Quests { get; } = new();
 
     public bool IsDead { get; set; }
     public double RespawnAt { get; set; }
     public double DodgeUntil { get; set; }
     public double NextDodgeAt { get; set; }
+    public double NextPotionAt { get; set; }
     public float MpRegenCarry { get; set; }
 
     /// <summary>Movimentos de item e Alz desde o último salvamento (vão junto no próximo).</summary>
@@ -48,22 +73,49 @@ public sealed class ServerPlayer
     public HashSet<int> KnownEntities { get; } = new();
     public HashSet<int> KnownLoot { get; } = new();
 
-    /// <summary>Precisa reenviar <c>PlayerStats</c> / <c>ComboState</c> no próximo tick.</summary>
+    /// <summary>Precisa reenviar a mensagem correspondente no próximo tick.</summary>
     public bool StatsDirty { get; set; } = true;
     public bool InventoryDirty { get; set; } = true;
     public bool ComboDirty { get; set; } = true;
+    public bool SheetDirty { get; set; } = true;
+    public bool QuestsDirty { get; set; } = true;
 
-    public ServerPlayer()
+    public ServerPlayer(CharacterClass characterClass = CharacterClass.Blade)
     {
-        var stats = CharacterStats.ForLevel(1);
-        Hp = new ResourcePool(stats.MaxHp);
-        Mp = new ResourcePool(stats.MaxMp);
+        Class = characterClass;
+        Attributes = Attributes.StartingFor(characterClass);
+        ClassSkills = ClassCatalog.SkillsFor(characterClass);
+        Skills = ClassSkills.Select(s => s.Skill).ToList();
         Cooldowns = new SkillCooldowns(Skills.Count);
+        Combo = new ComboSession(ClassCatalog.ComboConfigFor(characterClass, ComboGraceSeconds));
+        Stats = StatCalculator.Compute(1, Attributes, Equipment);
+        Hp = new ResourcePool(Stats.MaxHp);
+        Mp = new ResourcePool(Stats.MaxMp);
     }
 
     public float X => Movement.X;
     public float Z => Movement.Z;
     public bool IsDodging(double now) => now < DodgeUntil;
+
+    /// <summary>Missão concluída (convidado conta tudo como concluído).</summary>
+    public bool QuestCompleted(string questId) => IsGuest || Quests.IsCompleted(questId);
+
+    public bool SkillUnlocked(int slot) =>
+        IsGuest || (slot >= 0 && slot < ClassSkills.Count && ClassSkills[slot].IsUnlocked(Progress.Level, QuestCompleted));
+
+    public bool ComboUnlocked => ClassCatalog.ComboUnlocked(QuestCompleted);
+
+    public int FreeAttributePoints => Attributes.FreePoints(Progress.Level, Class, Attributes);
+
+    /// <summary>Recalcula os valores finais e ajusta os máximos de vida e MP (avisa o cliente).</summary>
+    public void RecalculateStats()
+    {
+        Stats = StatCalculator.Compute(Progress.Level, Attributes, Equipment);
+        Hp.SetMax(Stats.MaxHp);
+        Mp.SetMax(Stats.MaxMp);
+        StatsDirty = true;
+        SheetDirty = true;
+    }
 }
 
 /// <summary>Monstro simulado no servidor com a IA do Shared.</summary>
