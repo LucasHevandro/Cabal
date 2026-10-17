@@ -36,6 +36,8 @@ namespace Game.Client.Net
             if (GetComponent<UI.GameWindows>() == null) gameObject.AddComponent<UI.GameWindows>();
             // Chat e grupo.
             if (GetComponent<UI.SocialWindows>() == null) gameObject.AddComponent<UI.SocialWindows>();
+            // Mapa da dungeon (montado quando o servidor manda entrar).
+            if (GetComponent<World.DungeonView>() == null) gameObject.AddComponent<World.DungeonView>();
         }
 
         private void OnDestroy()
@@ -81,6 +83,9 @@ namespace Game.Client.Net
                 case UpgradeResult upgrade:
                     CharacterState.Apply(upgrade);
                     SoundPlayer.Play(upgrade.Outcome == 1 ? SoundId.Excellent : upgrade.Outcome == 0 ? SoundId.Error : SoundId.Miss, 0.8f, 0f);
+                    break;
+                case DungeonInfo dungeonInfo:
+                    CharacterState.Apply(dungeonInfo);
                     break;
                 case TradeState trade:
                     CharacterState.Apply(trade);

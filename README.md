@@ -83,7 +83,10 @@ R ativa o Despertar quando a barra enche. O combo de um personagem novo libera n
 as mensagens e recusa os convites daquela pessoa; a denúncia guarda o motivo e as últimas mensagens dela para a
 moderação (tabela `player_reports`). A Mercadora Lia (T perto dela) vende poções, núcleo baixo e o conjunto de
 Ferro, e compra itens (botão direito ou arraste da bolsa). Na troca, cada lado monta a oferta (botão direito na
-bolsa e botões de Alz), aperta Pronto e depois Confirmar. Grupo de até 4: quem está a até 50 m do monstro divide o XP (com bônus de 15% por membro a
+bolsa e botões de Alz), aperta Pronto e depois Confirmar. **Cripta Esquecida:** com uma Chave da Cripta por membro
+(a mercadora vende), o líder fala com a Guardiã Selene e entra com o grupo: três salas com portões que só abrem
+com a sala limpa, o Senhor da Cripta (escudo com servos e golpe no chão avisado), 15 minutos, medalha S/A/B pelo
+tempo e pelo combo máximo, baú com sorteios por medalha e ranking dos melhores tempos no portal. Grupo de até 4: quem está a até 50 m do monstro divide o XP (com bônus de 15% por membro a
 mais) e o Alz, conta a missão e pode pegar o drop. O servidor filtra palavrões e limita mensagens seguidas.
 
 **Teste do social com um cliente:** um bot com conta convida o personagem do cliente; o teste aceita, conversa,
@@ -93,6 +96,16 @@ conferindo cada passo. Use um personagem novo (o teste vende 4 das 5 poções in
 ```bash
 dotnet run --project Tools/Game.Bots -- --port 7777 --count 3 --seconds 110 --accounts --invite NomeDoPersonagem
 Client/Builds/Windows/Prototipo.exe -server 127.0.0.1:7777 -autologin conta senha12345 -onlinetest saida-online -onlinesocial
+```
+
+**Teste da dungeon:** servidor com `--guests --dungeon-test` (Cripta fácil e sem nível mínimo). O cliente entra
+sozinho, limpa as salas, derruba o chefe e volta ao portal; os bots fazem o mesmo em grupos de 4, cada grupo na
+sua cópia.
+
+```bash
+dotnet run --project Server/Game.Server -- --port 7777 --db memory --guests --dungeon-test
+Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinedungeon
+dotnet run --project Tools/Game.Bots -- --port 7777 --count 8 --seconds 300 --dungeon
 ```
 
 `--party` nos bots forma grupos de 4 entre eles e conversa no chat (teste de carga do social). `--accounts` faz
@@ -123,6 +136,7 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 Fase 6 — Conteúdo e social (em andamento): grupo de até 4 com XP e drop divididos, chat (mapa, grupo, sussurro,
 sistema) com filtro e limite de mensagens, lista de amigos, bloquear e denunciar, loja da mercadora e troca com
-dupla confirmação (economia revisada em `Docs/balanceamento.md`). Próximas partes: dungeon; duelo e arena 5v5.
+dupla confirmação (economia revisada em `Docs/balanceamento.md`) e a dungeon Cripta Esquecida em instância por
+grupo, com medalha, baú e ranking. Próxima parte: duelo e arena 5v5.
 Fases 1 a 5 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30) concluídas. Veja o Backlog do
 MVP no GDD.

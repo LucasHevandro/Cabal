@@ -94,3 +94,26 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
 - **Risco conhecido:** os dois personagens são salvos em transações separadas. Se o servidor cair entre os dois
   salvamentos, um lado pode perder o que recebeu (nunca duplica). Revisar se aparecer em produção: salvar os dois
   juntos logo depois da troca.
+
+## 2026-10-17 — Dungeon em instância
+
+- **Cada cópia da dungeon é uma faixa própria do mesmo mundo**, longe do mapa aberto (a partir de Z = 1000, uma a
+  cada 400 m), e não um mundo separado. Visão, combate, grupo, troca e chat continuam funcionando por distância, sem
+  código novo para "qual instância". O servidor cria os monstros da cópia ao entrar e apaga tudo (monstros e itens no
+  chão) quando o último jogador sai, quando o tempo acaba ou 90 s depois da vitória.
+- **Entrada:** o líder fala com a Guardiã Selene, todo o grupo perto do portal, nível 18 ou mais e uma Chave da
+  Cripta por membro (300 Alz na mercadora). Escolhemos o item barato em vez do limite diário, que exigiria guardar
+  contadores por dia.
+- **Portões:** o servidor não deixa passar do portão de uma sala que ainda tem monstros (corrige a posição). O
+  cliente também tem paredes e portões com colisão, mas quem decide é o servidor.
+- **Chefe:** escudo aos 66% e 33% da vida (fica imune até os 3 servos morrerem) e um golpe no chão a cada 9 s, avisado
+  2 s antes, onde o alvo está. Os monstros da dungeon não renascem.
+- **Medalha:** S até 8 minutos e combo máximo do grupo de 12 ou mais; A até 11 minutos; B até 15. O baú dá 3, 2 ou 1
+  sorteios por jogador, e cada um só pega os próprios itens.
+- **Ranking:** os 10 melhores tempos ficam em memória e na tabela `dungeon_runs`. Só grupos de personagens de conta
+  vão para o banco (convidados de teste não sujam o ranking).
+- **Morreu na dungeon:** renasce na entrada da cripta. Sair do jogo dentro dela salva a posição no portal.
+- **Tempo:** pela estimativa (`Tools/Game.Balance`), um grupo de 4 no nível 22 termina em cerca de 10 minutos, um
+  no nível mínimo em cerca de 12, e um grupo bom (+7, mais combo) tira S. Dupla no nível 22 não termina (cerca de 17
+  minutos): a dungeon é feita para grupo.
+- `--dungeon-test` deixa a Cripta fácil e sem nível mínimo, para bots e testes automáticos.

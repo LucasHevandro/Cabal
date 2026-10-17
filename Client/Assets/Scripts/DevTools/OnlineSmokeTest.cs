@@ -26,6 +26,7 @@ namespace Game.Client.DevTools
         private bool _fight;
         private bool _uiTour;
         private bool _social;
+        private bool _dungeon;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -43,6 +44,7 @@ namespace Game.Client.DevTools
             test._fight = Array.IndexOf(args, "-onlinefight") >= 0;
             test._uiTour = Array.IndexOf(args, "-onlineui") >= 0;
             test._social = Array.IndexOf(args, "-onlinesocial") >= 0;
+            test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0;
             DontDestroyOnLoad(test.gameObject);
         }
 
@@ -136,6 +138,18 @@ namespace Game.Client.DevTools
             {
                 var outcome = new FightOutcome();
                 yield return Social(session, outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
+            }
+
+            if (_dungeon)
+            {
+                var outcome = new FightOutcome();
+                yield return DungeonRun(session, outcome);
                 if (!outcome.Ok)
                 {
                     Finish("FALHA: " + outcome.Message);
@@ -524,6 +538,112 @@ namespace Game.Client.DevTools
             outcome.Ok = true;
             outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), " +
                               "chat, filtro, amigos, bloqueio, denúncia, loja e troca ok";
+        }
+
+        /// <summary>
+        /// Entra sozinho na Cripta pelo portal (servidor com --guests --dungeon-test, cliente convidado com chaves),
+        /// limpa as salas na ordem, derruba o chefe e confere o resultado, o ranking e a volta ao portal.
+        /// </summary>
+        private IEnumerator DungeonRun(NetworkSession session, FightOutcome outcome)
+        {
+            var combat = PlayerCombat.Local;
+            var motor = combat.GetComponent<PlayerMotor>();
+            var selector = combat.GetComponent<TargetSelector>();
+            var windows = UI.GameWindows.Instance;
+            var crypt = Shared.Dungeon.DungeonCatalog.Crypt();
+
+            yield return WalkTo(NpcCatalog.DungeonPortal);
+            windows.TalkToNearestNpc();
+            yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.DungeonPortal, 3f);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("11-portal");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            windows.EnterDungeon();
+            CharacterState.CloseDialog();
+            yield return WaitFor(() => CharacterState.Dungeon != null, 5f);
+            if (CharacterState.Dungeon == null)
+            {
+                outcome.Message = "não entrou na cripta";
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(1.5f);
+            Log($"Na cripta: origem z {CharacterState.Dungeon.OriginZ}, posição {motor.transform.position}");
+            Capture("12-cripta");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            var bossShot = false;
+            var giveUp = Time.realtimeSinceStartup + 300f;
+            while (Time.realtimeSinceStartup < giveUp && CharacterState.Dungeon is { Completed: false } state)
+            {
+                var room = crypt.Rooms[Mathf.Min(state.Room, crypt.Rooms.Count - 1)];
+                NetEntityView target = null;
+                foreach (var view in session.Views.Values)
+                {
+                    if (view.Kind != EntityKind.Monster || view.IsDead) continue;
+                    if (!room.IsBossRoom && view.transform.position.z > state.OriginZ + room.GateZ) continue;
+                    if (target == null || Distance(view, motor) < Distance(target, motor)) target = view;
+                }
+                if (target == null)
+                {
+                    // Nada à frente: anda para o meio da sala aberta.
+                    var middle = new Vector3(state.OriginX, 0, state.OriginZ + (room.StartZ + room.EndZ) / 2);
+                    var step = middle - motor.transform.position;
+                    step.y = 0;
+                    if (step.magnitude > 1f) motor.Teleport(motor.transform.position + step.normalized * Mathf.Min(step.magnitude, 6.5f * Time.deltaTime));
+                    yield return null;
+                    continue;
+                }
+                if (Distance(target, motor) > 1.8f)
+                {
+                    var direction = target.transform.position - motor.transform.position;
+                    direction.y = 0;
+                    motor.Teleport(motor.transform.position + direction.normalized * Mathf.Min(direction.magnitude - 1.7f, 6.5f * Time.deltaTime));
+                    yield return null;
+                    continue;
+                }
+                if (selector.Current != target.Target) selector.Select(target.Target);
+                if (combat.CooldownRemaining(0) <= 0) combat.RequestSkill(0);
+                else if (combat.CooldownRemaining(1) <= 0) combat.RequestSkill(1);
+                if (!bossShot && room.IsBossRoom && target.TypeId == crypt.BossId)
+                {
+                    bossShot = true;
+                    yield return new WaitForSecondsRealtime(1f);
+                    Capture("13-chefe");
+                    yield return new WaitForEndOfFrame();
+                }
+                yield return new WaitForSecondsRealtime(0.15f);
+            }
+
+            var final = CharacterState.Dungeon;
+            if (final == null || !final.Completed)
+            {
+                outcome.Message = $"não venceu a cripta (sala {(final?.Room ?? 0) + 1}, faltando {final?.MonstersLeft})";
+                yield break;
+            }
+            yield return WaitFor(() => CharacterState.DungeonRanking != null && CharacterState.DungeonRanking.Ranking.Count > 0, 3f);
+            yield return new WaitForSecondsRealtime(0.8f);
+            Capture("14-vitoria");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            var time = Shared.Dungeon.DungeonRules.FormatTime(final.ElapsedSeconds);
+            var medal = Shared.Dungeon.DungeonRules.MedalName((Shared.Dungeon.DungeonMedal)final.Medal);
+
+            session.Send(new DungeonCommand { Action = DungeonActionKind.Leave });
+            yield return WaitFor(() => CharacterState.Dungeon == null, 5f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            var portal = NpcCatalog.Find(NpcCatalog.DungeonPortal);
+            var home = new Vector3(portal.X, 0, portal.Z) - motor.transform.position;
+            home.y = 0;
+            if (CharacterState.Dungeon != null || home.magnitude > 6f)
+            {
+                outcome.Message = $"não voltou ao portal (a {home.magnitude:0} m)";
+                yield break;
+            }
+            outcome.Ok = true;
+            outcome.Message = $"cripta vencida em {time}, medalha {medal}, ranking com {CharacterState.DungeonRanking.Ranking.Count} tempo(s), de volta ao portal";
         }
 
         private static int FirstSlotOf(string itemId)

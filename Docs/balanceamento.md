@@ -132,3 +132,24 @@ Valores da Lâmina; o Arcanista fica praticamente igual.
 - O teste `Economia_fecha_positiva_em_cada_faixa_e_gasta_boa_parte` exige saldo positivo em cada faixa e um gasto
   entre 60% e 90% do que entra.
 - **Revisar** quando a dungeon (entrada e baú) e o PvP entrarem na conta.
+
+## Cripta Esquecida (2026-10-17)
+
+Estimativa do `Tools/Game.Balance`. Soma a vida dos monstros de cada sala e divide pelo dano por segundo do grupo
+(o mesmo cálculo da subida de nível). Acrescenta 12 s por grupo de monstros, 15 s por sala, e no chefe os servos dos
+dois escudos e 15% de dano perdido fugindo do golpe no chão.
+
+| Grupo | Tempo |
+|---|---:|
+| 4 no nível 22 (2 Lâminas, 2 Arcanistas) | 10:06 |
+| 4 no nível 18 (mínimo) | 12:22 |
+| 4 no nível 28 | 9:08 |
+| 2 no nível 22 | 17:37 (não termina) |
+
+- A primeira versão levava 4 minutos. A vida dos monstros da dungeon foi multiplicada por 5 (e o XP por 3), para um
+  grupo típico ficar perto de 10 minutos e a medalha S (até 8 minutos com combo de 12) pedir jogo bom.
+- O teste `Grupo_de_quatro_termina_em_menos_de_15_minutos_e_um_grupo_bom_tira_S` cobra que:
+  - o grupo típico fique entre 8 e 13 minutos;
+  - o grupo no nível mínimo termine antes do limite;
+  - um grupo bom (+7, 35% de bônus de combo) tire S.
+- **Revisar** com grupos de verdade: os 12 s por grupo de monstros são um chute.

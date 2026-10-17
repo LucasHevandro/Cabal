@@ -206,7 +206,7 @@ namespace Game.Client.UI
             var shopOpen = npc != null && npc.Role == NpcRole.Merchant && !Trading;
             var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || Trading;
 
-            if (!inventoryShown && !_questLogOpen) DrawQuestTracker();
+            if (!inventoryShown && !_questLogOpen && Dungeon == null) DrawQuestTracker();
             if (inventoryShown) DrawInventory();
             if (warehouseOpen) DrawWarehouse();
             if (smithOpen) DrawSmith(npc);
@@ -214,6 +214,8 @@ namespace Game.Client.UI
             if (Trading) DrawTrade();
             DrawTradeInvite();
             if (npc != null && npc.Role == NpcRole.QuestGiver) DrawQuestDialog(npc, dialog);
+            if (npc != null && npc.Role == NpcRole.DungeonPortal) DrawPortal(npc);
+            DrawDungeonHud();
             if (_attributesOpen) DrawAttributes();
             if (_questLogOpen) DrawQuestLog();
             DrawTalkPrompt();
@@ -913,7 +915,7 @@ namespace Game.Client.UI
             if (npc == null) return;
             var hasQuest = npc.Role == NpcRole.QuestGiver;
             GUI.Label(new Rect(0, VirtualHeight - 340, VirtualWidth, 30),
-                $"<b>T</b>: falar com {npc.Name}{(npc.Role == NpcRole.Smith ? " (melhoria)" : npc.Role == NpcRole.Warehouse ? " (armazém)" : npc.Role == NpcRole.Merchant ? " (loja)" : hasQuest ? " (missões)" : "")}",
+                $"<b>T</b>: falar com {npc.Name}{(npc.Role == NpcRole.Smith ? " (melhoria)" : npc.Role == NpcRole.Warehouse ? " (armazém)" : npc.Role == NpcRole.Merchant ? " (loja)" : npc.Role == NpcRole.DungeonPortal ? " (dungeon)" : hasQuest ? " (missões)" : "")}",
                 _label.WithCenter());
         }
 
@@ -931,7 +933,7 @@ namespace Game.Client.UI
                 if (screen.z <= 0) continue;
                 // Não escreve por cima das janelas do chat e de amigos (coordenadas virtuais do quadro anterior).
                 if (SocialWindows.Contains(new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale))) continue;
-                var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", NpcRole.Merchant => "Loja", _ => "Missões" };
+                var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", NpcRole.Merchant => "Loja", NpcRole.DungeonPortal => "Dungeon", _ => "Missões" };
                 var rect = new Rect(screen.x - 150, Screen.height - screen.y - 20, 300, 40);
                 GUI.color = new Color(0, 0, 0, 0.8f);
                 GUI.Label(new Rect(rect.x + 2, rect.y + 2, rect.width, rect.height), $"<b>{npc.Name}</b>\n<size=13>{role}</size>", _small.WithCenter());

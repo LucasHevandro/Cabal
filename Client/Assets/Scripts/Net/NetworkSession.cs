@@ -68,6 +68,9 @@ namespace Game.Client.Net
 
         public void Send(INetMessage message) => _client?.Send(message);
 
+        /// <summary>Material colorido com o mesmo modelo dos monstros (cache por nome), para o mapa da dungeon.</summary>
+        public Material Material(string key, Color color) => MaterialFor(key, color);
+
         private void Awake()
         {
             if (!GameMode.IsOnline)
@@ -103,6 +106,7 @@ namespace Game.Client.Net
                     NpcRole.Smith => new Color(0.85f, 0.45f, 0.2f),
                     NpcRole.Warehouse => new Color(0.55f, 0.45f, 0.3f),
                     NpcRole.Merchant => new Color(0.35f, 0.7f, 0.45f),
+                    NpcRole.DungeonPortal => new Color(0.45f, 0.35f, 0.8f),
                     _ => new Color(0.85f, 0.8f, 0.5f),
                 };
                 var parts = MonsterVisuals.Build(root.transform, MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f),

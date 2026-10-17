@@ -34,6 +34,22 @@ namespace Game.Client.Net
         private static Msg.TradeInvite _tradeInvite;
         private static float _tradeInviteUntil;
 
+        /// <summary>Dungeon em que está (nulo ou inativo = fora) e o último ranking recebido.</summary>
+        public static Msg.DungeonState Dungeon { get; private set; }
+        public static Msg.DungeonInfo DungeonRanking { get; private set; }
+
+        public static void Apply(Msg.DungeonState state)
+        {
+            Dungeon = state.Active ? state : null;
+            Changed?.Invoke();
+        }
+
+        public static void Apply(Msg.DungeonInfo info)
+        {
+            DungeonRanking = info;
+            Changed?.Invoke();
+        }
+
         public static Msg.TradeInvite PendingTradeInvite => Time.unscaledTime < _tradeInviteUntil ? _tradeInvite : null;
         public static float LastUpgradeAt { get; private set; } = float.NegativeInfinity;
 
@@ -53,6 +69,8 @@ namespace Game.Client.Net
             LastUpgradeAt = float.NegativeInfinity;
             Trade = null;
             _tradeInvite = null;
+            Dungeon = null;
+            DungeonRanking = null;
         }
 
         public static void Apply(Msg.TradeState trade)

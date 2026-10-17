@@ -47,6 +47,12 @@ namespace Game.Client.Monsters
                 ["espectro"] = (MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f), new Color(0.45f, 0.3f, 0.7f)),
                 ["cavaleiro_caido"] = (MonsterShape.Capsule, new Vector3(1.1f, 1.25f, 1.1f), new Color(0.3f, 0.32f, 0.4f)),
                 ["guardiao_das_ruinas"] = (MonsterShape.Capsule, new Vector3(2.2f, 2.2f, 2.2f), new Color(0.6f, 0.15f, 0.12f)),
+                // Cripta Esquecida
+                ["esqueleto_guerreiro"] = (MonsterShape.Capsule, new Vector3(0.8f, 1.05f, 0.8f), new Color(0.85f, 0.82f, 0.72f)),
+                ["esqueleto_arqueiro"] = (MonsterShape.Capsule, new Vector3(0.7f, 1f, 0.7f), new Color(0.72f, 0.75f, 0.62f)),
+                ["cavaleiro_ossudo"] = (MonsterShape.Cube, new Vector3(1.2f, 1.6f, 1f), new Color(0.55f, 0.52f, 0.48f)),
+                ["servo_da_cripta"] = (MonsterShape.Sphere, new Vector3(0.8f, 0.8f, 0.8f), new Color(0.4f, 0.75f, 0.95f)),
+                ["senhor_da_cripta"] = (MonsterShape.Capsule, new Vector3(2.3f, 2.4f, 2.3f), new Color(0.35f, 0.2f, 0.45f)),
             };
 
         /// <summary>Aparência do tipo, ou uma cápsula cinza se o tipo for desconhecido (servidor mais novo).</summary>

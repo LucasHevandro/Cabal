@@ -207,7 +207,8 @@ namespace Game.Client.UI
         {
             var zone = ZoneArea.At(combat.transform.position);
             var levels = zone == null ? "" : zone.MinLevel == zone.MaxLevel ? $"{zone.MinLevel}" : $"{zone.MinLevel}–{zone.MaxLevel}";
-            var text = zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
+            var dungeon = Net.CharacterState.Dungeon != null ? Game.Shared.Dungeon.DungeonCatalog.Find(Net.CharacterState.Dungeon.DungeonId) : null;
+            var text = dungeon != null ? $"<b>{dungeon.Name}</b>  Dungeon" : zone == null ? "Estrada" : $"<b>{zone.DisplayName}</b>  Nv {levels}";
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
             Box(rect, Panel);
             GUI.Label(rect, text, _center);
