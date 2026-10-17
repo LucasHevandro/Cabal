@@ -99,6 +99,18 @@ namespace Game.Shared.Progression
 
         public static double TotalHours(IEnumerable<LevelStep> steps) => steps.Sum(s => s.Minutes) / 60;
 
+        /// <summary>
+        /// Dano por segundo de um personagem típico do nível contra um monstro (equipamento do grau, missões do
+        /// caminho feitas). Usado também para estimar o tempo da dungeon.
+        /// </summary>
+        public static double DpsAgainst(CharacterClass characterClass, int level, MonsterData monster, LevelingAssumptions? assumptions = null)
+        {
+            assumptions ??= new LevelingAssumptions();
+            var completed = new HashSet<string>(QuestCatalog.All.Where(q => q.MinLevel <= level).Select(q => q.Id));
+            var stats = StatsAt(characterClass, level, assumptions);
+            return DamagePerSecond(characterClass, level, stats, completed, assumptions)(monster);
+        }
+
         /// <summary>Atributos finais: pontos no atributo principal e equipamento completo do grau do nível.</summary>
         public static StatBlock StatsAt(CharacterClass characterClass, int level, LevelingAssumptions assumptions)
         {

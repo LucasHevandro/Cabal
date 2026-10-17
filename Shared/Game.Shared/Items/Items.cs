@@ -236,10 +236,18 @@ namespace Game.Shared.Items
                          ("seda", "Seda de aranha", ItemRarity.Common), ("veneno", "Glândula de veneno", ItemRarity.Uncommon),
                          ("fragmento_pedra", "Fragmento de pedra viva", ItemRarity.Common), ("essencia", "Essência espectral", ItemRarity.Uncommon),
                          ("fragmento_guardiao", "Fragmento do Guardião", ItemRarity.Epic),
+                         ("po_de_osso", "Pó de osso", ItemRarity.Common),
                      })
             {
                 list.Add(new ItemDefinition { Id = id, Name = name, Kind = ItemKind.Material, Rarity = rarity, MaxStack = 99 });
             }
+
+            // ===== Chaves de dungeon =====
+            list.Add(new ItemDefinition
+            {
+                Id = "chave_cripta", Name = "Chave da Cripta", Kind = ItemKind.Material, Rarity = ItemRarity.Uncommon, MaxStack = 10,
+                Description = "Cada membro gasta uma para entrar na Cripta Esquecida (Guardiã Selene, na vila).",
+            });
 
             var result = new Dictionary<string, ItemDefinition>();
             foreach (var item in list) result.Add(item.Id, item);
