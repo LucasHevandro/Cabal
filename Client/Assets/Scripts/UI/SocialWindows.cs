@@ -119,7 +119,7 @@ namespace Game.Client.UI
         {
             var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
-            if (keyboard.oKey.wasPressedThisFrame) _friendsOpen = !_friendsOpen;
+            if (KeyBindings.Pressed(GameAction.Friends)) _friendsOpen = !_friendsOpen;
             if (keyboard.escapeKey.wasPressedThisFrame) _friendsOpen = false;
         }
 
@@ -355,7 +355,7 @@ namespace Game.Client.UI
             Box(rect, Panel);
             AddRect(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30),
-                Loc.T("friends.title", _lists.Friends.Count, RelationRules.MaxFriends), _label);
+                Loc.T("friends.title", _lists.Friends.Count, RelationRules.MaxFriends, KeyBindings.Label(GameAction.Friends)), _label);
 
             GUI.SetNextControlName(FriendControl);
             _friendName = GUI.TextField(new Rect(rect.x + 14, rect.y + 46, 350, 30), _friendName, AccountRules.MaxCharacterNameLength, _input);

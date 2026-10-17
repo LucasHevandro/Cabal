@@ -65,7 +65,7 @@ namespace Game.Client.Player
             var input = keyboard != null ? ReadMoveInput(keyboard) : Vector2.zero;
             var moveDirection = ToWorldDirection(input);
 
-            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame && Time.time >= _nextDodgeAt)
+            if (UI.KeyBindings.Pressed(UI.GameAction.Dodge) && Time.time >= _nextDodgeAt)
             {
                 // Esquiva na direção do movimento; parado, esquiva para trás.
                 _dodgeDirection = moveDirection.sqrMagnitude > 0.01f ? moveDirection : -transform.forward;
@@ -85,7 +85,7 @@ namespace Game.Client.Player
             }
             else
             {
-                var speed = keyboard != null && keyboard.leftShiftKey.isPressed ? runSpeed : walkSpeed;
+                var speed = UI.KeyBindings.Held(UI.GameAction.Run) ? runSpeed : walkSpeed;
                 horizontal = moveDirection * speed;
                 if (moveDirection.sqrMagnitude > 0.01f) FaceDirection(moveDirection);
             }
@@ -113,8 +113,8 @@ namespace Game.Client.Player
 
         private static Vector2 ReadMoveInput(Keyboard keyboard)
         {
-            var x = (keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0);
-            var y = (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0);
+            var x = (UI.KeyBindings.Held(UI.GameAction.MoveRight) ? 1 : 0) - (UI.KeyBindings.Held(UI.GameAction.MoveLeft) ? 1 : 0);
+            var y = (UI.KeyBindings.Held(UI.GameAction.MoveForward) ? 1 : 0) - (UI.KeyBindings.Held(UI.GameAction.MoveBack) ? 1 : 0);
             return Vector2.ClampMagnitude(new Vector2(x, y), 1f);
         }
 

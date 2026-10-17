@@ -30,7 +30,7 @@ namespace Game.Client.Combat
             var keyboard = UI.GameInput.Keyboard;
             var mouse = Mouse.current;
 
-            if (keyboard != null && keyboard.tabKey.wasPressedThisFrame) SelectNext();
+            if (UI.KeyBindings.Pressed(UI.GameAction.NextTarget)) SelectNext();
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Select(null);
             if (mouse != null && mouse.leftButton.wasPressedThisFrame) SelectUnderMouse(mouse);
 

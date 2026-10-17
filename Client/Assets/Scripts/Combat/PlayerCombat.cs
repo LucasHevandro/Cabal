@@ -153,17 +153,17 @@ namespace Game.Client.Combat
             var keyboard = UI.GameInput.Keyboard;
             if (keyboard == null) return;
 
-            if (keyboard.qKey.wasPressedThisFrame) RequestStartCombo();
-            if (keyboard.fKey.wasPressedThisFrame) RequestFinisher();
-            if (keyboard.digit1Key.wasPressedThisFrame) RequestSkill(0);
-            if (keyboard.digit2Key.wasPressedThisFrame) RequestSkill(1);
-            if (keyboard.digit3Key.wasPressedThisFrame) RequestSkill(2);
-            if (keyboard.digit4Key.wasPressedThisFrame) RequestSkill(3);
-            if (keyboard.digit5Key.wasPressedThisFrame) RequestSkill(4);
-            if (keyboard.digit6Key.wasPressedThisFrame) RequestSkill(5);
-            if (keyboard.digit7Key.wasPressedThisFrame) RequestSkill(6);
-            if (keyboard.digit8Key.wasPressedThisFrame) RequestSkill(7);
-            if (keyboard.rKey.wasPressedThisFrame && Online) NetworkSession.Instance.Send(new Msg.ActivateAwakening());
+            if (KeyBindings.Pressed(GameAction.StartCombo)) RequestStartCombo();
+            if (KeyBindings.Pressed(GameAction.Finisher)) RequestFinisher();
+            if (KeyBindings.Pressed(GameAction.Skill1)) RequestSkill(0);
+            if (KeyBindings.Pressed(GameAction.Skill2)) RequestSkill(1);
+            if (KeyBindings.Pressed(GameAction.Skill3)) RequestSkill(2);
+            if (KeyBindings.Pressed(GameAction.Skill4)) RequestSkill(3);
+            if (KeyBindings.Pressed(GameAction.Skill5)) RequestSkill(4);
+            if (KeyBindings.Pressed(GameAction.Skill6)) RequestSkill(5);
+            if (KeyBindings.Pressed(GameAction.Skill7)) RequestSkill(6);
+            if (KeyBindings.Pressed(GameAction.Skill8)) RequestSkill(7);
+            if (KeyBindings.Pressed(GameAction.Awakening) && Online) NetworkSession.Instance.Send(new Msg.ActivateAwakening());
         }
 
         // Ações públicas: usadas pelo teclado hoje e, depois, pela rede, IA e testes automáticos.
@@ -187,7 +187,7 @@ namespace Game.Client.Combat
             }
             if (Target == null || !Target.IsAlive)
             {
-                ShowMessage(Loc.T("combat.need_target_hint"));
+                ShowMessage(Loc.T("combat.need_target_hint", KeyBindings.Label(GameAction.NextTarget)));
                 return;
             }
             var cost = Combo.Config.ActivationSpCost;
@@ -249,7 +249,7 @@ namespace Game.Client.Combat
             switch (SkillRules.Check(skill, index, _cooldowns, Mp, distance, Time.time))
             {
                 case SkillUseCheck.NoTarget:
-                    ShowMessage(Loc.T("combat.need_target_hint"));
+                    ShowMessage(Loc.T("combat.need_target_hint", KeyBindings.Label(GameAction.NextTarget)));
                     return;
                 case SkillUseCheck.OnCooldown:
                     // Como no CABAL: usar skill em recarga durante o combo quebra a corrente.

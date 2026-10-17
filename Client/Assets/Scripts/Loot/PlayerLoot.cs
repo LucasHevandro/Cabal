@@ -61,8 +61,7 @@ namespace Game.Client.Loot
             var player = PlayerCombat.Local;
             if (player != null && player.IsDead) return;
 
-            var keyboard = UI.GameInput.Keyboard;
-            var pressedE = keyboard != null && keyboard.eKey.wasPressedThisFrame;
+            var pressedE = UI.KeyBindings.Pressed(UI.GameAction.Pickup);
 
             for (var i = LootPickup.All.Count - 1; i >= 0; i--)
             {

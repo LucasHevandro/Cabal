@@ -162,7 +162,7 @@ skill.unlock_level_quest = Nv {0} + missão "{1}"
 combo.route = Rota: {0}
 combo.reason_timeout = Tempo esgotado
 combo.locked = Conclua a missão "{0}" para liberar o combo
-combat.need_target_hint = Selecione um alvo (Tab ou clique)
+combat.need_target_hint = Selecione um alvo ({0} ou clique)
 combo.no_sp = SP insuficiente ({0}/{1})
 combo.started = Combo! Aperte as skills quando o marcador estiver na janela
 combo.finisher_closer = Chegue perto do alvo para finalizar
@@ -254,10 +254,10 @@ fx.level_up = NÍVEL {0}!
 
 # ===== Cliente: HUD =====
 hud.dps = DPS {0:0} · total {1}
-hud.combo_start = Q: iniciar combo ({0} SP)
+hud.combo_start = {0}: iniciar combo ({1} SP)
 hud.combo_hits = <b>{0}</b> acertos
 hud.combo_bonus = bônus +{0:0}%
-hud.combo_finish = F: finalizar
+hud.combo_finish = {0}: finalizar
 hud.kind_magical_short = <b>M</b>
 hud.kind_physical_short = <b>F</b>
 hud.max_level = Nível máximo
@@ -272,8 +272,8 @@ hud.entering_world = Entrando no mundo…
 hud.online = Online · {0} · {1:0} ms
 hud.you_died = <b>VOCÊ MORREU</b>
 hud.respawning = Renascendo na cidade em {0:0}…
-hud.inventory_title = <b>Inventário</b> (I fecha)
-hud.inventory_empty = Vazio. Derrote monstros e passe por cima dos itens (ou aperte E perto deles).
+hud.inventory_title = <b>Inventário</b> ({0} fecha)
+hud.inventory_empty = Vazio. Derrote monstros e passe por cima dos itens (ou aperte {0} perto deles).
 hud.monsters_killed = Monstros derrotados: {0}
 hud.target = {0} Nv {1}
 hud.sp = SP {0} / {1}
@@ -283,7 +283,7 @@ hud.hp = HP {0} / {1}
 hud.mp = MP {0} / {1}
 hud.awakening_active = <b>DESPERTAR</b> {0:0.0} s
 hud.awakening_gauge = Despertar {0}%
-hud.awakening_ready = <b>R: DESPERTAR</b>
+hud.awakening_ready = <b>{0}: DESPERTAR</b>
 hud.kind_magical = mágico
 hud.kind_physical = físico
 hud.kind_with_mp = {0} · {1} MP
@@ -291,10 +291,10 @@ hud.grade_excellent = EXCELLENT
 hud.grade_good = GOOD
 hud.grade_miss = MISS
 hud.route = <b>{0} +{1:0}%</b>
-help.controls = <b>Controles</b>\nWASD andar · Shift correr · Espaço esquivar\nBotão direito girar câmera · Roda zoom · F10 opções\nTab / clique: selecionar alvo · Esc limpar
-help.keys_online = 1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\nEnter chat · O amigos · /convidar nome forma grupo\n/duelo nome desafia · /arena entra na fila 5v5
-help.keys_offline = 1–4 skills · E coletar itens · I inventário
-help.combo = Q iniciar combo (gasta SP)\nF finalizador (depois de 3 acertos)\n\n<b>Rotas de combo</b> (F = físico, M = mágico)\nF→M ou M→F: Alternância +10%\nF F M: Tempestade +25% · M M F: Eco Arcano +25%
+help.controls = <b>Controles</b>\n{0} andar · {1} correr · {2} esquivar\nBotão direito girar câmera · Roda zoom · {3} opções\n{4} / clique: selecionar alvo · Esc limpar
+help.keys_online = {0} skills · {1} coletar · {2} inventário · {3} atributos\n{4} falar com NPC · {5} missões · {6} Despertar\nEnter chat · {7} amigos · /convidar nome forma grupo\n/duelo nome desafia · /arena entra na fila 5v5
+help.keys_offline = {0} skills · {1} coletar itens · {2} inventário
+help.combo = {0} iniciar combo (gasta SP)\n{1} finalizador (depois de 3 acertos)\n\n<b>Rotas de combo</b> (F = físico, M = mágico)\nF→M ou M→F: Alternância +10%\nF F M: Tempestade +25% · M M F: Eco Arcano +25%
 help.best_chain = Melhor corrente: <b>{0}</b>
 
 # ===== Cliente: dungeon =====
@@ -377,7 +377,7 @@ arena.back_home = <size=12>Todos voltam à vila em instantes.</size>
 
 # ===== Cliente: inventário, ferreira, missões e atributos =====
 npc.none_near = Nenhum NPC por perto
-inv.title = Inventário  <size=14>(I fecha · botão direito usa/veste)</size>
+inv.title = Inventário  <size=14>({0} fecha · botão direito usa/veste)</size>
 inv.alz = <b>{0:N0}</b> Alz
 inv.stats = Ataque {0} · Magia {1} · Defesa {2} · Crítico {3:0.#}%
 inv.discard = Jogar fora
@@ -415,11 +415,11 @@ quest.header = <b><color=#ffd25a>{0}</color></b>  <size=14>Nv {1}</size>
 quest.reward = Recompensa: {0}
 quest.reward_xp = {0:N0} XP
 quest.reward_alz = {0:N0} Alz
-tracker.title = <b>Missões</b>  <size=13>(J abre o diário)</size>
-questlog.title = Diário de missões  <size=14>(J fecha)</size>
+tracker.title = <b>Missões</b>  <size=13>({0} abre o diário)</size>
+questlog.title = Diário de missões  <size=14>({0} fecha)</size>
 questlog.abandon = Abandonar
 questlog.completed = Concluídas: {0} de {1}
-attr.title = Atributos  <size=14>(C fecha)</size>
+attr.title = Atributos  <size=14>({0} fecha)</size>
 attr.class_level = {0} · Nv {1}
 attr.free = Pontos livres: <b>{0}</b>
 attr.str_hint = +2 ataque, +5 HP
@@ -449,9 +449,9 @@ objective.talk = Fale com {0}
 objective.ok = (ok)
 quest.reward_item = {0} x{1}
 questlog.all_done = Todas as missões foram concluídas!
-questlog.none_active = Nenhuma missão aceita. Fale com o {0} na vila (T).
-npc.talk_prompt_role = <b>T</b>: falar com {0} ({1})
-npc.talk_prompt = <b>T</b>: falar com {0}
+questlog.none_active = Nenhuma missão aceita. Fale com o {0} na vila ({1}).
+npc.talk_prompt_role = <b>{2}</b>: falar com {0} ({1})
+npc.talk_prompt = <b>{1}</b>: falar com {0}
 npc.hint_smith = melhoria
 npc.hint_warehouse = armazém
 npc.hint_merchant = loja
@@ -474,7 +474,7 @@ chat.input_hint = <size=12>Enter envia · Esc cancela · Tab troca o canal · Pg
 party.title = <b>Grupo</b>  <size=13>({0}/{1})</size>
 party.leave = Sair
 party.member_dead = <size=12><b>MORTO</b></size>
-friends.title = <b>Amigos</b>  <size=13>({0}/{1} · O fecha)</size>
+friends.title = <b>Amigos</b>  <size=13>({0}/{1} · {2} fecha)</size>
 friends.add = Adicionar
 friends.empty = <size=14>Nenhum amigo ainda. Digite o nome de alguém online.</size>
 friends.info = Nv {0} · {1}
@@ -805,4 +805,55 @@ options.volume_music = Música
 options.language = Idioma
 options.language_label = Idioma do jogo
 options.defaults = Restaurar padrão
-options.hint = F10 abre e fecha · Esc fecha · as opções ficam salvas
+options.hint = {0} abre e fecha · Esc fecha · as opções ficam salvas
+
+# ===== Cliente: atalhos =====
+options.tab_general = Geral
+options.tab_keys = Atalhos
+options.keys_hint = Clique numa tecla e aperte a nova. Esc cancela. Esc e Enter não podem ser atalho.
+options.keys_waiting = Aperte uma tecla…
+options.keys_reserved = Essa tecla é reservada
+options.keys_defaults = Restaurar atalhos
+action.moveforward = Andar para frente
+action.moveback = Andar para trás
+action.moveleft = Andar para a esquerda
+action.moveright = Andar para a direita
+action.run = Correr (segurar)
+action.dodge = Esquivar
+action.skill = Skill {0}
+action.startcombo = Iniciar combo
+action.finisher = Finalizador
+action.awakening = Despertar
+action.pickup = Coletar item
+action.nexttarget = Próximo alvo
+action.talk = Falar com NPC
+action.inventory = Inventário
+action.attributes = Atributos
+action.questlog = Diário de missões
+action.friends = Amigos
+action.options = Opções
+key.space = Espaço
+key.leftshift = Shift
+key.rightshift = Shift dir.
+key.leftctrl = Ctrl
+key.rightctrl = Ctrl dir.
+key.leftalt = Alt
+key.rightalt = Alt Gr
+key.tab = Tab
+key.backspace = Backspace
+key.capslock = Caps Lock
+key.uparrow = Seta ↑
+key.downarrow = Seta ↓
+key.leftarrow = Seta ←
+key.rightarrow = Seta →
+key.backquote = '
+key.minus = -
+key.equals = =
+key.comma = ,
+key.period = .
+key.slash = /
+key.semicolon = ;
+key.quote = ~
+key.leftbracket = [
+key.rightbracket = ]
+key.backslash = \\

@@ -124,10 +124,10 @@ namespace Game.Client.UI
             var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
 
-            if (keyboard.iKey.wasPressedThisFrame) _inventoryOpen = !_inventoryOpen;
-            if (keyboard.cKey.wasPressedThisFrame) _attributesOpen = !_attributesOpen;
-            if (keyboard.jKey.wasPressedThisFrame) _questLogOpen = !_questLogOpen;
-            if (keyboard.tKey.wasPressedThisFrame) TalkToNearest();
+            if (KeyBindings.Pressed(GameAction.Inventory)) _inventoryOpen = !_inventoryOpen;
+            if (KeyBindings.Pressed(GameAction.Attributes)) _attributesOpen = !_attributesOpen;
+            if (KeyBindings.Pressed(GameAction.QuestLog)) _questLogOpen = !_questLogOpen;
+            if (KeyBindings.Pressed(GameAction.Talk)) TalkToNearest();
             if (keyboard.escapeKey.wasPressedThisFrame) CloseAll();
 
             // Afastou-se do NPC: a conversa fecha.
@@ -246,7 +246,7 @@ namespace Game.Client.UI
 
         private void DrawInventory()
         {
-            var rect = Window(InventoryRect, Loc.T("inv.title"));
+            var rect = Window(InventoryRect, Loc.T("inv.title", KeyBindings.Label(GameAction.Inventory)));
 
             // Equipamento
             var x = rect.x + 14;
@@ -816,7 +816,7 @@ namespace Game.Client.UI
             var y = 104f;
             var height = 40f + active.Sum(q => 28f + 20f * (QuestCatalog.Find(q.QuestId)?.Objectives.Count ?? 0));
             Box(new Rect(x, y, 450, height), new Color(0, 0, 0, 0.45f));
-            GUI.Label(new Rect(x + 12, y + 6, 420, 24), Loc.T("tracker.title"), _small);
+            GUI.Label(new Rect(x + 12, y + 6, 420, 24), Loc.T("tracker.title", KeyBindings.Label(GameAction.QuestLog)), _small);
             y += 34;
             foreach (var entry in active)
             {
@@ -836,7 +836,7 @@ namespace Game.Client.UI
 
         private void DrawQuestLog()
         {
-            var rect = Window(new Rect(480, 160, 560, 640), Loc.T("questlog.title"));
+            var rect = Window(new Rect(480, 160, 560, 640), Loc.T("questlog.title", KeyBindings.Label(GameAction.QuestLog)));
             var x = rect.x + 14;
             var width = rect.width - 44;
             var active = CharacterState.Quests.Active;
@@ -848,7 +848,7 @@ namespace Game.Client.UI
             {
                 var next = QuestCatalog.All.FirstOrDefault(q => !CharacterState.QuestCompleted(q.Id));
                 GUI.Label(new Rect(0, y, width, 60),
-                    next == null ? Loc.T("questlog.all_done") : Loc.T("questlog.none_active", Loc.T("npc." + next.GiverNpcId)), _small);
+                    next == null ? Loc.T("questlog.all_done") : Loc.T("questlog.none_active", Loc.T("npc." + next.GiverNpcId), KeyBindings.Label(GameAction.Talk)), _small);
             }
             foreach (var entry in active)
             {
@@ -869,7 +869,7 @@ namespace Game.Client.UI
         private void DrawAttributes()
         {
             var sheet = CharacterState.Sheet;
-            var rect = Window(new Rect(20, 340, 420, 400), Loc.T("attr.title"));
+            var rect = Window(new Rect(20, 340, 420, 400), Loc.T("attr.title", KeyBindings.Label(GameAction.Attributes)));
             if (sheet == null) return;
             var x = rect.x + 14;
             var y = rect.y + 46;
@@ -923,8 +923,8 @@ namespace Game.Client.UI
             var hasQuest = npc.Role == NpcRole.QuestGiver;
             GUI.Label(new Rect(0, VirtualHeight - 340, VirtualWidth, 30),
                 hasQuest || npc.Role != NpcRole.QuestGiver
-                    ? Loc.T("npc.talk_prompt_role", npc.Name, Loc.T(RoleHintKey(npc.Role)))
-                    : Loc.T("npc.talk_prompt", npc.Name),
+                    ? Loc.T("npc.talk_prompt_role", npc.Name, Loc.T(RoleHintKey(npc.Role)), KeyBindings.Label(GameAction.Talk))
+                    : Loc.T("npc.talk_prompt", npc.Name, KeyBindings.Label(GameAction.Talk)),
                 _label.WithCenter());
         }
 

@@ -24,6 +24,8 @@ namespace Game.Client.UI
         private GUIStyle _small;
         private GUIStyle _button;
         private GUIStyle _toggle;
+        private GUIStyle _tab;
+        private GUIStyle _keyButton;
 
         private List<Vector2Int> _resolutions = new List<Vector2Int>();
         private int _resolutionIndex;
@@ -31,6 +33,9 @@ namespace Game.Client.UI
         private IReadOnlyList<string> _languages = new List<string>();
         private readonly Dictionary<string, string> _languageNames = new Dictionary<string, string>();
         private Rect _rect;
+        private bool _keysTab;
+        private GameAction? _waitingFor;
+        private string _keysMessage = "";
         private float _scale = 1f;
         private Vector2 _offset;
 
@@ -45,10 +50,11 @@ namespace Game.Client.UI
             return _instance._rect.Contains(point);
         }
 
-        public static void Open()
+        public static void Open(bool keysTab = false)
         {
             if (_instance == null) return;
             _instance.Refresh();
+            _instance._keysTab = keysTab;
             IsOpen = true;
         }
 
@@ -56,6 +62,7 @@ namespace Game.Client.UI
         {
             if (!IsOpen) return;
             IsOpen = false;
+            if (_instance != null) _instance._waitingFor = null;
             GameSettings.Save();
         }
 
@@ -88,7 +95,28 @@ namespace Game.Client.UI
         {
             var keyboard = Keyboard.current;
             if (keyboard == null || GameInput.Typing || GameInput.FieldFocused) return;
-            if (keyboard.f10Key.wasPressedThisFrame) Toggle();
+            if (IsOpen && _waitingFor is { } action)
+            {
+                // Esperando a tecla nova: a próxima tecla apertada vira o atalho (Esc cancela).
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    _waitingFor = null;
+                    return;
+                }
+                foreach (var key in keyboard.allKeys)
+                {
+                    if (key == null || !key.wasPressedThisFrame) continue;
+                    if (KeyBindings.Set(action, key.keyCode))
+                    {
+                        _waitingFor = null;
+                        _keysMessage = "";
+                    }
+                    else _keysMessage = Loc.T("options.keys_reserved");
+                    break;
+                }
+                return;
+            }
+            if (KeyBindings.PressedRaw(GameAction.Options)) Toggle();
             else if (IsOpen && keyboard.escapeKey.wasPressedThisFrame) Close();
         }
 
@@ -101,15 +129,29 @@ namespace Game.Client.UI
             _offset = new Vector2((Screen.width - VirtualWidth * _scale) / 2, (Screen.height - VirtualHeight * _scale) / 2);
             GUI.matrix = Matrix4x4.TRS(new Vector3(_offset.x, _offset.y, 0), Quaternion.identity, new Vector3(_scale, _scale, 1));
 
-            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 330, 660, 660);
+            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 360, 660, 720);
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0, 0, 0, 0.35f));
             Box(_rect, Panel);
             var x = _rect.x + 28;
             var y = _rect.y + 18;
             var width = _rect.width - 56;
             GUI.Label(new Rect(x, y, width, 34), Loc.T("options.title"), _title);
-            y += 52;
+            y += 48;
+            if (Tab(new Rect(x, y, 150, 34), Loc.T("options.tab_general"), !_keysTab)) _keysTab = false;
+            if (Tab(new Rect(x + 156, y, 150, 34), Loc.T("options.tab_keys"), _keysTab)) _keysTab = true;
+            y += 50;
 
+            if (_keysTab) DrawKeys(x, y, width);
+            else DrawGeneral(x, y, width);
+
+            var buttonsY = _rect.yMax - 60;
+            if (GUI.Button(new Rect(_rect.xMax - 28 - 160, buttonsY, 160, 40), "<b>" + Loc.T("ui.close") + "</b>", _button)) Close();
+            GUI.Label(new Rect(x, buttonsY - 34, width, 24), Loc.T("options.hint", KeyBindings.Label(GameAction.Options)), _small);
+            GUI.matrix = Matrix4x4.identity;
+        }
+
+        private void DrawGeneral(float x, float y, float width)
+        {
             // ----- Vídeo -----
             y = Section(x, y, width, Loc.T("options.video"));
             var size = _resolutions.Count > 0 ? _resolutions[_resolutionIndex] : new Vector2Int(Screen.width, Screen.height);
@@ -179,17 +221,53 @@ namespace Game.Client.UI
             });
             GUI.enabled = true;
 
-            // ----- Botões -----
-            var buttonsY = _rect.yMax - 60;
-            if (GUI.Button(new Rect(x, buttonsY, 220, 40), Loc.T("options.defaults"), _button))
+            if (GUI.Button(new Rect(x, _rect.yMax - 60, 220, 40), Loc.T("options.defaults"), _button))
             {
                 GameSettings.ResetDefaults();
                 GameSettings.Apply();
             }
-            if (GUI.Button(new Rect(_rect.xMax - 28 - 160, buttonsY, 160, 40), "<b>" + Loc.T("ui.close") + "</b>", _button)) Close();
-            GUI.Label(new Rect(x, buttonsY - 34, width, 24), Loc.T("options.hint"), _small);
+        }
 
-            GUI.matrix = Matrix4x4.identity;
+        /// <summary>Lista dos atalhos em duas colunas; clicar na tecla espera a nova.</summary>
+        private void DrawKeys(float x, float y, float width)
+        {
+            GUI.Label(new Rect(x, y - 8, width, 24), Loc.T("options.keys_hint"), _small);
+            y += 24;
+            var actions = new System.Collections.Generic.List<GameAction>(KeyBindings.All);
+            var perColumn = (actions.Count + 1) / 2;
+            var columnWidth = width / 2;
+            for (var i = 0; i < actions.Count; i++)
+            {
+                var action = actions[i];
+                var cx = x + (i / perColumn) * columnWidth;
+                var cy = y + (i % perColumn) * 32;
+                GUI.Label(new Rect(cx, cy, columnWidth - 120, 30), KeyBindings.ActionName(action), _small);
+                var waiting = _waitingFor == action;
+                var label = waiting ? "<color=#ffd25a>" + Loc.T("options.keys_waiting") + "</color>" : "<b>" + KeyBindings.Label(action) + "</b>";
+                if (GUI.Button(new Rect(cx + columnWidth - 130, cy, 116, 28), label, _keyButton))
+                {
+                    _waitingFor = waiting ? (GameAction?)null : action;
+                    _keysMessage = "";
+                }
+            }
+            if (_keysMessage.Length > 0)
+            {
+                GUI.color = new Color(1f, 0.55f, 0.5f);
+                GUI.Label(new Rect(x + 240, _rect.yMax - 56, 220, 30), _keysMessage, _small);
+                GUI.color = Color.white;
+            }
+            if (GUI.Button(new Rect(x, _rect.yMax - 60, 220, 40), Loc.T("options.keys_defaults"), _button))
+            {
+                KeyBindings.ResetDefaults();
+                _waitingFor = null;
+            }
+        }
+
+        private bool Tab(Rect rect, string text, bool active)
+        {
+            Box(rect, active ? new Color(1f, 0.82f, 0.35f, 0.25f) : new Color(1, 1, 1, 0.06f));
+            if (active) Box(new Rect(rect.x, rect.yMax - 3, rect.width, 3), Accent);
+            return GUI.Button(rect, active ? "<b>" + text + "</b>" : text, _tab);
         }
 
         private float Section(float x, float y, float width, string title)
@@ -251,6 +329,9 @@ namespace Game.Client.UI
             _small = new GUIStyle(_label) { fontSize = 14 };
             _button = new GUIStyle(GUI.skin.button) { fontSize = 18, richText = true };
             _toggle = new GUIStyle(GUI.skin.toggle) { fontSize = 20, richText = true };
+            _tab = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, alignment = TextAnchor.MiddleCenter };
+            _tab.normal.textColor = _tab.hover.textColor = Color.white;
+            _keyButton = new GUIStyle(GUI.skin.button) { fontSize = 15, richText = true };
             _toggle.normal.textColor = _toggle.onNormal.textColor = _toggle.hover.textColor = _toggle.onHover.textColor = Color.white;
         }
     }

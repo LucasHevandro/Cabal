@@ -68,7 +68,7 @@ namespace Game.Client.UI
         {
             var keyboard = GameInput.Keyboard;
             // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
-            if (keyboard != null && keyboard.iKey.wasPressedThisFrame && !GameMode.IsOnline) _showInventory = !_showInventory;
+            if (KeyBindings.Pressed(GameAction.Inventory) && !GameMode.IsOnline) _showInventory = !_showInventory;
         }
 
         private void OnGUI()
@@ -109,8 +109,16 @@ namespace Game.Client.UI
             var online = GameMode.IsOnline;
             Box(new Rect(20, 20, 420, online ? 346 : 270), Panel);
             GUI.Label(new Rect(36, 30, 400, online ? 336 : 260),
-                Loc.T("help.controls") + "\n" + Loc.T(online ? "help.keys_online" : "help.keys_offline") + "\n" +
-                Loc.T("help.combo") + "\n\n" + Loc.T("help.best_chain", combat.BestChain), _small);
+                Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
+                    KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget)) + "\n" +
+                (online
+                    ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
+                        KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
+                        KeyBindings.Label(GameAction.QuestLog), KeyBindings.Label(GameAction.Awakening), KeyBindings.Label(GameAction.Friends))
+                    : Loc.T("help.keys_offline", KeyBindings.SkillsLabel(4), KeyBindings.Label(GameAction.Pickup),
+                        KeyBindings.Label(GameAction.Inventory))) + "\n" +
+                Loc.T("help.combo", KeyBindings.Label(GameAction.StartCombo), KeyBindings.Label(GameAction.Finisher)) + "\n\n" +
+                Loc.T("help.best_chain", combat.BestChain), _small);
         }
 
         private void DrawTargetFrame()
@@ -140,7 +148,7 @@ namespace Game.Client.UI
                 var cost = combo.Config.ActivationSpCost;
                 var ready = combat.Sp.Has(cost) && combat.Target != null;
                 GUI.color = ready ? Color.white : new Color(1, 1, 1, 0.5f);
-                GUI.Label(new Rect(rect.x, rect.y, rect.width, rect.height), Loc.T("hud.combo_start", cost), _center);
+                GUI.Label(new Rect(rect.x, rect.y, rect.width, rect.height), Loc.T("hud.combo_start", KeyBindings.Label(GameAction.StartCombo), cost), _center);
                 GUI.color = Color.white;
                 return;
             }
@@ -164,7 +172,7 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), Loc.T("hud.combo_hits", combo.HitCount), _big.WithAlignment(TextAnchor.MiddleLeft));
             GUI.Label(new Rect(rect.x, rect.y - 46, rect.width, 36), Loc.T("hud.combo_bonus", combo.ChainBonus * 100), _label.WithAlignment(TextAnchor.MiddleRight));
             if (combo.CanFinish)
-                GUI.Label(new Rect(rect.x, rect.y + rect.height + 6, rect.width, 24), Loc.T("hud.combo_finish"), _center);
+                GUI.Label(new Rect(rect.x, rect.y + rect.height + 6, rect.width, 24), Loc.T("hud.combo_finish", KeyBindings.Label(GameAction.Finisher)), _center);
 
             // Últimos tipos acertados na corrente, para o jogador planejar a próxima rota.
             var kinds = combo.ChainKinds;
@@ -249,11 +257,11 @@ namespace Game.Client.UI
         {
             var rect = new Rect(VirtualWidth - 440, 140, 400, 500);
             Box(rect, Panel);
-            GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), Loc.T("hud.inventory_title"), _label);
+            GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), Loc.T("hud.inventory_title", KeyBindings.Label(GameAction.Inventory)), _label);
             if (_loot == null || _loot.Inventory.Count == 0)
             {
                 GUI.Label(new Rect(rect.x + 16, rect.y + 50, rect.width - 32, 60),
-                    Loc.T("hud.inventory_empty"), _small);
+                    Loc.T("hud.inventory_empty", KeyBindings.Label(GameAction.Pickup)), _small);
                 return;
             }
 
@@ -341,7 +349,7 @@ namespace Game.Client.UI
             }
             var full = sheet.AwakeningGauge >= AwakeningState.MaxGauge;
             Bar(rect, sheet.AwakeningGauge / (float)AwakeningState.MaxGauge, full ? new Color(1f, 0.4f, 0.95f) : new Color(0.6f, 0.3f, 0.6f));
-            GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? Loc.T("hud.awakening_ready") : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
+            GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? Loc.T("hud.awakening_ready", KeyBindings.Label(GameAction.Awakening)) : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
         }
 
         private void DrawSkillBar()
@@ -358,7 +366,7 @@ namespace Game.Client.UI
                 var rect = new Rect(x + i * (size + gap), y, size, 120);
                 var skill = skills[i];
                 Box(rect, Panel);
-                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
+                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{KeyBindings.Label(GameAction.Skill1 + i)}</b>", _big);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.Name, _small.WithCenter());
                 var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
                 if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
@@ -370,7 +378,7 @@ namespace Game.Client.UI
                 if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i))
                 {
                     Box(rect, new Color(0.05f, 0.05f, 0.07f, 0.95f));
-                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
+                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{KeyBindings.Label(GameAction.Skill1 + i)}</b>", _big);
                     GUI.Label(new Rect(rect.x + 4, rect.y + 36, rect.width - 8, 80), $"<color=#999999>{skill.Name}</color>\n{combat.UnlockText(i, compact: true)}", _small.WithCenter());
                     continue;
                 }

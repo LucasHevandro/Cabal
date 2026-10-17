@@ -421,6 +421,10 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.4f);
             Capture("9-opcoes");
             yield return new WaitForEndOfFrame();
+            OptionsWindow.Open(keysTab: true);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("9b-atalhos");
+            yield return new WaitForEndOfFrame();
             OptionsWindow.Close();
             outcome.Ok = true;
             outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
