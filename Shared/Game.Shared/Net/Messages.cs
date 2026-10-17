@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Shared.Text;
 
 namespace Game.Shared.Net
 {
@@ -71,7 +72,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 9;
+        public const int Version = 10;
         public const int DefaultPort = 7777;
     }
 
@@ -248,11 +249,11 @@ namespace Game.Shared.Net
     public sealed class Reject : INetMessage
     {
         public MessageType Type => MessageType.Reject;
-        public string Reason = "";
+        public LocalText Reason = LocalText.Empty;
 
-        public void Write(PacketWriter w) => w.WriteString(Reason);
+        public void Write(PacketWriter w) => Reason.Write(w);
 
-        public static Reject Read(PacketReader r) => new Reject { Reason = r.ReadString() };
+        public static Reject Read(PacketReader r) => new Reject { Reason = LocalText.Read(r) };
     }
 
     /// <summary>Dados fixos de uma entidade, enviados uma vez quando ela aparece para o cliente.</summary>
@@ -374,7 +375,8 @@ namespace Game.Shared.Net
         /// <summary><see cref="Combat.ComboGrade"/> como byte, ou 255 se o golpe não fazia parte de um combo.</summary>
         public byte Grade = 255;
 
-        public string RouteName = "";
+        /// <summary>Rota de combo fechada pelo golpe (<see cref="Combat.ComboRoute.Id"/>; vazio = nenhuma).</summary>
+        public string RouteId = "";
 
         public void Write(PacketWriter w)
         {
@@ -385,13 +387,13 @@ namespace Game.Shared.Net
             w.WriteBool(Critical);
             w.WriteBool(Dodged);
             w.WriteByte(Grade);
-            w.WriteString(RouteName);
+            w.WriteString(RouteId);
         }
 
         public static CombatEvent Read(PacketReader r) => new CombatEvent
         {
             AttackerId = r.ReadInt(), TargetId = r.ReadInt(), Source = r.ReadByte(), Damage = r.ReadInt(),
-            Critical = r.ReadBool(), Dodged = r.ReadBool(), Grade = r.ReadByte(), RouteName = r.ReadString(),
+            Critical = r.ReadBool(), Dodged = r.ReadBool(), Grade = r.ReadByte(), RouteId = r.ReadString(),
         };
     }
 
@@ -478,7 +480,10 @@ namespace Game.Shared.Net
         public MessageType Type => MessageType.LootSpawned;
         public int LootId;
         public string ItemId = "";
-        public string Name = "";
+
+        /// <summary>Nome do item no idioma do jogador.</summary>
+        public string Name => Loc.T("item." + ItemId);
+
         public byte Rarity;
         public int Quantity;
         public float X;
@@ -488,7 +493,6 @@ namespace Game.Shared.Net
         {
             w.WriteInt(LootId);
             w.WriteString(ItemId);
-            w.WriteString(Name);
             w.WriteByte(Rarity);
             w.WriteInt(Quantity);
             w.WriteFloat(X);
@@ -497,7 +501,7 @@ namespace Game.Shared.Net
 
         public static LootSpawned Read(PacketReader r) => new LootSpawned
         {
-            LootId = r.ReadInt(), ItemId = r.ReadString(), Name = r.ReadString(), Rarity = r.ReadByte(),
+            LootId = r.ReadInt(), ItemId = r.ReadString(), Rarity = r.ReadByte(),
             Quantity = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
         };
     }
@@ -539,18 +543,18 @@ namespace Game.Shared.Net
     public sealed class Notice : INetMessage
     {
         public MessageType Type => MessageType.Notice;
-        public string Text = "";
+        public LocalText Text = LocalText.Empty;
 
         /// <summary>Verdadeiro para aviso grande no topo (ex.: chefe furioso).</summary>
         public bool Announcement;
 
         public void Write(PacketWriter w)
         {
-            w.WriteString(Text);
+            Text.Write(w);
             w.WriteBool(Announcement);
         }
 
-        public static Notice Read(PacketReader r) => new Notice { Text = r.ReadString(), Announcement = r.ReadBool() };
+        public static Notice Read(PacketReader r) => new Notice { Text = LocalText.Read(r), Announcement = r.ReadBool() };
     }
 
     public sealed class Pong : INetMessage
@@ -597,7 +601,10 @@ namespace Game.Shared.Net
     public struct InventoryStack
     {
         public string ItemId;
-        public string Name;
+
+        /// <summary>Nome do item no idioma do jogador.</summary>
+        public string Name => Loc.T("item." + ItemId);
+
         public byte Rarity;
         public int Quantity;
         public ItemContainerKind Container;
@@ -622,7 +629,6 @@ namespace Game.Shared.Net
             foreach (var item in Items)
             {
                 w.WriteString(item.ItemId);
-                w.WriteString(item.Name);
                 w.WriteByte(item.Rarity);
                 w.WriteInt(item.Quantity);
                 w.WriteByte((byte)item.Container);
@@ -644,7 +650,7 @@ namespace Game.Shared.Net
             {
                 inventory.Items.Add(new InventoryStack
                 {
-                    ItemId = r.ReadString(), Name = r.ReadString(), Rarity = r.ReadByte(), Quantity = r.ReadInt(),
+                    ItemId = r.ReadString(), Rarity = r.ReadByte(), Quantity = r.ReadInt(),
                     Container = (ItemContainerKind)r.ReadByte(), Slot = r.ReadUShort(), Uid = r.ReadLong(),
                     Upgrade = r.ReadByte(), PityFails = r.ReadByte(), PityLevel = r.ReadByte(),
                     RegainGuaranteed = r.ReadBool(), OptionId = r.ReadString(),

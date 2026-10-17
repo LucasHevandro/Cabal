@@ -130,8 +130,8 @@ public class EquipmentTests
         bag.TryAdd("espada_aco_negro", 1, NextUid);
         bag.TryAdd("cajado_ferro", 1, NextUid);
 
-        Assert.Contains("nível 10", equipment.Equip(bag, 0, 5, CharacterClass.Blade));
-        Assert.Contains("Arcanista", equipment.Equip(bag, 1, 30, CharacterClass.Blade));
+        Assert.Contains("nível 10", equipment.Equip(bag, 0, 5, CharacterClass.Blade)?.ToString());
+        Assert.Contains("Arcanista", equipment.Equip(bag, 1, 30, CharacterClass.Blade)?.ToString());
         Assert.Null(equipment[EquipSlot.Weapon]);
         Assert.Equal(2, 4 - bag.FreeSlots);
     }
@@ -145,7 +145,7 @@ public class EquipmentTests
         equipment.Equip(bag, 0, 1, CharacterClass.Blade);
         bag.TryAdd("seda", 1, NextUid);
 
-        Assert.Equal("Bolsa cheia.", equipment.Unequip(EquipSlot.Accessory, bag));
+        Assert.Equal("Bolsa cheia.", equipment.Unequip(EquipSlot.Accessory, bag)?.ToString());
         bag.TryRemove("seda", 1);
         Assert.Null(equipment.Unequip(EquipSlot.Accessory, bag));
     }
@@ -277,7 +277,7 @@ public class UpgradeTests
         var steel = new ItemInstance { Uid = 1, ItemId = "espada_aco_negro" };
         long alz = 1_000_000;
 
-        Assert.Contains("médio", UpgradeRules.CanTry(steel, bag, alz));
+        Assert.Contains("médio", UpgradeRules.CanTry(steel, bag, alz)?.ToString());
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Shared.Text;
 
 namespace Game.Shared.Combat
 {
@@ -21,8 +22,11 @@ namespace Game.Shared.Combat
     {
         private readonly SkillKind[] _pattern;
 
-        /// <summary>Nome mostrado ao jogador.</summary>
-        public string Name { get; }
+        /// <summary>Identificador estável (vai pela rede).</summary>
+        public string Id { get; }
+
+        /// <summary>Nome no idioma do jogador (chave <c>route.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("route." + Id);
 
         /// <summary>Sequência de tipos, do mais antigo para o mais recente.</summary>
         public IReadOnlyList<SkillKind> Pattern => _pattern;
@@ -31,12 +35,12 @@ namespace Game.Shared.Combat
         public double DamageBonus { get; }
 
         /// <summary>Cria uma rota. O padrão precisa de pelo menos 2 golpes.</summary>
-        public ComboRoute(string name, double damageBonus, params SkillKind[] pattern)
+        public ComboRoute(string id, double damageBonus, params SkillKind[] pattern)
         {
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A rota precisa de nome.", nameof(name));
+            if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A rota precisa de id.", nameof(id));
             if (pattern == null || pattern.Length < 2) throw new ArgumentException("A rota precisa de pelo menos 2 golpes.", nameof(pattern));
             if (damageBonus < 0) throw new ArgumentOutOfRangeException(nameof(damageBonus), "O bônus não pode ser negativo.");
-            Name = name;
+            Id = id;
             DamageBonus = damageBonus;
             _pattern = (SkillKind[])pattern.Clone();
         }
@@ -59,10 +63,10 @@ namespace Game.Shared.Combat
         /// </summary>
         public static List<ComboRoute> CreateDefaults() => new List<ComboRoute>
         {
-            new ComboRoute("Alternância", 0.10, SkillKind.Physical, SkillKind.Magical),
-            new ComboRoute("Alternância", 0.10, SkillKind.Magical, SkillKind.Physical),
-            new ComboRoute("Tempestade", 0.25, SkillKind.Physical, SkillKind.Physical, SkillKind.Magical),
-            new ComboRoute("Eco Arcano", 0.25, SkillKind.Magical, SkillKind.Magical, SkillKind.Physical),
+            new ComboRoute("alternancia", 0.10, SkillKind.Physical, SkillKind.Magical),
+            new ComboRoute("alternancia_inversa", 0.10, SkillKind.Magical, SkillKind.Physical),
+            new ComboRoute("tempestade", 0.25, SkillKind.Physical, SkillKind.Physical, SkillKind.Magical),
+            new ComboRoute("eco_arcano", 0.25, SkillKind.Magical, SkillKind.Magical, SkillKind.Physical),
         };
     }
 }

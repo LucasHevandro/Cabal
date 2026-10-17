@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Shared.Accounts;
 using Game.Shared.Loot;
+using Game.Shared.Text;
 
 namespace Game.Shared.Items
 {
@@ -63,12 +64,12 @@ namespace Game.Shared.Items
         public string Describe()
         {
             var parts = new List<string>();
-            if (AttackPower != 0) parts.Add($"{AttackPower:+0;-0} ataque");
-            if (MagicPower != 0) parts.Add($"{MagicPower:+0;-0} magia");
-            if (Defense != 0) parts.Add($"{Defense:+0;-0} defesa");
-            if (MaxHp != 0) parts.Add($"{MaxHp:+0;-0} HP");
-            if (MaxMp != 0) parts.Add($"{MaxMp:+0;-0} MP");
-            if (CritPercent != 0) parts.Add($"{CritPercent:+0.#;-0.#}% crítico");
+            if (AttackPower != 0) parts.Add(Loc.T("stat.attack", AttackPower));
+            if (MagicPower != 0) parts.Add(Loc.T("stat.magic", MagicPower));
+            if (Defense != 0) parts.Add(Loc.T("stat.defense", Defense));
+            if (MaxHp != 0) parts.Add(Loc.T("stat.hp", MaxHp));
+            if (MaxMp != 0) parts.Add(Loc.T("stat.mp", MaxMp));
+            if (CritPercent != 0) parts.Add(Loc.T("stat.crit", CritPercent));
             return string.Join(", ", parts);
         }
     }
@@ -77,7 +78,10 @@ namespace Game.Shared.Items
     public sealed class ItemDefinition
     {
         public string Id = "";
-        public string Name = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>item.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("item." + Id);
+
         public ItemKind Kind;
         public ItemRarity Rarity;
         public int MaxStack = 1;
@@ -110,7 +114,11 @@ namespace Game.Shared.Items
         // Consumíveis
         public int HealHp;
 
-        public string Description = "";
+        /// <summary>Descrição no idioma do jogador (vazia se o item não tiver).</summary>
+        public string Description =>
+            UpgradeCoreGrade > 0 ? Loc.T("item.desc.core", Loc.Ref("grade." + UpgradeCoreGrade)) :
+            IsOptionStone ? Loc.T("item.desc.stone", OptionStats.Describe()) :
+            Loc.Optional("item." + Id + ".desc");
     }
 
     /// <summary>Um item que existe no jogo (no inventário, equipado ou no armazém).</summary>
@@ -157,13 +165,7 @@ namespace Game.Shared.Items
         public static ItemDefinition Get(string id) =>
             Find(id) ?? throw new KeyNotFoundException($"Item desconhecido: {id}");
 
-        public static string GradeName(int grade) => grade switch
-        {
-            1 => "Ferro",
-            2 => "Aço Negro",
-            3 => "Astralita",
-            _ => "?",
-        };
+        public static string GradeName(int grade) => grade >= 1 && grade <= 3 ? Loc.T("grade." + grade) : "?";
 
         /// <summary>Núcleo que melhora equipamento do grau informado.</summary>
         public static string CoreForGrade(int grade) => grade switch
@@ -178,75 +180,74 @@ namespace Game.Shared.Items
             var list = new List<ItemDefinition>();
 
             // ===== Armas da Lâmina =====
-            list.Add(Weapon("espada_ferro", "Espada de Ferro", 1, 1, CharacterClass.Blade, atk: 25, perLevel: 4));
-            list.Add(Weapon("espada_aco_negro", "Espada de Aço Negro", 2, 10, CharacterClass.Blade, atk: 60, perLevel: 8));
-            list.Add(Weapon("espada_astralita", "Espada de Astralita", 3, 20, CharacterClass.Blade, atk: 110, perLevel: 14));
+            list.Add(Weapon("espada_ferro", 1, 1, CharacterClass.Blade, atk: 25, perLevel: 4));
+            list.Add(Weapon("espada_aco_negro", 2, 10, CharacterClass.Blade, atk: 60, perLevel: 8));
+            list.Add(Weapon("espada_astralita", 3, 20, CharacterClass.Blade, atk: 110, perLevel: 14));
 
             // ===== Armas do Arcanista =====
-            list.Add(Weapon("cajado_ferro", "Cajado de Ferro", 1, 1, CharacterClass.Arcanist, magic: 25, perLevel: 4));
-            list.Add(Weapon("cajado_aco_negro", "Cajado de Aço Negro", 2, 10, CharacterClass.Arcanist, magic: 60, perLevel: 8));
-            list.Add(Weapon("cajado_astralita", "Cajado de Astralita", 3, 20, CharacterClass.Arcanist, magic: 110, perLevel: 14));
+            list.Add(Weapon("cajado_ferro", 1, 1, CharacterClass.Arcanist, magic: 25, perLevel: 4));
+            list.Add(Weapon("cajado_aco_negro", 2, 10, CharacterClass.Arcanist, magic: 60, perLevel: 8));
+            list.Add(Weapon("cajado_astralita", 3, 20, CharacterClass.Arcanist, magic: 110, perLevel: 14));
 
             // ===== Armaduras e acessórios (todas as classes) =====
-            var grades = new[] { (1, 1, "ferro", "de Ferro"), (2, 10, "aco_negro", "de Aço Negro"), (3, 20, "astralita", "de Astralita") };
-            foreach (var (grade, level, key, suffix) in grades)
+            var grades = new[] { (1, 1, "ferro"), (2, 10, "aco_negro"), (3, 20, "astralita") };
+            foreach (var (grade, level, key) in grades)
             {
                 var g = grade;
-                list.Add(Gear($"armadura_{key}", $"Couraça {suffix}", EquipSlot.Armor, g, level,
+                list.Add(Gear($"armadura_{key}", EquipSlot.Armor, g, level,
                     new StatBlock { Defense = 20 * g * g, MaxHp = 100 * g * g },
                     new StatBlock { Defense = 3 * g, MaxHp = 20 * g }));
-                list.Add(Gear($"luvas_{key}", $"Luvas {suffix}", EquipSlot.Gloves, g, level,
+                list.Add(Gear($"luvas_{key}", EquipSlot.Gloves, g, level,
                     new StatBlock { Defense = 6 * g * g, CritPercent = 1 * g },
                     new StatBlock { Defense = 1 * g, CritPercent = 0.2f }));
-                list.Add(Gear($"botas_{key}", $"Botas {suffix}", EquipSlot.Boots, g, level,
+                list.Add(Gear($"botas_{key}", EquipSlot.Boots, g, level,
                     new StatBlock { Defense = 6 * g * g, MaxHp = 40 * g * g },
                     new StatBlock { Defense = 1 * g, MaxHp = 10 * g }));
-                list.Add(Gear($"anel_{key}", $"Anel {suffix}", EquipSlot.Accessory, g, level,
+                list.Add(Gear($"anel_{key}", EquipSlot.Accessory, g, level,
                     new StatBlock { MaxHp = 60 * g * g, MaxMp = 40 * g * g },
                     new StatBlock { MaxHp = 15 * g, MaxMp = 10 * g }));
             }
 
             // ===== Núcleos de melhoria =====
-            list.Add(Core(CoreLow, "Núcleo de melhoria (baixo)", 1, ItemRarity.Rare));
-            list.Add(Core(CoreMedium, "Núcleo de melhoria (médio)", 2, ItemRarity.Rare));
-            list.Add(Core(CoreHigh, "Núcleo de melhoria (alto)", 3, ItemRarity.Rare));
+            list.Add(Core(CoreLow, 1, ItemRarity.Rare));
+            list.Add(Core(CoreMedium, 2, ItemRarity.Rare));
+            list.Add(Core(CoreHigh, 3, ItemRarity.Rare));
 
             // ===== Pedras de opção (1 por item) =====
-            list.Add(Stone("pedra_vigor", "Pedra do Vigor", new StatBlock { MaxHp = 150 }));
-            list.Add(Stone("pedra_furia", "Pedra da Fúria", new StatBlock { AttackPower = 15, MagicPower = 15 }));
-            list.Add(Stone("pedra_precisao", "Pedra da Precisão", new StatBlock { CritPercent = 3 }));
+            list.Add(Stone("pedra_vigor", new StatBlock { MaxHp = 150 }));
+            list.Add(Stone("pedra_furia", new StatBlock { AttackPower = 15, MagicPower = 15 }));
+            list.Add(Stone("pedra_precisao", new StatBlock { CritPercent = 3 }));
 
             // ===== Consumíveis =====
             list.Add(new ItemDefinition
             {
-                Id = "pocao_hp_p", Name = "Poção de vida (P)", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
-                MaxStack = 50, HealHp = 400, Description = "Recupera 400 de vida.",
+                Id = "pocao_hp_p", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
+                MaxStack = 50, HealHp = 400,
             });
             list.Add(new ItemDefinition
             {
-                Id = "pocao_hp_m", Name = "Poção de vida (M)", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
-                MaxStack = 50, HealHp = 1200, Description = "Recupera 1.200 de vida.",
+                Id = "pocao_hp_m", Kind = ItemKind.Consumable, Rarity = ItemRarity.Common,
+                MaxStack = 50, HealHp = 1200,
             });
 
             // ===== Materiais dos monstros (vendáveis e para missões) =====
-            foreach (var (id, name, rarity) in new[]
+            foreach (var (id, rarity) in new[]
                      {
-                         ("pelo_macio", "Pelo macio", ItemRarity.Common), ("pele_lobo", "Pele de lobo", ItemRarity.Common),
-                         ("presa_lobo", "Presa de lobo", ItemRarity.Uncommon), ("couro_javali", "Couro de javali", ItemRarity.Common),
-                         ("seda", "Seda de aranha", ItemRarity.Common), ("veneno", "Glândula de veneno", ItemRarity.Uncommon),
-                         ("fragmento_pedra", "Fragmento de pedra viva", ItemRarity.Common), ("essencia", "Essência espectral", ItemRarity.Uncommon),
-                         ("fragmento_guardiao", "Fragmento do Guardião", ItemRarity.Epic),
-                         ("po_de_osso", "Pó de osso", ItemRarity.Common),
+                         ("pelo_macio", ItemRarity.Common), ("pele_lobo", ItemRarity.Common),
+                         ("presa_lobo", ItemRarity.Uncommon), ("couro_javali", ItemRarity.Common),
+                         ("seda", ItemRarity.Common), ("veneno", ItemRarity.Uncommon),
+                         ("fragmento_pedra", ItemRarity.Common), ("essencia", ItemRarity.Uncommon),
+                         ("fragmento_guardiao", ItemRarity.Epic),
+                         ("po_de_osso", ItemRarity.Common),
                      })
             {
-                list.Add(new ItemDefinition { Id = id, Name = name, Kind = ItemKind.Material, Rarity = rarity, MaxStack = 99 });
+                list.Add(new ItemDefinition { Id = id, Kind = ItemKind.Material, Rarity = rarity, MaxStack = 99 });
             }
 
             // ===== Chaves de dungeon =====
             list.Add(new ItemDefinition
             {
-                Id = "chave_cripta", Name = "Chave da Cripta", Kind = ItemKind.Material, Rarity = ItemRarity.Uncommon, MaxStack = 10,
-                Description = "Cada membro gasta uma para entrar na Cripta Esquecida (Guardiã Selene, na vila).",
+                Id = "chave_cripta", Kind = ItemKind.Material, Rarity = ItemRarity.Uncommon, MaxStack = 10,
             });
 
             var result = new Dictionary<string, ItemDefinition>();
@@ -254,33 +255,31 @@ namespace Game.Shared.Items
             return result;
         }
 
-        private static ItemDefinition Weapon(string id, string name, int grade, int level, CharacterClass characterClass,
+        private static ItemDefinition Weapon(string id, int grade, int level, CharacterClass characterClass,
             int atk = 0, int magic = 0, int perLevel = 0) => new ItemDefinition
         {
-            Id = id, Name = name, Kind = ItemKind.Equipment, Slot = EquipSlot.Weapon, Grade = grade, RequiredLevel = level,
+            Id = id, Kind = ItemKind.Equipment, Slot = EquipSlot.Weapon, Grade = grade, RequiredLevel = level,
             RequiredClass = characterClass, Rarity = grade == 3 ? ItemRarity.Rare : grade == 2 ? ItemRarity.Uncommon : ItemRarity.Common,
             Stats = new StatBlock { AttackPower = atk, MagicPower = magic },
             UpgradeStats = new StatBlock { AttackPower = atk > 0 ? perLevel : 0, MagicPower = magic > 0 ? perLevel : 0 },
         };
 
-        private static ItemDefinition Gear(string id, string name, EquipSlot slot, int grade, int level, StatBlock stats, StatBlock perLevel) =>
+        private static ItemDefinition Gear(string id, EquipSlot slot, int grade, int level, StatBlock stats, StatBlock perLevel) =>
             new ItemDefinition
             {
-                Id = id, Name = name, Kind = ItemKind.Equipment, Slot = slot, Grade = grade, RequiredLevel = level,
+                Id = id, Kind = ItemKind.Equipment, Slot = slot, Grade = grade, RequiredLevel = level,
                 Rarity = grade == 3 ? ItemRarity.Rare : grade == 2 ? ItemRarity.Uncommon : ItemRarity.Common,
                 Stats = stats, UpgradeStats = perLevel,
             };
 
-        private static ItemDefinition Core(string id, string name, int grade, ItemRarity rarity) => new ItemDefinition
+        private static ItemDefinition Core(string id, int grade, ItemRarity rarity) => new ItemDefinition
         {
-            Id = id, Name = name, Kind = ItemKind.Material, Rarity = rarity, MaxStack = 99, UpgradeCoreGrade = grade,
-            Description = $"Melhora equipamentos de {GradeName(grade)}.",
+            Id = id, Kind = ItemKind.Material, Rarity = rarity, MaxStack = 99, UpgradeCoreGrade = grade,
         };
 
-        private static ItemDefinition Stone(string id, string name, StatBlock stats) => new ItemDefinition
+        private static ItemDefinition Stone(string id, StatBlock stats) => new ItemDefinition
         {
-            Id = id, Name = name, Kind = ItemKind.Material, Rarity = ItemRarity.Rare, MaxStack = 99, OptionStats = stats,
-            Description = $"Coloque num equipamento sem opção: {stats.Describe()}.",
+            Id = id, Kind = ItemKind.Material, Rarity = ItemRarity.Rare, MaxStack = 99, OptionStats = stats,
         };
     }
 }

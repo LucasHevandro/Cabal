@@ -5,8 +5,8 @@ namespace Game.Shared.Tests.Combat;
 
 public class SkillRulesTests
 {
-    private static readonly SkillData Corte = new("corte", "Corte", SkillKind.Physical, 120, 2.5f, 0.5f);
-    private static readonly SkillData Lanca = new("lanca", "Lança de Força", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40);
+    private static readonly SkillData Corte = new("corte", SkillKind.Physical, 120, 2.5f, 0.5f);
+    private static readonly SkillData Lanca = new("lanca", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40);
 
     [Fact]
     public void Pode_usar_com_alvo_no_alcance_e_skill_pronta()
@@ -83,9 +83,9 @@ public class SkillRulesTests
     [Fact]
     public void Dados_invalidos_sao_rejeitados()
     {
-        Assert.Throws<ArgumentException>(() => new SkillData("", "Sem id", SkillKind.Physical, 10, 1, 1).Validate());
-        Assert.Throws<ArgumentException>(() => new SkillData("x", "Alcance zero", SkillKind.Physical, 10, 0, 1).Validate());
-        Assert.Throws<ArgumentException>(() => new SkillData("x", "Mana negativa", SkillKind.Magical, 10, 1, 1, mpCost: -1).Validate());
-        new SkillData("ok", "Válida", SkillKind.Physical, 10, 1, 1).Validate();
+        Assert.Throws<ArgumentException>(() => new SkillData("", SkillKind.Physical, 10, 1, 1).Validate());
+        Assert.Throws<ArgumentException>(() => new SkillData("x", SkillKind.Physical, 10, 0, 1).Validate());
+        Assert.Throws<ArgumentException>(() => new SkillData("x", SkillKind.Magical, 10, 1, 1, mpCost: -1).Validate());
+        new SkillData("ok", SkillKind.Physical, 10, 1, 1).Validate();
     }
 }

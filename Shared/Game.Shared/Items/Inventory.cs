@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Shared.Accounts;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 
 namespace Game.Shared.Items
 {
@@ -220,12 +221,12 @@ namespace Game.Shared.Items
         public IEnumerable<KeyValuePair<EquipSlot, ItemInstance>> Worn => _worn;
 
         /// <summary>Nulo se pode usar; senão o motivo.</summary>
-        public static string? CanWear(ItemDefinition definition, int level, CharacterClass characterClass)
+        public static LocalText? CanWear(ItemDefinition definition, int level, CharacterClass characterClass)
         {
-            if (definition.Kind != ItemKind.Equipment) return "Isso não é um equipamento.";
-            if (level < definition.RequiredLevel) return $"Precisa do nível {definition.RequiredLevel}.";
+            if (definition.Kind != ItemKind.Equipment) return new LocalText("equip.not_gear");
+            if (level < definition.RequiredLevel) return new LocalText("equip.level", definition.RequiredLevel);
             if (definition.RequiredClass.HasValue && definition.RequiredClass.Value != characterClass)
-                return $"Só para {AccountRules.ClassDisplayName(definition.RequiredClass.Value)}.";
+                return new LocalText("equip.class", Loc.Ref(definition.RequiredClass.Value == CharacterClass.Arcanist ? "class.arcanist" : "class.blade"));
             return null;
         }
 
@@ -233,10 +234,10 @@ namespace Game.Shared.Items
         /// Veste o item da posição <paramref name="bagSlot"/> da bolsa; o que estava vestido vai para o lugar dele.
         /// Nulo se deu certo; senão o motivo (nada muda).
         /// </summary>
-        public string? Equip(ItemContainer bag, int bagSlot, int level, CharacterClass characterClass)
+        public LocalText? Equip(ItemContainer bag, int bagSlot, int level, CharacterClass characterClass)
         {
             var item = bag[bagSlot];
-            if (item == null) return "Posição vazia.";
+            if (item == null) return new LocalText("equip.empty_slot");
             var definition = ItemCatalog.Get(item.ItemId);
             var reason = CanWear(definition, level, characterClass);
             if (reason != null) return reason;
@@ -248,10 +249,10 @@ namespace Game.Shared.Items
         }
 
         /// <summary>Tira o item da posição e coloca na bolsa. Nulo se deu certo; senão o motivo.</summary>
-        public string? Unequip(EquipSlot slot, ItemContainer bag)
+        public LocalText? Unequip(EquipSlot slot, ItemContainer bag)
         {
-            if (!_worn.TryGetValue(slot, out var item)) return "Nada vestido aí.";
-            if (!bag.TryPlace(item, out _)) return "Bolsa cheia.";
+            if (!_worn.TryGetValue(slot, out var item)) return new LocalText("equip.nothing_worn");
+            if (!bag.TryPlace(item, out _)) return new LocalText("bag.full");
             _worn.Remove(slot);
             return null;
         }

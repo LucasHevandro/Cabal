@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Shared.Items;
 using Game.Shared.Loot;
+using Game.Shared.Text;
 
 namespace Game.Shared.Economy
 {
@@ -158,18 +159,18 @@ namespace Game.Shared.Economy
     public static class TradeExecutor
     {
         /// <summary>Confere uma oferta contra a bolsa e o Alz de quem oferece. Nulo = tudo certo.</summary>
-        public static string? CheckOffer(TradeOffer offer, ItemContainer bag, long alz)
+        public static LocalText? CheckOffer(TradeOffer offer, ItemContainer bag, long alz)
         {
-            if (offer.Alz < 0) return "Alz inválido";
-            if (offer.Alz > alz) return "Alz insuficiente";
-            if (offer.Items.Count > TradeRules.MaxItems) return $"No máximo {TradeRules.MaxItems} itens";
+            if (offer.Alz < 0) return new LocalText("trade.bad_alz");
+            if (offer.Alz > alz) return new LocalText("trade.no_alz");
+            if (offer.Items.Count > TradeRules.MaxItems) return new LocalText("trade.max_items", TradeRules.MaxItems);
             var slots = new HashSet<int>();
             foreach (var entry in offer.Items)
             {
-                if (!slots.Add(entry.Slot)) return "Item repetido na oferta";
+                if (!slots.Add(entry.Slot)) return new LocalText("trade.repeated");
                 var item = bag[entry.Slot];
-                if (item == null || item.Uid != entry.Uid) return "Um item da oferta não está mais na bolsa";
-                if (entry.Quantity <= 0 || entry.Quantity > item.Quantity) return "Quantidade inválida";
+                if (item == null || item.Uid != entry.Uid) return new LocalText("trade.item_gone");
+                if (entry.Quantity <= 0 || entry.Quantity > item.Quantity) return new LocalText("trade.bad_quantity");
             }
             return null;
         }
@@ -178,7 +179,7 @@ namespace Game.Shared.Economy
         /// Faz a troca. Primeiro simula em cópias das bolsas (tira o que cada um dá, depois põe o que recebe); só mexe nas
         /// bolsas de verdade se tudo couber. Retorna nulo se trocou, ou o motivo.
         /// </summary>
-        public static string? Execute(TradeSession session, ItemContainer bagA, ref long alzA, ItemContainer bagB, ref long alzB,
+        public static LocalText? Execute(TradeSession session, ItemContainer bagA, ref long alzA, ItemContainer bagB, ref long alzB,
             Func<long> newUid)
         {
             var problem = CheckOffer(session.OfferA, bagA, alzA) ?? CheckOffer(session.OfferB, bagB, alzB);
@@ -189,8 +190,8 @@ namespace Game.Shared.Economy
             var testB = bagB.Clone();
             var fromA = TakeAll(testA, session.OfferA);
             var fromB = TakeAll(testB, session.OfferB);
-            if (!PutAll(testA, fromB, () => ++fakeUid)) return "Sua bolsa não tem espaço para os itens";
-            if (!PutAll(testB, fromA, () => ++fakeUid)) return "A bolsa do outro jogador não tem espaço";
+            if (!PutAll(testA, fromB, () => ++fakeUid)) return new LocalText("trade.no_space_mine");
+            if (!PutAll(testB, fromA, () => ++fakeUid)) return new LocalText("trade.no_space_other");
 
             fromA = TakeAll(bagA, session.OfferA);
             fromB = TakeAll(bagB, session.OfferB);

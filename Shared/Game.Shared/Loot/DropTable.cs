@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Shared.Combat;
+using Game.Shared.Text;
 
 namespace Game.Shared.Loot
 {
@@ -18,7 +19,10 @@ namespace Game.Shared.Loot
     public sealed class DropEntry
     {
         public string ItemId = "";
-        public string Name = "";
+
+        /// <summary>Nome do item no idioma do jogador.</summary>
+        public string Name => Loc.T("item." + ItemId);
+
         public ItemRarity Rarity = ItemRarity.Common;
 
         /// <summary>Chance de cair, de 0 a 1.</summary>
@@ -29,10 +33,9 @@ namespace Game.Shared.Loot
 
         public DropEntry() { }
 
-        public DropEntry(string itemId, string name, ItemRarity rarity, double chance, int minQuantity = 1, int maxQuantity = 1)
+        public DropEntry(string itemId, ItemRarity rarity, double chance, int minQuantity = 1, int maxQuantity = 1)
         {
             ItemId = itemId;
-            Name = name;
             Rarity = rarity;
             Chance = chance;
             MinQuantity = minQuantity;

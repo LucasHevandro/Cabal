@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Shared.Text;
 
 namespace Game.Shared.Pvp
 {
@@ -103,7 +104,10 @@ namespace Game.Shared.Pvp
 
         public static (float X, float Z) BaseOf(ArenaTeam team) => (0, team == ArenaTeam.Blue ? -BaseZ : BaseZ);
 
-        public static string TeamName(ArenaTeam team) => team == ArenaTeam.Blue ? "Azul" : team == ArenaTeam.Red ? "Vermelho" : "-";
+        public static string TeamName(ArenaTeam team) => team == ArenaTeam.None ? "-" : Loc.T(TeamKey(team));
+
+        /// <summary>Chave do nome do time (para mandar como argumento de um <see cref="LocalText"/>).</summary>
+        public static string TeamKey(ArenaTeam team) => team == ArenaTeam.Blue ? "team.blue" : "team.red";
 
         /// <summary>
         /// Divide os jogadores (id, nível) em dois times parecidos: do maior nível para o menor, em "cobra"

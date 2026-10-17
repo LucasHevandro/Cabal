@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Game.Shared.Text;
 
 namespace Game.Shared.Accounts
 {
@@ -28,33 +29,33 @@ namespace Game.Shared.Accounts
 
         public static string ClassDisplayName(CharacterClass characterClass) => characterClass switch
         {
-            CharacterClass.Blade => "Lâmina",
-            CharacterClass.Arcanist => "Arcanista",
-            _ => "Desconhecida",
+            CharacterClass.Blade => Loc.T("class.blade"),
+            CharacterClass.Arcanist => Loc.T("class.arcanist"),
+            _ => Loc.T("class.unknown"),
         };
 
         /// <summary>Forma canônica do nome da conta (minúsculas, sem espaços nas pontas).</summary>
         public static string NormalizeAccount(string account) => (account ?? "").Trim().ToLowerInvariant();
 
-        /// <summary>Nulo se válida; senão, o motivo em português.</summary>
-        public static string? ValidateAccount(string account)
+        /// <summary>Nulo se válida; senão, o motivo (chave de tradução).</summary>
+        public static LocalText? ValidateAccount(string account)
         {
             var value = NormalizeAccount(account);
             if (value.Length < MinAccountLength || value.Length > MaxAccountLength)
-                return $"A conta deve ter de {MinAccountLength} a {MaxAccountLength} caracteres.";
+                return new LocalText("account.length", MinAccountLength, MaxAccountLength);
             foreach (var c in value)
             {
                 if (!(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && c != '_')
-                    return "A conta só pode ter letras sem acento, números e _.";
+                    return new LocalText("account.chars");
             }
             return null;
         }
 
-        public static string? ValidatePassword(string password)
+        public static LocalText? ValidatePassword(string password)
         {
             password ??= "";
-            if (password.Length < MinPasswordLength) return $"A senha deve ter pelo menos {MinPasswordLength} caracteres.";
-            if (password.Length > MaxPasswordLength) return $"A senha deve ter no máximo {MaxPasswordLength} caracteres.";
+            if (password.Length < MinPasswordLength) return new LocalText("password.short", MinPasswordLength);
+            if (password.Length > MaxPasswordLength) return new LocalText("password.long", MaxPasswordLength);
             var hasLetter = false;
             var hasDigit = false;
             foreach (var c in password)
@@ -62,19 +63,19 @@ namespace Game.Shared.Accounts
                 if (char.IsLetter(c)) hasLetter = true;
                 if (char.IsDigit(c)) hasDigit = true;
             }
-            return hasLetter && hasDigit ? null : "A senha precisa ter letras e números.";
+            return hasLetter && hasDigit ? null : new LocalText("password.mix");
         }
 
         /// <summary>Nome do personagem: letras (acentos permitidos), números depois da primeira letra, sem espaços.</summary>
-        public static string? ValidateCharacterName(string name)
+        public static LocalText? ValidateCharacterName(string name)
         {
             var value = (name ?? "").Trim();
             if (value.Length < MinCharacterNameLength || value.Length > MaxCharacterNameLength)
-                return $"O nome deve ter de {MinCharacterNameLength} a {MaxCharacterNameLength} caracteres.";
-            if (!char.IsLetter(value[0])) return "O nome deve começar com uma letra.";
+                return new LocalText("charname.length", MinCharacterNameLength, MaxCharacterNameLength);
+            if (!char.IsLetter(value[0])) return new LocalText("charname.first");
             foreach (var c in value)
             {
-                if (!char.IsLetterOrDigit(c)) return "O nome só pode ter letras e números, sem espaços.";
+                if (!char.IsLetterOrDigit(c)) return new LocalText("charname.chars");
             }
             return null;
         }
@@ -113,7 +114,18 @@ namespace Game.Shared.Accounts
     [Serializable]
     public sealed class ApiError
     {
+        /// <summary>Motivo em português (para logs e ferramentas).</summary>
         public string Error = "";
+
+        /// <summary>Motivo como chave de tradução e argumentos (o cliente mostra no idioma dele).</summary>
+        public string Key = "";
+
+        public string[] Args = Array.Empty<string>();
+
+        public static ApiError From(LocalText text) => new ApiError { Error = text.ToString(), Key = text.Key, Args = text.Args };
+
+        /// <summary>O motivo no idioma carregado (cai no texto em português se não vier chave).</summary>
+        public string Display => !string.IsNullOrEmpty(Key) ? Loc.Format(LocalText.FromParts(Key, Args)) : Error;
     }
 
     [Serializable]

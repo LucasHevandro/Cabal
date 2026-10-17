@@ -1,5 +1,6 @@
 using System;
 using Game.Shared.Combat;
+using Game.Shared.Text;
 
 namespace Game.Shared.Items
 {
@@ -83,15 +84,15 @@ namespace Game.Shared.Items
         }
 
         /// <summary>Nulo se dá para tentar; senão o motivo.</summary>
-        public static string? CanTry(ItemInstance item, ItemContainer bag, long alz)
+        public static LocalText? CanTry(ItemInstance item, ItemContainer bag, long alz)
         {
             var definition = ItemCatalog.Find(item.ItemId);
-            if (definition == null || definition.Kind != ItemKind.Equipment) return "Só equipamentos podem ser melhorados.";
-            if (item.Upgrade >= MaxLevel) return $"Já está no máximo (+{MaxLevel}).";
+            if (definition == null || definition.Kind != ItemKind.Equipment) return new LocalText("upgrade.not_gear");
+            if (item.Upgrade >= MaxLevel) return new LocalText("upgrade.max", MaxLevel);
             var cost = CostFor(definition, item.Upgrade);
             if (bag.Count(cost.CoreId) < cost.Cores)
-                return $"Faltam núcleos: precisa de {cost.Cores}x {ItemCatalog.Get(cost.CoreId).Name}.";
-            if (alz < cost.Alz) return $"Faltam Alz: precisa de {cost.Alz:N0}.";
+                return new LocalText("upgrade.no_cores", cost.Cores, Loc.Ref("item." + cost.CoreId));
+            if (alz < cost.Alz) return new LocalText("upgrade.no_alz", cost.Alz);
             return null;
         }
 
@@ -137,14 +138,14 @@ namespace Game.Shared.Items
         /// <summary>
         /// Coloca uma pedra de opção num item sem opção (a pedra é consumida). Nulo se deu certo; senão o motivo.
         /// </summary>
-        public static string? ApplyOption(ItemInstance item, ItemContainer bag, string stoneId)
+        public static LocalText? ApplyOption(ItemInstance item, ItemContainer bag, string stoneId)
         {
             var definition = ItemCatalog.Find(item.ItemId);
             var stone = ItemCatalog.Find(stoneId);
-            if (definition == null || definition.Kind != ItemKind.Equipment) return "Só equipamentos recebem opção.";
-            if (stone == null || !stone.IsOptionStone) return "Isso não é uma pedra de opção.";
-            if (!string.IsNullOrEmpty(item.OptionId)) return "Este item já tem uma opção.";
-            if (!bag.TryRemove(stoneId, 1)) return "Você não tem essa pedra.";
+            if (definition == null || definition.Kind != ItemKind.Equipment) return new LocalText("option.not_gear");
+            if (stone == null || !stone.IsOptionStone) return new LocalText("option.not_stone");
+            if (!string.IsNullOrEmpty(item.OptionId)) return new LocalText("option.has_option");
+            if (!bag.TryRemove(stoneId, 1)) return new LocalText("option.no_stone");
             item.OptionId = stoneId;
             return null;
         }

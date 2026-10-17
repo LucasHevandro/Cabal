@@ -16,8 +16,8 @@ public class DropTableTests
     }
 
     private static DropTable Table() => new(10, 20,
-        new DropEntry("pele", "Pele de lobo", ItemRarity.Common, chance: 0.5, minQuantity: 1, maxQuantity: 3),
-        new DropEntry("presa", "Presa afiada", ItemRarity.Rare, chance: 0.05));
+        new DropEntry("pele_lobo", ItemRarity.Common, chance: 0.5, minQuantity: 1, maxQuantity: 3),
+        new DropEntry("presa_lobo", ItemRarity.Rare, chance: 0.05));
 
     [Fact]
     public void Sorteio_abaixo_da_chance_faz_o_item_cair()
@@ -26,7 +26,7 @@ public class DropTableTests
         var loot = Table().Roll(new SequenceRandom(0.1, 0.99, 0.9, 0.0));
 
         var item = Assert.Single(loot.Items);
-        Assert.Equal("pele", item.ItemId);
+        Assert.Equal("pele_lobo", item.ItemId);
         Assert.Equal(3, item.Quantity);
         Assert.Equal(10, loot.Alz);
     }
@@ -53,7 +53,7 @@ public class DropTableTests
         {
             foreach (var item in table.Roll(random).Items)
             {
-                if (item.ItemId == "pele") pele++;
+                if (item.ItemId == "pele_lobo") pele++;
                 else presa++;
             }
         }
@@ -66,8 +66,8 @@ public class DropTableTests
     public void Tabela_invalida_eh_rejeitada()
     {
         Assert.Throws<ArgumentException>(() => new DropTable(10, 5).Validate());
-        Assert.Throws<ArgumentException>(() => new DropTable(0, 0, new DropEntry("x", "X", ItemRarity.Common, 1.5)).Validate());
-        Assert.Throws<ArgumentException>(() => new DropTable(0, 0, new DropEntry("", "X", ItemRarity.Common, 0.5)).Validate());
+        Assert.Throws<ArgumentException>(() => new DropTable(0, 0, new DropEntry("x", ItemRarity.Common, 1.5)).Validate());
+        Assert.Throws<ArgumentException>(() => new DropTable(0, 0, new DropEntry("", ItemRarity.Common, 0.5)).Validate());
         Table().Validate();
     }
 }

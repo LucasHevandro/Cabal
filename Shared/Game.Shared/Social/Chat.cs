@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Game.Shared.Accounts;
+using Game.Shared.Text;
 
 namespace Game.Shared.Social
 {
@@ -215,10 +216,7 @@ namespace Game.Shared.Social
     /// </summary>
     public static class ChatParser
     {
-        public const string HelpText =
-            "/m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · " +
-            "/convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · " +
-            "/bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome · /duelo nome · /arena";
+        public static string HelpText => Loc.T("chat.help");
 
         public static ChatInput Parse(string line, ChatChannel current, string lastWhisperFrom = "")
         {
@@ -242,47 +240,47 @@ namespace Game.Shared.Social
                 case "s":
                 case "w":
                 case "sussurro":
-                    if (first.Length == 0) return Invalid("Use /s nome mensagem");
+                    if (first.Length == 0) return Invalid(Loc.T("chat.use_whisper"));
                     return Message(ChatChannel.Whisper, first, afterFirst);
                 case "r":
                 case "responder":
-                    if (string.IsNullOrEmpty(lastWhisperFrom)) return Invalid("Ninguém sussurrou para você ainda");
+                    if (string.IsNullOrEmpty(lastWhisperFrom)) return Invalid(Loc.T("chat.no_whisper"));
                     return Message(ChatChannel.Whisper, lastWhisperFrom, rest);
                 case "convidar":
                 case "c":
-                    return first.Length == 0 ? Invalid("Use /convidar nome") : Command(ChatInputKind.PartyInvite, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_invite")) : Command(ChatInputKind.PartyInvite, first);
                 case "sair":
                     return Command(ChatInputKind.PartyLeave, "");
                 case "expulsar":
-                    return first.Length == 0 ? Invalid("Use /expulsar nome") : Command(ChatInputKind.PartyKick, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_kick")) : Command(ChatInputKind.PartyKick, first);
                 case "lider":
                 case "líder":
-                    return first.Length == 0 ? Invalid("Use /lider nome") : Command(ChatInputKind.PartyPromote, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_leader")) : Command(ChatInputKind.PartyPromote, first);
                 case "amigo":
-                    return first.Length == 0 ? Invalid("Use /amigo nome") : Command(ChatInputKind.FriendAdd, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_friend")) : Command(ChatInputKind.FriendAdd, first);
                 case "remover":
-                    return first.Length == 0 ? Invalid("Use /remover nome") : Command(ChatInputKind.FriendRemove, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_remove")) : Command(ChatInputKind.FriendRemove, first);
                 case "bloquear":
-                    return first.Length == 0 ? Invalid("Use /bloquear nome") : Command(ChatInputKind.Block, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_block")) : Command(ChatInputKind.Block, first);
                 case "desbloquear":
-                    return first.Length == 0 ? Invalid("Use /desbloquear nome") : Command(ChatInputKind.Unblock, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_unblock")) : Command(ChatInputKind.Unblock, first);
                 case "denunciar":
-                    if (first.Length == 0 || afterFirst.Length == 0) return Invalid("Use /denunciar nome motivo");
+                    if (first.Length == 0 || afterFirst.Length == 0) return Invalid(Loc.T("chat.use_report"));
                     return new ChatInput { Kind = ChatInputKind.Report, Target = first, Text = afterFirst };
                 case "duelo":
                 case "duelar":
-                    return first.Length == 0 ? Invalid("Use /duelo nome") : Command(ChatInputKind.DuelRequest, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_duel")) : Command(ChatInputKind.DuelRequest, first);
                 case "arena":
                     return Command(ChatInputKind.ArenaQueue, "");
                 case "trocar":
-                    return first.Length == 0 ? Invalid("Use /trocar nome") : Command(ChatInputKind.TradeRequest, first);
+                    return first.Length == 0 ? Invalid(Loc.T("chat.use_trade")) : Command(ChatInputKind.TradeRequest, first);
                 case "amigos":
                     return Command(ChatInputKind.FriendsWindow, "");
                 case "ajuda":
                 case "?":
                     return Command(ChatInputKind.Help, "");
                 default:
-                    return Invalid($"Comando desconhecido: /{command} (digite /ajuda)");
+                    return Invalid(Loc.T("chat.unknown", command));
             }
         }
 

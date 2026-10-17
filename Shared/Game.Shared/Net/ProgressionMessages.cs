@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Shared.Text;
 
 namespace Game.Shared.Net
 {
@@ -295,17 +296,17 @@ namespace Game.Shared.Net
 
         public long Uid;
         public byte NewLevel;
-        public string Message = "";
+        public LocalText Message = LocalText.Empty;
 
         public void Write(PacketWriter w)
         {
             w.WriteByte(Outcome);
             w.WriteLong(Uid);
             w.WriteByte(NewLevel);
-            w.WriteString(Message);
+            Message.Write(w);
         }
 
         public static UpgradeResult Read(PacketReader r) =>
-            new UpgradeResult { Outcome = r.ReadByte(), Uid = r.ReadLong(), NewLevel = r.ReadByte(), Message = r.ReadString() };
+            new UpgradeResult { Outcome = r.ReadByte(), Uid = r.ReadLong(), NewLevel = r.ReadByte(), Message = LocalText.Read(r) };
     }
 }

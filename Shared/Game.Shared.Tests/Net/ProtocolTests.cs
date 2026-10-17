@@ -1,4 +1,5 @@
 using Game.Shared.Net;
+using Game.Shared.Text;
 
 namespace Game.Shared.Tests.Net;
 
@@ -71,9 +72,9 @@ public class ProtocolTests
 
         var combat = RoundTrip(new CombatEvent
         {
-            AttackerId = 1, TargetId = 7, Source = CombatSource.Finisher, Damage = 580, Critical = true, Grade = 2, RouteName = "Tempestade",
+            AttackerId = 1, TargetId = 7, Source = CombatSource.Finisher, Damage = 580, Critical = true, Grade = 2, RouteId = "tempestade",
         });
-        Assert.Equal((580, true, "Tempestade", CombatSource.Finisher), (combat.Damage, combat.Critical, combat.RouteName, combat.Source));
+        Assert.Equal((580, true, "tempestade", CombatSource.Finisher), (combat.Damage, combat.Critical, combat.RouteId, combat.Source));
 
         var combo = RoundTrip(new ComboState
         {
@@ -85,16 +86,18 @@ public class ProtocolTests
         var stats = RoundTrip(new PlayerStats { Level = 12, Hp = 100, MaxHp = 3000, Alz = 9_000_000_000 });
         Assert.Equal((12, 9_000_000_000L), (stats.Level, stats.Alz));
 
-        Assert.Equal("Pele de lobo", RoundTrip(new LootSpawned { LootId = 3, Name = "Pele de lobo", Quantity = 2 }).Name);
+        Assert.Equal("Pele de lobo", RoundTrip(new LootSpawned { LootId = 3, ItemId = "pele_lobo", Quantity = 2 }).Name);
         Assert.Equal(4, RoundTrip(new LootRemoved { LootId = 3, PickedById = 4 }).PickedById);
         Assert.Equal(12f, RoundTrip(new PositionCorrection { X = 12, Z = 1 }).X);
-        Assert.True(RoundTrip(new Notice { Text = "O chefe ficou furioso!", Announcement = true }).Announcement);
+        var notice = RoundTrip(new Notice { Text = new LocalText("upgrade.no_cores", 3, Loc.Ref("item.nucleo_baixo")), Announcement = true });
+        Assert.True(notice.Announcement);
+        Assert.Equal("Faltam núcleos: precisa de 3x Núcleo de melhoria (baixo).", notice.Text.ToString());
         Assert.Equal(2.0, RoundTrip(new Pong { ClientTime = 1, ServerTime = 2 }).ServerTime);
         Assert.Equal(55, RoundTrip(new Welcome { PlayerId = 55, TickRate = 20 }).PlayerId);
-        Assert.Equal("Versão antiga", RoundTrip(new Reject { Reason = "Versão antiga" }).Reason);
+        Assert.Equal("trade.no_alz", RoundTrip(new Reject { Reason = new LocalText("trade.no_alz") }).Reason.Key);
         Assert.Equal(7, RoundTrip(new EntityDespawned { Id = 7 }).Id);
-        var bag = RoundTrip(new Inventory { Items = { new InventoryStack { ItemId = "pele", Name = "Pele", Rarity = 1, Quantity = 3 } } });
-        Assert.Equal(("pele", 3), (bag.Items[0].ItemId, bag.Items[0].Quantity));
+        var bag = RoundTrip(new Inventory { Items = { new InventoryStack { ItemId = "pele_lobo", Rarity = 1, Quantity = 3 } } });
+        Assert.Equal(("pele_lobo", 3), (bag.Items[0].ItemId, bag.Items[0].Quantity));
     }
 
     [Fact]
@@ -106,7 +109,7 @@ public class ProtocolTests
             {
                 new InventoryStack
                 {
-                    ItemId = "espada_ferro", Name = "Espada", Rarity = 0, Quantity = 1, Container = ItemContainerKind.Equipment,
+                    ItemId = "espada_ferro", Rarity = 0, Quantity = 1, Container = ItemContainerKind.Equipment,
                     Slot = 0, Uid = 123456789012, Upgrade = 7, PityFails = 2, PityLevel = 7, RegainGuaranteed = true, OptionId = "pedra_furia",
                 },
             },
@@ -141,8 +144,8 @@ public class ProtocolTests
         Assert.Equal(new[] { 4, 6 }, quests.Active[0].Counts);
         var dialog = RoundTrip(new NpcDialog { NpcId = "anciao_doran", Offered = { "a" }, ReadyToTurnIn = { "b", "c" } });
         Assert.Equal(2, dialog.ReadyToTurnIn.Count);
-        var upgrade = RoundTrip(new UpgradeResult { Outcome = 3, Uid = 9, NewLevel = 6, Message = "Falhou" });
-        Assert.Equal(((byte)3, (byte)6, "Falhou"), (upgrade.Outcome, upgrade.NewLevel, upgrade.Message));
+        var upgrade = RoundTrip(new UpgradeResult { Outcome = 3, Uid = 9, NewLevel = 6, Message = new LocalText("upgrade.max", 10) });
+        Assert.Equal(((byte)3, (byte)6, "Já está no máximo (+10)."), (upgrade.Outcome, upgrade.NewLevel, upgrade.Message.ToString()));
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Game.Shared.Economy;
 using Game.Shared.Social;
+using Game.Shared.Text;
 
 namespace Game.Shared.Net
 {
@@ -404,7 +405,7 @@ namespace Game.Shared.Net
 
     /// <summary>
     /// Uma linha do chat. No sussurro, quem enviou recebe uma cópia com <see cref="ToName"/> preenchido
-    /// ("Para Fulano: ...").
+    /// ("Para Fulano: ..."). Linhas do sistema vêm em <see cref="SystemText"/> (traduzidas no cliente).
     /// </summary>
     public sealed class ChatMessage : INetMessage
     {
@@ -413,7 +414,15 @@ namespace Game.Shared.Net
         public int FromId;
         public string FromName = "";
         public string ToName = "";
+
+        /// <summary>O que o jogador escreveu (já filtrado).</summary>
         public string Text = "";
+
+        /// <summary>Linha do sistema (canal <see cref="ChatChannel.System"/>).</summary>
+        public LocalText SystemText = LocalText.Empty;
+
+        /// <summary>O texto para mostrar: o do jogador ou o do sistema no idioma carregado.</summary>
+        public string Display => Channel == ChatChannel.System ? SystemText.ToString() : Text;
 
         public void Write(PacketWriter w)
         {
@@ -422,12 +431,13 @@ namespace Game.Shared.Net
             w.WriteString(FromName);
             w.WriteString(ToName);
             w.WriteString(Text);
+            SystemText.Write(w);
         }
 
         public static ChatMessage Read(PacketReader r) => new ChatMessage
         {
             Channel = (ChatChannel)r.ReadByte(), FromId = r.ReadInt(), FromName = r.ReadString(), ToName = r.ReadString(),
-            Text = r.ReadString(),
+            Text = r.ReadString(), SystemText = LocalText.Read(r),
         };
     }
 }

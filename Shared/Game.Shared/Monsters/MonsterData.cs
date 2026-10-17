@@ -1,5 +1,6 @@
 using System;
 using Game.Shared.Loot;
+using Game.Shared.Text;
 
 namespace Game.Shared.Monsters
 {
@@ -8,7 +9,10 @@ namespace Game.Shared.Monsters
     public sealed class MonsterData
     {
         public string Id = "";
-        public string Name = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>monster.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("monster." + Id);
+
         public int Level = 1;
         public int MaxHp = 500;
 

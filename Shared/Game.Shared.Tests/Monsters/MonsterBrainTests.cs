@@ -9,7 +9,6 @@ public class MonsterBrainTests
     private static MonsterData Wolf(bool aggressive = true, float wander = 0) => new()
     {
         Id = "lobo",
-        Name = "Lobo",
         AttackRange = 1.5f,
         AttackCooldownSeconds = 2f,
         AttackWindupSeconds = 0.5f,

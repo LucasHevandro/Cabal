@@ -1,0 +1,784 @@
+# Textos do jogo em português do Brasil (idioma padrão).
+#
+# Formato: uma linha por texto, "chave = texto". Linhas vazias e começadas por # são ignoradas.
+# Argumentos: {0}, {1}... na ordem que o código passa; formato opcional como {0:N0} (milhar) ou {0:0.0}.
+# Para chaves literais use {{ e }}. Quebra de linha: \n.
+# Para traduzir: copie este arquivo como <idioma>.txt (ex.: en-US.txt) e troque só o que vem depois do "=".
+
+# ===== Itens =====
+item.espada_ferro = Espada de Ferro
+item.espada_aco_negro = Espada de Aço Negro
+item.espada_astralita = Espada de Astralita
+item.cajado_ferro = Cajado de Ferro
+item.cajado_aco_negro = Cajado de Aço Negro
+item.cajado_astralita = Cajado de Astralita
+item.armadura_ferro = Couraça de Ferro
+item.luvas_ferro = Luvas de Ferro
+item.botas_ferro = Botas de Ferro
+item.anel_ferro = Anel de Ferro
+item.armadura_aco_negro = Couraça de Aço Negro
+item.luvas_aco_negro = Luvas de Aço Negro
+item.botas_aco_negro = Botas de Aço Negro
+item.anel_aco_negro = Anel de Aço Negro
+item.armadura_astralita = Couraça de Astralita
+item.luvas_astralita = Luvas de Astralita
+item.botas_astralita = Botas de Astralita
+item.anel_astralita = Anel de Astralita
+item.nucleo_baixo = Núcleo de melhoria (baixo)
+item.nucleo_medio = Núcleo de melhoria (médio)
+item.nucleo_alto = Núcleo de melhoria (alto)
+item.pedra_vigor = Pedra do Vigor
+item.pedra_furia = Pedra da Fúria
+item.pedra_precisao = Pedra da Precisão
+item.pocao_hp_p = Poção de vida (P)
+item.pocao_hp_p.desc = Recupera 400 de vida.
+item.pocao_hp_m = Poção de vida (M)
+item.pocao_hp_m.desc = Recupera 1.200 de vida.
+item.chave_cripta = Chave da Cripta
+item.chave_cripta.desc = Cada membro gasta uma para entrar na Cripta Esquecida (Guardiã Selene, na vila).
+item.pelo_macio = Pelo macio
+item.pele_lobo = Pele de lobo
+item.presa_lobo = Presa de lobo
+item.couro_javali = Couro de javali
+item.seda = Seda de aranha
+item.veneno = Glândula de veneno
+item.fragmento_pedra = Fragmento de pedra viva
+item.essencia = Essência espectral
+item.fragmento_guardiao = Fragmento do Guardião
+item.po_de_osso = Pó de osso
+item.desc.core = Melhora equipamentos de {0}.
+item.desc.stone = Coloque num equipamento sem opção: {0}.
+
+# ===== Graus de material =====
+grade.1 = Ferro
+grade.2 = Aço Negro
+grade.3 = Astralita
+
+# ===== Atributos =====
+stat.attack = {0:+0;-0} ataque
+stat.magic = {0:+0;-0} magia
+stat.defense = {0:+0;-0} defesa
+stat.hp = {0:+0;-0} HP
+stat.mp = {0:+0;-0} MP
+stat.crit = {0:+0.#;-0.#}% crítico
+
+# ===== Monstros =====
+monster.coelho_saltador = Coelho Saltador
+monster.lobo_cinzento = Lobo Cinzento
+monster.javali_furioso = Javali Furioso
+monster.aranha_da_mata = Aranha da Mata
+monster.golem_de_pedra = Golem de Pedra
+monster.espectro = Espectro
+monster.cavaleiro_caido = Cavaleiro Caído
+monster.guardiao_das_ruinas = Guardião das Ruínas
+monster.servo_da_cripta = Servo da Cripta
+monster.esqueleto_guerreiro = Esqueleto Guerreiro
+monster.esqueleto_arqueiro = Esqueleto Arqueiro
+monster.cavaleiro_ossudo = Cavaleiro Ossudo
+monster.senhor_da_cripta = Senhor da Cripta
+
+# ===== Zonas =====
+zone.vila = Vila de Partida
+zone.campos_do_vento = Campos do Vento
+zone.mata_sombria = Mata Sombria
+zone.ruinas_esquecidas = Ruínas Esquecidas
+zone.arena_do_guardiao = Arena do Guardião
+
+# ===== Skills =====
+skill.corte = Corte
+skill.giro_de_lamina = Giro de Lâmina
+skill.lanca_de_forca = Lança de Força
+skill.explosao_arcana = Explosão Arcana
+skill.golpe_runico = Golpe Rúnico
+skill.estocada_dupla = Estocada Dupla
+skill.fenda_sismica = Fenda Sísmica
+skill.lamina_flamejante = Lâmina Flamejante
+skill.tempestade_de_aco = Tempestade de Aço
+skill.execucao = Execução
+skill.faisca = Faísca
+skill.golpe_de_cajado = Golpe de Cajado
+skill.corrente_gelida = Corrente Gélida
+skill.meteoro = Meteoro
+skill.raio_duplo = Raio Duplo
+skill.cataclismo = Cataclismo
+
+# ===== Dungeons =====
+dungeon.cripta_esquecida = Cripta Esquecida
+
+# ===== Salas da dungeon =====
+room.salao_dos_ossos = Salão dos Ossos
+room.galeria_das_flechas = Galeria das Flechas
+room.camara_dos_cavaleiros = Câmara dos Cavaleiros
+room.trono_da_cripta = Trono da Cripta
+
+# ===== Medalhas =====
+medal.S = S
+medal.A = A
+medal.B = B
+
+# ===== NPCs =====
+npc.anciao_doran = Ancião Doran
+npc.ferreira_ilsa = Ferreira Ilsa
+npc.guarda_volumes_bento = Bento do Armazém
+npc.mercadora_lia = Mercadora Lia
+npc.guardia_selene = Guardiã Selene
+
+# ===== Missões =====
+quest.primeiros_passos = Primeiros passos
+quest.arte_do_combo = A arte do combo
+quest.pele_e_presa = Pele e presa
+quest.ameaca_na_mata = Ameaça na mata
+quest.veneno_raro = Veneno raro
+quest.as_ruinas = As ruínas
+quest.ecos_espectrais = Ecos espectrais
+quest.o_guardiao = O Guardião
+quest.primeiros_passos.desc = Apresente-se à Ferreira Ilsa: ela cuida das armas e da melhoria dos equipamentos.
+quest.arte_do_combo.desc = Derrote coelhos nos Campos do Vento para treinar o ritmo dos golpes.
+quest.arte_do_combo.unlocks = Libera o combo.
+quest.pele_e_presa.desc = Os lobos cinzentos rondam a vila. Traga peles para reforçar as armaduras.
+quest.ameaca_na_mata.desc = Javalis e aranhas tomaram a Mata Sombria. Abra caminho.
+quest.ameaca_na_mata.unlocks = Libera as skills de rank 2.
+quest.veneno_raro.desc = A Ferreira Ilsa precisa de glândulas de veneno para temperar o aço.
+quest.as_ruinas.desc = Golens de pedra guardam a entrada das Ruínas Esquecidas.
+quest.as_ruinas.unlocks = Libera as skills de rank 3.
+quest.ecos_espectrais.desc = Espectros vagam pelas ruínas. Reúna a essência deles.
+quest.o_guardiao.desc = Derrote o Guardião das Ruínas na arena ao norte.
+
+# ===== Rotas de combo =====
+route.sobrecarga = Sobrecarga
+route.lamina_runica = Lâmina Rúnica
+route.alternancia = Alternância
+route.alternancia_inversa = Alternância
+route.tempestade = Tempestade
+route.eco_arcano = Eco Arcano
+
+# ===== Cliente: combate =====
+skill.unlock_level = Nv {0}
+skill.unlock_level_quest_short = Nv {0}\n+ missão
+skill.unlock_level_quest = Nv {0} + missão "{1}"
+combo.route = Rota: {0}
+combo.reason_timeout = Tempo esgotado
+combo.locked = Conclua a missão "{0}" para liberar o combo
+combat.need_target_hint = Selecione um alvo (Tab ou clique)
+combo.no_sp = SP insuficiente ({0}/{1})
+combo.started = Combo! Aperte as skills quando o marcador estiver na janela
+combo.finisher_closer = Chegue perto do alvo para finalizar
+fx.final = FINAL {0}
+combo.finisher = Finalizador x{0:0.00} depois de {1} acertos
+skill.locked_detail = {0} ainda não foi liberada ({1})
+skill.cooldown = {0} em recarga
+combat.out_of_range = Fora de alcance
+combat.no_mp = MP insuficiente ({0}/{1})
+combo.reason_window = Fora da janela
+fx.dodged = Esquivou!
+level.up_offline = Nível {0}! HP {1} · MP {2} · ataque {3} · defesa {4}
+player.died = Você morreu
+respawn.city = Você renasceu na cidade
+combat.no_target = Sem alvo
+combo.ended = Combo encerrado: {0} ({1} acertos)
+respawn.village = Você renasceu na vila
+combo.reason_window_server = fora da janela (servidor)
+combo.reason_timeout_server = tempo esgotado (servidor)
+combo.reason_finished = finalizado
+combo.reason_interrupted = interrompido
+
+# ===== Cliente: combate offline =====
+fx.alz_gain = +{0} Alz
+loot.picked = {0} x{1}
+
+# ===== Cliente: combate offline =====
+boss.enraged = {0} ficou furioso!
+
+# ===== Cliente: combate offline =====
+ui.name_level = {0} (Nv {1})
+
+# ===== Cliente: conexão =====
+net.http_error = Erro {0}
+net.api_timeout = O servidor não respondeu a tempo.
+net.api_unreachable = Não foi possível falar com o servidor. Ele está ligado?
+net.api_bad_response = Resposta inválida do servidor.
+
+# ===== Cliente: entrada =====
+login.entering = Entrando…
+login.passwords_differ = As senhas não são iguais.
+login.creating_account = Criando conta…
+login.account_created = Conta criada!
+login.creating_character = Criando personagem…
+login.character_created = {0} foi criado!
+login.auto = Login automático…
+login.bad_address = Endereço inválido. Exemplo: 127.0.0.1:7777
+login.title = Action MMORPG — protótipo
+login.server = Servidor (endereço:porta)
+login.account = Conta
+login.password = Senha
+login.enter = Entrar
+login.create_account = Criar conta
+login.offline = Jogar offline
+login.new_account = Nova conta
+login.account_rule = Conta: {0} a {1} letras sem acento, números ou _
+login.password_rule = Senha: pelo menos {0} caracteres, com letras e números
+login.repeat_password = Repita a senha
+login.create_and_enter = Criar conta e entrar
+ui.back = Voltar
+login.your_characters = Seus personagens ({0}/{1})
+login.character_row = {0}   ·   {1}   ·   Nv {2}
+login.create_character = Criar personagem
+login.logout = Sair da conta
+login.new_character = Novo personagem
+login.name_rule = Nome: {0} a {1} letras ou números, sem espaços
+login.class = Classe
+login.class_blade = Lâmina — corpo a corpo
+login.class_arcanist = Arcanista — à distância
+login.create = Criar
+login.auto_failed = Login automático falhou: {0}
+login.auto_create_failed = Não consegui criar o personagem: {0}
+
+# ===== Cliente: conexão =====
+net.lost_sending = conexão perdida ao enviar
+net.timeout = tempo esgotado conectando em {0}:{1}
+net.cant_connect_code = não foi possível conectar em {0}:{1} ({2})
+net.cant_connect = não foi possível conectar em {0}:{1}
+net.lost = conexão perdida
+net.server_closed = o servidor encerrou a conexão
+net.protocol_error = erro de protocolo: {0}
+
+# ===== Cliente: conexão =====
+net.disconnected = Desconectado
+
+# ===== Cliente: combate offline =====
+fx.xp_gain = +{0} XP
+fx.level_up = NÍVEL {0}!
+
+# ===== Cliente: HUD =====
+hud.dps = DPS {0:0} · total {1}
+hud.combo_start = Q: iniciar combo ({0} SP)
+hud.combo_hits = <b>{0}</b> acertos
+hud.combo_bonus = bônus +{0:0}%
+hud.combo_finish = F: finalizar
+hud.kind_magical_short = <b>M</b>
+hud.kind_physical_short = <b>F</b>
+hud.max_level = Nível máximo
+hud.xp = XP {0} / {1} ({2:0.0}%)
+hud.zone = <b>{0}</b>  Nv {1}
+hud.zone_road = Estrada
+hud.zone_dungeon = <b>{0}</b>  Dungeon
+hud.zone_arena = <b>Arena</b>  5 contra 5
+hud.disconnected = Desconectado: {0}
+hud.connecting = Conectando em {0}:{1}…
+hud.entering_world = Entrando no mundo…
+hud.online = Online · {0} · {1:0} ms
+hud.you_died = <b>VOCÊ MORREU</b>
+hud.respawning = Renascendo na cidade em {0:0}…
+hud.inventory_title = <b>Inventário</b> (I fecha)
+hud.inventory_empty = Vazio. Derrote monstros e passe por cima dos itens (ou aperte E perto deles).
+hud.monsters_killed = Monstros derrotados: {0}
+hud.target = {0} Nv {1}
+hud.sp = SP {0} / {1}
+hud.you = <b>Você</b> · Nv {0}
+hud.alz = {0:N0} Alz
+hud.hp = HP {0} / {1}
+hud.mp = MP {0} / {1}
+hud.awakening_active = <b>DESPERTAR</b> {0:0.0} s
+hud.awakening_gauge = Despertar {0}%
+hud.awakening_ready = <b>R: DESPERTAR</b>
+hud.kind_magical = mágico
+hud.kind_physical = físico
+hud.kind_with_mp = {0} · {1} MP
+hud.grade_excellent = EXCELLENT
+hud.grade_good = GOOD
+hud.grade_miss = MISS
+hud.route = <b>{0} +{1:0}%</b>
+help.controls = <b>Controles</b>\nWASD andar · Shift correr · Espaço esquivar\nBotão direito girar câmera · Roda zoom\nTab / clique: selecionar alvo · Esc limpar
+help.keys_online = 1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\nEnter chat · O amigos · /convidar nome forma grupo\n/duelo nome desafia · /arena entra na fila 5v5
+help.keys_offline = 1–4 skills · E coletar itens · I inventário
+help.combo = Q iniciar combo (gasta SP)\nF finalizador (depois de 3 acertos)\n\n<b>Rotas de combo</b> (F = físico, M = mágico)\nF→M ou M→F: Alternância +10%\nF F M: Tempestade +25% · M M F: Eco Arcano +25%
+help.best_chain = Melhor corrente: <b>{0}</b>
+
+# ===== Cliente: dungeon =====
+dungeon.portal_title = {0} — {1}
+dungeon.req_level = Nível {0} ou mais (você: {1})
+dungeon.req_key = {0} na bolsa (você tem {1}; a mercadora vende)
+dungeon.req_solo = Sozinho (ou forme um grupo com /convidar)
+dungeon.req_party = Grupo de {0}: o líder entra com todos, que precisam estar aqui perto
+dungeon.best_times = <b>Melhores tempos</b>
+dungeon.no_runs = Ninguém venceu ainda. Sejam os primeiros!
+dungeon.run_row = {0}  <size=12>combo {1}</size>
+dungeon.enter = <b>Entrar</b>
+dungeon.enter_party = <b>Entrar com o grupo</b>
+dungeon.hud_room = <b>Sala {0}/{1}</b>  <size=14>{2}</size>
+dungeon.hud_shield = <color=#8fd3ff>Escudo: derrote os servos!</color>
+dungeon.hud_victory = Vitória!
+dungeon.hud_monsters = {0} monstros para abrir o portão
+dungeon.hud_boss = Chefe e {0} servos
+dungeon.leave = Sair
+dungeon.victory_title = {0} — vitória!
+dungeon.victory_stats = Tempo <b>{0}</b> · combo máximo <b>{1}</b> · {2} sorteios no baú
+dungeon.ranking_out = Fora do top 10 desta vez.
+dungeon.ranking_place = <color=#ffd25a>{0}º lugar no ranking!</color>
+dungeon.chest_hint = O baú apareceu no fundo da sala: os itens com o seu nome são só seus. A cripta fecha sozinha em instantes.
+dungeon.take_chest = Pegar o baú
+dungeon.leave_crypt = Sair da cripta
+dungeon.crypt_intro = Três salas e o Senhor da Cripta, para até {0} jogadores. Vençam em {1}: medalha <b>S</b> até {2} com combo de {3}+, <b>A</b> até {4}. A medalha dá mais sorteios no baú.
+
+# ===== Cliente: loja e troca =====
+shop.title = {0} — loja
+shop.sell_title = <b>Vender</b>  <size=13>(botão direito ou arraste um item da bolsa)</size>
+smith.no_item = Nenhum item escolhido
+shop.unit_price = {0:N0} Alz cada
+shop.sell_warning = <color=#ff7766>Atenção: item valioso, não dá para desfazer.</color>
+shop.sell_one = Vender 1
+shop.sell_all = Vender tudo ({0:N0})
+trade.title = Troca com {0}
+trade.they_offer = <b>{0} oferece</b>  {1}
+trade.you_offer = <b>Você oferece</b>  {0}
+trade.offer_hint = <size=12>Botão direito ou arraste da bolsa; clique num item seu para tirar.</size>
+trade.zero = Zerar
+trade.step_1 = <size=13>1) Os dois apertam <b>Pronto</b>. Mudar a oferta destrava os dois.</size>
+trade.step_2 = <size=13>2) Confira tudo e aperte <b>Confirmar</b>. A troca acontece quando os dois confirmam.</size>
+trade.ready = Pronto
+trade.confirm = <b>Confirmar</b>
+ui.cancel = Cancelar
+trade.status_building = <color=#aaaaaa>montando</color>
+trade.status_ready = <color=#ffd25a>pronto</color>
+trade.status_confirmed = <color=#77ee77>✔ confirmou</color>
+trade.invite_title = Pedido de troca
+trade.invite_text = <b>{0}</b> quer trocar com você
+party.invite_accept = <b>Aceitar</b>
+party.invite_decline = Recusar
+
+# ===== Cliente: duelo e arena =====
+duel.invite_title = Desafio de duelo
+duel.invite_text = <b>{0}</b> desafiou você para um duelo
+arena.queue_title = <b>Fila da arena</b>  {0}/{1} jogadores
+arena.leave_queue = Sair da fila
+duel.countdown = <b>Duelo contra {0}</b> em {1}…
+duel.running = <b>Duelo contra {0}</b>  {1}
+duel.forfeit_button = Desistir
+arena.score_blue = <size=30><b>{0}</b></size>  Azul
+arena.score_red = Vermelho  <size=30><b>{0}</b></size>
+arena.starts_in = começa em {0}
+arena.end = fim
+arena.score_info = <size=12>até {0} · você: {1}</size>
+arena.leave = Sair
+arena.defeat_title = Derrota
+arena.victory = Vitória!
+arena.draw = Empate!
+arena.result_title = Arena — {0}
+arena.result_score = Azul <b>{0}</b> x <b>{1}</b> Vermelho
+arena.col_player = <b>Jogador</b>
+arena.col_kills = <b>Abates</b>
+arena.col_deaths = <b>Mortes</b>
+arena.col_captures = <b>Capturas</b>
+ui.name_level_small = {0} <size=12>Nv {1}</size>
+arena.back_home = <size=12>Todos voltam à vila em instantes.</size>
+
+# ===== Cliente: inventário, ferreira, missões e atributos =====
+npc.none_near = Nenhum NPC por perto
+inv.title = Inventário  <size=14>(I fecha · botão direito usa/veste)</size>
+inv.alz = <b>{0:N0}</b> Alz
+inv.stats = Ataque {0} · Magia {1} · Defesa {2} · Crítico {3:0.#}%
+inv.discard = Jogar fora
+bag.full_short = Bolsa cheia
+inv.discard_confirm = Jogar fora?
+item.with_upgrade = {0} +{1}
+tip.option = <color=#ffd25a>Opção: {0}</color>
+tip.compared = <i>Comparado ao vestido:</i>
+tip.equal = igual
+tip.empty_slot = <color=#77ee77>Posição vazia: só ganha.</color>
+tip.option_stone = Pedra de opção: {0}
+tip.option_stone_hint = Use na ferreira (1 por item).
+tip.quantity = Quantidade: {0}
+storage.title = Armazém  <size=14>(arraste entre as janelas)</size>
+smith.title = {0} — melhoria
+smith.drag_hint = Arraste um equipamento para cá (ou botão direito nele).
+smith.option_title = <b>Opção</b> (pedra + equipamento sem opção)
+smith.stone_info = {0}: {1}
+smith.pick_stone_hint = Escolha uma pedra (botão direito)
+smith.apply_stone = Aplicar pedra
+item.with_upgrade_bold = <b>{0} +{1}</b>
+smith.max = No máximo (+10).
+smith.fail_keep = Falhar mantém o nível
+smith.fail_downgrade = <color=#ff9977>Falhar perde 1 nível (recuperar é garantido)</color>
+smith.pity = Proteção: {0}/{1} falhas (cheia = garantida)
+smith.next_level = Próximo nível: {0}
+smith.upgrade = <b>Melhorar</b>
+dialog.finish_first = "Termine o que pedi e volte aqui."
+dialog.come_back_level = "Volte quando chegar ao nível {0}, aventureiro."
+dialog.all_done = "Você já fez tudo o que eu podia pedir. Obrigado!"
+dialog.turn_in = <b>Entregar</b>
+dialog.accept = Aceitar
+ui.close = Fechar
+quest.header = <b><color=#ffd25a>{0}</color></b>  <size=14>Nv {1}</size>
+quest.reward = Recompensa: {0}
+quest.reward_xp = {0:N0} XP
+quest.reward_alz = {0:N0} Alz
+tracker.title = <b>Missões</b>  <size=13>(J abre o diário)</size>
+questlog.title = Diário de missões  <size=14>(J fecha)</size>
+questlog.abandon = Abandonar
+questlog.completed = Concluídas: {0} de {1}
+attr.title = Atributos  <size=14>(C fecha)</size>
+attr.class_level = {0} · Nv {1}
+attr.free = Pontos livres: <b>{0}</b>
+attr.str_hint = +2 ataque, +5 HP
+attr.str = Força
+attr.dex_hint = +1 defesa, +0,2% crítico
+attr.dex = Destreza
+attr.int_hint = +2 magia, +4 MP
+attr.int = Inteligência
+attr.confirm = Confirmar
+attr.clear = Limpar
+attr.sheet_1 = Ataque <b>{0}</b> · Magia <b>{1}</b>\n
+attr.sheet_2 = Defesa <b>{0}</b> · Crítico <b>{1:0.#}%</b>\n
+attr.sheet_3 = HP {0} · MP {1}
+slot.weapon = Arma
+slot.armor = Couraça
+slot.gloves = Luvas
+slot.boots = Botas
+slot.accessory = Anel
+inv.discard_text_many = {0} x{1} some para sempre.
+inv.discard_text = {0} some para sempre.
+tip.level = Nível {0}
+smith.guaranteed = (garantida)
+smith.cores = {0}x {1} (tem {2})
+objective.kill = Derrote {0}
+objective.collect = Traga {0}
+objective.talk = Fale com {0}
+objective.ok = (ok)
+quest.reward_item = {0} x{1}
+questlog.all_done = Todas as missões foram concluídas!
+questlog.none_active = Nenhuma missão aceita. Fale com o {0} na vila (T).
+npc.talk_prompt_role = <b>T</b>: falar com {0} ({1})
+npc.talk_prompt = <b>T</b>: falar com {0}
+npc.hint_smith = melhoria
+npc.hint_warehouse = armazém
+npc.hint_merchant = loja
+npc.hint_dungeon = dungeon
+npc.hint_quests = missões
+npc.role_smith = Ferreira
+npc.role_warehouse = Armazém
+npc.role_merchant = Loja
+npc.role_dungeon = Dungeon
+npc.role_quests = Missões
+
+# ===== Cliente: chat, grupo e amigos =====
+chat.hint = Enter abre o chat. Digite /ajuda para ver os comandos.
+party.invited_you = {0} convidou você para o grupo
+chat.whisper_to = Para <b>{0}</b>: {1}
+chat.whisper_from = De <b>{0}</b>: {1}
+chat.channel_map = Mapa
+chat.channel_party = Grupo
+chat.input_hint = <size=12>Enter envia · Esc cancela · Tab troca o canal · PgUp/PgDn rola · /ajuda</size>
+party.title = <b>Grupo</b>  <size=13>({0}/{1})</size>
+party.leave = Sair
+party.member_dead = <size=12><b>MORTO</b></size>
+friends.title = <b>Amigos</b>  <size=13>({0}/{1} · O fecha)</size>
+friends.add = Adicionar
+friends.empty = <size=14>Nenhum amigo ainda. Digite o nome de alguém online.</size>
+friends.info = Nv {0} · {1}
+friends.offline = offline
+friends.whisper = Sussurrar
+friends.invite = Grupo
+friends.remove = Remover
+friends.blocked_title = <b>Bloqueados</b> <size=12>({0} · /bloquear nome)</size>
+friends.unblock = Desbloquear
+party.invite_title = <b>{0}</b> convidou você para o grupo
+party.invite_expires = <size=13>expira em {0} s</size>
+party.member_row = {0}<b>{1}</b>{2}  <size=13>Nv {3} · {4}</size>
+party.you = (você)
+chat.prefix_party = [Grupo]
+
+# ===== Cliente: cena de treino =====
+dummy.a = Boneco de treino A
+dummy.b = Boneco de treino B
+dummy.c = Boneco de treino C
+
+# ===== Contas: login e personagens =====
+auth.wrong_credentials = Conta ou senha incorreta.
+auth.locked = Muitas tentativas erradas. Tente de novo em {0:0} min.
+auth.session_expired = Sessão expirada. Entre de novo.
+auth.bad_class = Classe inválida.
+auth.character_not_found = Personagem não encontrado.
+
+# ===== Contas: API =====
+auth.bad_request = Pedido inválido.
+
+# ===== Servidor: conexão =====
+net.hello_first = Envie Hello primeiro.
+net.old_version = Versão do jogo incompatível (cliente v{0}, servidor v{1}). Atualize o jogo.
+net.login_required = Entre com sua conta.
+net.no_accounts = Este servidor não tem contas.
+net.db_unavailable = Servidor sem acesso ao banco. Tente de novo em instantes.
+net.already_online = Esse personagem já está no jogo.
+
+# ===== Contas: banco =====
+auth.account_exists = Essa conta já existe.
+auth.max_characters = A conta já tem {0} personagens.
+auth.name_taken = Esse nome já está em uso.
+auth.try_again = Tente de novo em instantes.
+
+# ===== Servidor: combate =====
+combo.ended_timeout = Combo encerrado: tempo esgotado ({0} acertos)
+combo.need_target = Selecione um alvo para o combo
+skill.locked = {0} ainda não foi liberada
+combat.need_target = Selecione um alvo
+combo.ended_cooldown = Combo encerrado: {0} em recarga
+combo.ended_window = Combo encerrado: fora da janela ({0} acertos)
+respawn.crypt = Você renasceu na entrada da cripta
+respawn.arena_base = Você renasceu na base
+reward.xp_alz = +{0} XP, +{1} Alz
+loot.too_far = Longe demais para pegar
+loot.not_yours = Este item ainda é de outro jogador
+level.up = Nível {0}! +{1} pontos de atributo
+
+# ===== Servidor: dungeon =====
+dungeon.left = Você saiu da cripta
+dungeon.already_in = Você já está numa dungeon
+dungeon.talk_to_portal = Fale com {0} para entrar
+dungeon.leader_only = Só o líder do grupo pode entrar com todos
+dungeon.max_players = No máximo {0} jogadores
+dungeon.member_in_dungeon = {0} já está numa dungeon
+dungeon.member_pvp = {0} está num duelo ou na arena
+dungeon.member_trade = {0} está numa troca
+dungeon.member_dead = {0} está morto
+dungeon.member_level = {0} precisa do nível {1}
+dungeon.member_far = {0} precisa estar perto do portal
+dungeon.member_key = {0} precisa de uma {1} (vendida pela mercadora)
+dungeon.started = {0}: {1} para vencer o chefe!
+dungeon.closed = A cripta se fechou
+dungeon.timeout = Tempo esgotado! A cripta expulsou o grupo.
+dungeon.gate_open = O portão se abriu: {0}
+dungeon.boss_shield = {0} ergueu um escudo! Derrote os servos para quebrá-lo.
+dungeon.shield_down = O escudo caiu!
+dungeon.victory = Vitória em {0}! Medalha {1} · baú com {2} sorteios e {3:N0} Alz
+dungeon.victory_one = Vitória em {0}! Medalha {1} · baú com {2} sorteio e {3:N0} Alz
+
+# ===== Servidor: loja e troca =====
+trade.finish_first_shop = Termine a troca antes de usar a loja
+shop.go_to_merchant = Vá até a mercadora da vila.
+shop.no_alz = Faltam Alz: {0} x{1} custa {2:N0}
+shop.bought = Comprou {0} x{1} por {2:N0} Alz
+trade.declined = {0} recusou a troca
+trade.cancelled_by = {0} cancelou a troca
+trade.both_ready = Os dois precisam apertar Pronto antes de confirmar
+player.offline = {0} não está online
+trade.self = Você não pode trocar consigo mesmo
+trade.already_you = Você já está numa troca
+trade.already_other = {0} já está numa troca
+trade.dead = Ninguém troca morto
+trade.guests_only = Convidados só trocam com convidados
+trade.not_accepting = {0} não está aceitando trocas
+trade.unblock_to_trade = Desbloqueie {0} para trocar
+trade.come_closer = Chegue perto de {0} para trocar
+trade.request_pending = {0} já tem um pedido de troca esperando
+trade.request_sent = Pedido de troca enviado para {0}
+trade.request_expired = O pedido de troca expirou
+trade.someone_busy = Alguém já está numa troca
+trade.closer_to_finish = Cheguem mais perto para concluir a troca
+trade.failed = A troca não aconteceu: {0}
+trade.done = Troca com {0} concluída
+trade.cancelled_left = A troca foi cancelada: o outro jogador saiu
+trade.cancelled_died = A troca foi cancelada: alguém morreu
+trade.cancelled_far = A troca foi cancelada: vocês se afastaram
+shop.sold_upgraded = Vendeu {0} +{1} x{2} por {3:N0} Alz
+shop.sold = Vendeu {0} x{1} por {2:N0} Alz
+
+# ===== Servidor: itens, ferreira e missões =====
+item.unknown_action = Ação desconhecida.
+equip.empty_slot = Posição vazia.
+item.wrong_slot = Esse item não vai nessa posição.
+equip.nothing_worn = Nada vestido aí.
+item.drop_on_empty = Solte numa posição vazia da bolsa.
+item.bad_slot = Posição inválida.
+item.bad_move = Movimento inválido.
+storage.go_to = Vá até o armazém da vila.
+item.discard_bag_only = Só dá para jogar fora da bolsa.
+item.use_bag_only = Use itens da bolsa.
+item.not_usable = Esse item não pode ser usado.
+player.you_are_dead = Você está morto.
+item.potion_wait = Espere um instante para usar outra.
+item.hp_full = A vida já está cheia.
+smith.go_to = Vá até a ferreira da vila.
+smith.pick_item = Escolha um item.
+upgrade.success = Sucesso! {0} +{1}
+upgrade.failed_kept = Falhou. {0} continua +{1}
+upgrade.failed_down = Falhou. {0} caiu para +{1} (a próxima tentativa é garantida)
+upgrade.broadcast = {0} melhorou {1} para +{2}!
+smith.pick_stone = Escolha a pedra.
+option.applied = {0} recebeu {1}
+attr.not_enough_points = Só há {0} pontos livres
+awaken.not_full = A barra do Despertar ainda não encheu
+awaken.already_active = O Despertar já está ativo
+awaken.activated = Despertar! +{0:P0} de dano por {1:0} s
+npc.come_closer = Chegue perto de {0}
+npc.talk_to = Fale com {0}
+quest.accepted = Missão aceita: {0}
+quest.not_active = Missão não aceita.
+quest.completed_unlocks = Missão concluída: {0}. {1}
+quest.completed = Missão concluída: {0}.
+
+# ===== Servidor: duelo e arena =====
+duel.won = {0} venceu o duelo contra {1}!
+duel.declined = {0} recusou o duelo
+duel.forfeit = {0} desistiu do duelo contra {1}
+pvp.busy_dead = {0} está morto
+pvp.busy_duel = {0} já está num duelo
+pvp.busy_arena = {0} está na arena
+pvp.busy_dungeon = {0} está numa dungeon
+duel.self = Você não pode duelar consigo mesmo
+duel.not_accepting = {0} não está aceitando duelos
+duel.come_closer = Chegue perto de {0} para desafiar
+duel.pending = {0} já tem um desafio esperando
+duel.sent = Desafio enviado para {0}
+duel.expired = O desafio expirou
+duel.come_closer_accept = Chegue perto de {0} para duelar
+duel.starting = Duelo contra {0} em {1:0} segundos!
+duel.ended_left = O duelo acabou: o outro jogador saiu
+duel.ended_monster = O duelo acabou: alguém caiu para um monstro
+duel.fled = {0} fugiu do duelo: {1} venceu!
+duel.draw = O duelo empatou: o tempo acabou
+arena.already_queued = Você já está na fila da arena
+arena.queued = Na fila da arena ({0}/{1})
+arena.left_queue = Você saiu da fila da arena
+arena.left_match = Você saiu da arena (sem recompensa)
+trade.cancelled_arena = A troca foi cancelada: a arena começou
+arena.your_team = Arena: você é do time {0}! Começa em {1:0} s.
+arena.point_neutral = O ponto {0} ficou neutro
+arena.point_taken = Time {0} tomou o ponto {1}!
+arena.downed_you = {0} derrubou você
+arena.you_downed = Você derrubou {0} (+{1})
+arena.defeat = Derrota.
+arena.result = {0} Azul {1} x {2} Vermelho · +{3:N0} Alz
+arena.ended = A arena terminou: de volta à vila
+
+# ===== Servidor: amigos, bloqueio e denúncia =====
+social.guest_no_relations = Convidados não têm amigos, bloqueios nem denúncias (entre com uma conta)
+social.friend_must_be_online = {0} precisa estar online para ser adicionado
+social.friend_self = Você não pode adicionar a si mesmo
+social.friend_guest = {0} é um convidado e não pode ser adicionado
+social.already_friend = {0} já é seu amigo
+social.unblock_to_add = Desbloqueie {0} antes de adicionar
+social.friends_full = Sua lista de amigos está cheia ({0})
+social.friend_added = {0} agora é seu amigo
+social.added_you = {0} adicionou você como amigo
+social.block_self = Você não pode bloquear a si mesmo
+social.block_must_be_online = {0} precisa estar online para ser bloqueado
+social.block_guest = {0} é um convidado e não pode ser bloqueado
+social.already_blocked = {0} já está bloqueado
+social.blocked_full = Sua lista de bloqueados está cheia ({0})
+social.blocked = {0} foi bloqueado: você não vê mais as mensagens nem recebe convites dele
+social.report_must_be_online = {0} precisa estar online para ser denunciado
+social.report_self = Você não pode denunciar a si mesmo
+social.report_reason = Diga o motivo da denúncia
+social.report_cooldown = Você já denunciou {0} há pouco tempo
+social.report_limit = Você fez muitas denúncias na última hora
+social.report_sent = Denúncia de {0} enviada para a moderação. Obrigado!
+social.not_friend_anymore = {0} não é mais seu amigo
+social.not_in_friends = {0} não está na sua lista de amigos
+social.unblocked = {0} foi desbloqueado
+social.not_blocked = {0} não está bloqueado
+
+# ===== Servidor: grupo e chat =====
+party.not_in = Você não está em um grupo
+party.left = {0} saiu do grupo
+party.invite_self = Você não pode convidar a si mesmo
+party.leader_invites = Só o líder pode convidar
+party.full_max = O grupo está cheio ({0})
+party.already_other = {0} já está em um grupo
+party.not_accepting = {0} não está aceitando convites
+party.unblock_to_invite = Desbloqueie {0} para convidar
+party.invite_pending = {0} já tem um convite esperando resposta
+party.invite_sent = Convite enviado para {0}
+party.invite_expired = O convite expirou
+party.already_in = Você já está em um grupo
+party.inviter_gone = Quem convidou não está mais online
+party.inviter_not_leader = {0} não é mais o líder do grupo
+party.full = O grupo está cheio
+party.joined = {0} entrou no grupo
+party.declined = {0} recusou o convite
+party.leader_kicks = Só o líder pode expulsar
+party.not_member = {0} não está no seu grupo
+party.kicked_you = Você foi expulso do grupo
+party.kicked = {0} foi expulso do grupo
+party.leader_promotes = Só o líder pode passar a liderança
+party.new_leader = {0} agora é o líder
+dungeon.left_party = Você saiu do grupo e deixou a dungeon
+party.disbanded = O grupo foi desfeito
+chat.flood = Calma! Espere um pouco para mandar outra mensagem
+chat.whisper_self = Você não pode sussurrar para si mesmo
+chat.unblock_to_whisper = Desbloqueie {0} para sussurrar
+chat.not_receiving = {0} não está recebendo suas mensagens
+
+# ===== Servidor: geral =====
+social.friend_online = {0} entrou no jogo
+party.left_game = {0} saiu do jogo e deixou o grupo
+social.friend_offline = {0} saiu do jogo
+trade.finish_first_bag = Termine a troca antes de mexer na bolsa
+
+# ===== Contas e personagens =====
+class.blade = Lâmina
+class.arcanist = Arcanista
+class.unknown = Desconhecida
+account.length = A conta deve ter de {0} a {1} caracteres.
+account.chars = A conta só pode ter letras sem acento, números e _.
+password.short = A senha deve ter pelo menos {0} caracteres.
+password.long = A senha deve ter no máximo {0} caracteres.
+password.mix = A senha precisa ter letras e números.
+charname.length = O nome deve ter de {0} a {1} caracteres.
+charname.first = O nome deve começar com uma letra.
+charname.chars = O nome só pode ter letras e números, sem espaços.
+
+# ===== Troca =====
+trade.bad_alz = Alz inválido
+trade.no_alz = Alz insuficiente
+trade.max_items = No máximo {0} itens
+trade.repeated = Item repetido na oferta
+trade.item_gone = Um item da oferta não está mais na bolsa
+trade.bad_quantity = Quantidade inválida
+trade.no_space_mine = Sua bolsa não tem espaço para os itens
+trade.no_space_other = A bolsa do outro jogador não tem espaço
+
+# ===== Equipamento =====
+equip.not_gear = Isso não é um equipamento.
+equip.level = Precisa do nível {0}.
+equip.class = Só para {0}.
+bag.full = Bolsa cheia.
+
+# ===== Melhoria e opção =====
+upgrade.not_gear = Só equipamentos podem ser melhorados.
+upgrade.max = Já está no máximo (+{0}).
+upgrade.no_cores = Faltam núcleos: precisa de {0}x {1}.
+upgrade.no_alz = Faltam Alz: precisa de {0:N0}.
+option.not_gear = Só equipamentos recebem opção.
+option.not_stone = Isso não é uma pedra de opção.
+option.has_option = Este item já tem uma opção.
+option.no_stone = Você não tem essa pedra.
+
+# ===== Missões =====
+quest.done_already = Missão já concluída.
+quest.active_already = Missão já aceita.
+quest.level = Precisa do nível {0}.
+quest.previous = Conclua antes: {0}.
+quest.max_active = No máximo {0} missões ao mesmo tempo.
+quest.unknown = Missão desconhecida.
+quest.not_ready = Os objetivos ainda não foram cumpridos.
+quest.bag_full = Bolsa cheia: libere espaço para a recompensa.
+
+# ===== PvP =====
+team.blue = Azul
+team.red = Vermelho
+
+# ===== Comandos do chat =====
+chat.help = /m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · /convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · /bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome · /duelo nome · /arena
+chat.use_whisper = Use /s nome mensagem
+chat.no_whisper = Ninguém sussurrou para você ainda
+chat.use_invite = Use /convidar nome
+chat.use_kick = Use /expulsar nome
+chat.use_leader = Use /lider nome
+chat.use_friend = Use /amigo nome
+chat.use_remove = Use /remover nome
+chat.use_block = Use /bloquear nome
+chat.use_unblock = Use /desbloquear nome
+chat.use_report = Use /denunciar nome motivo
+chat.use_duel = Use /duelo nome
+chat.use_trade = Use /trocar nome
+chat.unknown = Comando desconhecido: /{0} (digite /ajuda)

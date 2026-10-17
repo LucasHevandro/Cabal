@@ -1,4 +1,5 @@
 using System;
+using Game.Shared.Text;
 
 namespace Game.Shared.Combat
 {
@@ -12,8 +13,8 @@ namespace Game.Shared.Combat
         /// <summary>Identificador único e estável (usado pela rede e pelo banco).</summary>
         public string Id = "";
 
-        /// <summary>Nome mostrado ao jogador.</summary>
-        public string Name = "";
+        /// <summary>Nome no idioma do jogador (chave <c>skill.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("skill." + Id);
 
         /// <summary>Físico ou mágico: define as rotas de combo e se gasta MP.</summary>
         public SkillKind Kind = SkillKind.Physical;
@@ -40,11 +41,10 @@ namespace Game.Shared.Combat
         public SkillData() { }
 
         /// <summary>Cria uma skill.</summary>
-        public SkillData(string id, string name, SkillKind kind, int baseDamage, float range, float cooldownSeconds,
+        public SkillData(string id, SkillKind kind, int baseDamage, float range, float cooldownSeconds,
             float areaRadius = 0f, int mpCost = 0, float lockSeconds = 0.15f)
         {
             Id = id;
-            Name = name;
             Kind = kind;
             BaseDamage = baseDamage;
             Range = range;
@@ -58,7 +58,6 @@ namespace Game.Shared.Combat
         public void Validate()
         {
             if (string.IsNullOrWhiteSpace(Id)) throw new ArgumentException("A skill precisa de Id.", nameof(Id));
-            if (string.IsNullOrWhiteSpace(Name)) throw new ArgumentException($"A skill {Id} precisa de nome.", nameof(Name));
             if (BaseDamage < 0) throw new ArgumentException($"{Id}: dano base não pode ser negativo.", nameof(BaseDamage));
             if (Range <= 0) throw new ArgumentException($"{Id}: alcance deve ser maior que zero.", nameof(Range));
             if (CooldownSeconds < 0) throw new ArgumentException($"{Id}: recarga não pode ser negativa.", nameof(CooldownSeconds));

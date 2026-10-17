@@ -97,15 +97,15 @@ public class EconomyTests
         trade.SetOffer(1, new TradeOffer { Items = { new TradeItem(0, 1, 1), new TradeItem(1, 2, 1) } });
         trade.SetOffer(2, new TradeOffer { Items = { new TradeItem(0, 3, 1) } });
 
-        Assert.Equal("A bolsa do outro jogador não tem espaço", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid));
+        Assert.Equal("trade.no_space_other", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid)?.Key);
         Assert.Equal(1, bagA.Count("espada_ferro"));
         Assert.Equal(1, bagA.Count("luvas_ferro"));
         Assert.Equal(1, bagB.Count("anel_ferro"));
 
         trade.SetOffer(1, new TradeOffer { Items = { new TradeItem(0, 99, 1) } });
-        Assert.Equal("Um item da oferta não está mais na bolsa", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid));
+        Assert.Equal("Um item da oferta não está mais na bolsa", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid)?.ToString());
         trade.SetOffer(1, new TradeOffer { Alz = 10 });
-        Assert.Equal("Alz insuficiente", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid));
+        Assert.Equal("Alz insuficiente", TradeExecutor.Execute(trade, bagA, ref alzA, bagB, ref alzB, NewUid)?.ToString());
     }
 
     [Fact]

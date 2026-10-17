@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game.Shared.Items;
+using Game.Shared.Text;
 
 namespace Game.Shared.Progression
 {
@@ -22,7 +23,10 @@ namespace Game.Shared.Progression
     public sealed class NpcDefinition
     {
         public string Id = "";
-        public string Name = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>npc.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("npc." + Id);
+
         public NpcRole Role;
         public float X;
         public float Z;
@@ -42,11 +46,11 @@ namespace Game.Shared.Progression
 
         public static readonly IReadOnlyList<NpcDefinition> All = new List<NpcDefinition>
         {
-            new NpcDefinition { Id = Elder, Name = "Ancião Doran", Role = NpcRole.QuestGiver, X = 0, Z = 8 },
-            new NpcDefinition { Id = Smith, Name = "Ferreira Ilsa", Role = NpcRole.Smith, X = 7, Z = 3 },
-            new NpcDefinition { Id = Warehouse, Name = "Bento do Armazém", Role = NpcRole.Warehouse, X = -7, Z = 3 },
-            new NpcDefinition { Id = Merchant, Name = "Mercadora Lia", Role = NpcRole.Merchant, X = 5, Z = -6 },
-            new NpcDefinition { Id = DungeonPortal, Name = "Guardiã Selene", Role = NpcRole.DungeonPortal, X = -5, Z = -6 },
+            new NpcDefinition { Id = Elder, Role = NpcRole.QuestGiver, X = 0, Z = 8 },
+            new NpcDefinition { Id = Smith, Role = NpcRole.Smith, X = 7, Z = 3 },
+            new NpcDefinition { Id = Warehouse, Role = NpcRole.Warehouse, X = -7, Z = 3 },
+            new NpcDefinition { Id = Merchant, Role = NpcRole.Merchant, X = 5, Z = -6 },
+            new NpcDefinition { Id = DungeonPortal, Role = NpcRole.DungeonPortal, X = -5, Z = -6 },
         };
 
         public static NpcDefinition? Find(string id) => All.FirstOrDefault(n => n.Id == id);
@@ -91,8 +95,11 @@ namespace Game.Shared.Progression
     public sealed class QuestDefinition
     {
         public string Id = "";
-        public string Name = "";
-        public string Description = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>quest.&lt;id&gt;</c>; a descrição é <c>.desc</c>).</summary>
+        public string Name => Loc.T("quest." + Id);
+
+        public string Description => Loc.T("quest." + Id + ".desc");
         public int MinLevel = 1;
 
         /// <summary>Missão que precisa estar concluída antes (vazio = nenhuma).</summary>
@@ -105,7 +112,7 @@ namespace Game.Shared.Progression
         public List<(string ItemId, int Quantity)> RewardItems = new List<(string, int)>();
 
         /// <summary>Texto curto do que a missão libera, para mostrar na janela (vazio = nada).</summary>
-        public string Unlocks = "";
+        public string Unlocks => Loc.Optional("quest." + Id + ".unlocks");
     }
 
     /// <summary>
@@ -120,23 +127,19 @@ namespace Game.Shared.Progression
         {
             new QuestDefinition
             {
-                Id = "primeiros_passos", Name = "Primeiros passos", MinLevel = 1,
-                Description = "Apresente-se à Ferreira Ilsa: ela cuida das armas e da melhoria dos equipamentos.",
+                Id = "primeiros_passos", MinLevel = 1,
                 Objectives = { new QuestObjective(QuestObjectiveKind.Talk, NpcCatalog.Smith) },
                 RewardXp = 300, RewardAlz = 500, RewardItems = { ("pocao_hp_p", 5) },
             },
             new QuestDefinition
             {
-                Id = ClassCatalog.ComboQuestId, Name = "A arte do combo", MinLevel = 3, PreviousQuestId = "primeiros_passos",
-                Description = "Derrote coelhos nos Campos do Vento para treinar o ritmo dos golpes.",
+                Id = ClassCatalog.ComboQuestId, MinLevel = 3, PreviousQuestId = "primeiros_passos",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "coelho_saltador", 10) },
                 RewardXp = 1200, RewardAlz = 1500, RewardItems = { (ItemCatalog.CoreLow, 2) },
-                Unlocks = "Libera o combo.",
             },
             new QuestDefinition
             {
-                Id = "pele_e_presa", Name = "Pele e presa", MinLevel = 6, PreviousQuestId = ClassCatalog.ComboQuestId,
-                Description = "Os lobos cinzentos rondam a vila. Traga peles para reforçar as armaduras.",
+                Id = "pele_e_presa", MinLevel = 6, PreviousQuestId = ClassCatalog.ComboQuestId,
                 Objectives =
                 {
                     new QuestObjective(QuestObjectiveKind.Kill, "lobo_cinzento", 12),
@@ -146,20 +149,17 @@ namespace Game.Shared.Progression
             },
             new QuestDefinition
             {
-                Id = ClassCatalog.RankTwoQuestId, Name = "Ameaça na mata", MinLevel = 10, PreviousQuestId = "pele_e_presa",
-                Description = "Javalis e aranhas tomaram a Mata Sombria. Abra caminho.",
+                Id = ClassCatalog.RankTwoQuestId, MinLevel = 10, PreviousQuestId = "pele_e_presa",
                 Objectives =
                 {
                     new QuestObjective(QuestObjectiveKind.Kill, "javali_furioso", 15),
                     new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 15),
                 },
                 RewardXp = 10000, RewardAlz = 12000, RewardItems = { (ItemCatalog.CoreMedium, 2) },
-                Unlocks = "Libera as skills de rank 2.",
             },
             new QuestDefinition
             {
-                Id = "veneno_raro", Name = "Veneno raro", MinLevel = 15, PreviousQuestId = ClassCatalog.RankTwoQuestId,
-                Description = "A Ferreira Ilsa precisa de glândulas de veneno para temperar o aço.",
+                Id = "veneno_raro", MinLevel = 15, PreviousQuestId = ClassCatalog.RankTwoQuestId,
                 Objectives =
                 {
                     new QuestObjective(QuestObjectiveKind.Collect, "veneno", 8),
@@ -169,20 +169,17 @@ namespace Game.Shared.Progression
             },
             new QuestDefinition
             {
-                Id = ClassCatalog.RankThreeQuestId, Name = "As ruínas", MinLevel = 20, PreviousQuestId = "veneno_raro",
-                Description = "Golens de pedra guardam a entrada das Ruínas Esquecidas.",
+                Id = ClassCatalog.RankThreeQuestId, MinLevel = 20, PreviousQuestId = "veneno_raro",
                 Objectives =
                 {
                     new QuestObjective(QuestObjectiveKind.Kill, "golem_de_pedra", 20),
                     new QuestObjective(QuestObjectiveKind.Collect, "fragmento_pedra", 10),
                 },
                 RewardXp = 28000, RewardAlz = 45000, RewardItems = { (ItemCatalog.CoreHigh, 2) },
-                Unlocks = "Libera as skills de rank 3.",
             },
             new QuestDefinition
             {
-                Id = "ecos_espectrais", Name = "Ecos espectrais", MinLevel = 25, PreviousQuestId = ClassCatalog.RankThreeQuestId,
-                Description = "Espectros vagam pelas ruínas. Reúna a essência deles.",
+                Id = "ecos_espectrais", MinLevel = 25, PreviousQuestId = ClassCatalog.RankThreeQuestId,
                 Objectives =
                 {
                     new QuestObjective(QuestObjectiveKind.Kill, "espectro", 25),
@@ -192,8 +189,7 @@ namespace Game.Shared.Progression
             },
             new QuestDefinition
             {
-                Id = "o_guardiao", Name = "O Guardião", MinLevel = 30, PreviousQuestId = "ecos_espectrais",
-                Description = "Derrote o Guardião das Ruínas na arena ao norte.",
+                Id = "o_guardiao", MinLevel = 30, PreviousQuestId = "ecos_espectrais",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "guardiao_das_ruinas") },
                 RewardXp = 0, RewardAlz = 200000, RewardItems = { (ItemCatalog.CoreHigh, 5) },
             },
@@ -250,21 +246,21 @@ namespace Game.Shared.Progression
         public QuestProgress? ProgressOf(string questId) => _active.TryGetValue(questId, out var p) ? p : null;
 
         /// <summary>Nulo se pode aceitar; senão o motivo.</summary>
-        public string? CanAccept(QuestDefinition quest, int level)
+        public LocalText? CanAccept(QuestDefinition quest, int level)
         {
-            if (_completed.Contains(quest.Id)) return "Missão já concluída.";
-            if (_active.ContainsKey(quest.Id)) return "Missão já aceita.";
-            if (level < quest.MinLevel) return $"Precisa do nível {quest.MinLevel}.";
+            if (_completed.Contains(quest.Id)) return new LocalText("quest.done_already");
+            if (_active.ContainsKey(quest.Id)) return new LocalText("quest.active_already");
+            if (level < quest.MinLevel) return new LocalText("quest.level", quest.MinLevel);
             if (!string.IsNullOrEmpty(quest.PreviousQuestId) && !_completed.Contains(quest.PreviousQuestId))
-                return $"Conclua antes: {QuestCatalog.Find(quest.PreviousQuestId)?.Name}.";
-            if (_active.Count >= QuestCatalog.MaxActive) return $"No máximo {QuestCatalog.MaxActive} missões ao mesmo tempo.";
+                return new LocalText("quest.previous", Loc.Ref("quest." + quest.PreviousQuestId));
+            if (_active.Count >= QuestCatalog.MaxActive) return new LocalText("quest.max_active", QuestCatalog.MaxActive);
             return null;
         }
 
-        public string? Accept(string questId, int level)
+        public LocalText? Accept(string questId, int level)
         {
             var quest = QuestCatalog.Find(questId);
-            if (quest == null) return "Missão desconhecida.";
+            if (quest == null) return new LocalText("quest.unknown");
             var reason = CanAccept(quest, level);
             if (reason != null) return reason;
             _active[questId] = new QuestProgress(questId);
@@ -320,11 +316,11 @@ namespace Game.Shared.Progression
         /// Entrega a missão no NPC que a deu: consome os itens de coleta e põe os itens da recompensa na bolsa. Tudo ou
         /// nada — se faltar espaço, nada muda. XP e Alz ficam para quem chama aplicar.
         /// </summary>
-        public string? TurnIn(string questId, ItemContainer bag, Func<long> newUid, out QuestReward reward)
+        public LocalText? TurnIn(string questId, ItemContainer bag, Func<long> newUid, out QuestReward reward)
         {
             reward = default;
-            if (!_active.TryGetValue(questId, out var progress)) return "Missão não aceita.";
-            if (!IsReady(progress, bag)) return "Os objetivos ainda não foram cumpridos.";
+            if (!_active.TryGetValue(questId, out var progress)) return new LocalText("quest.not_active");
+            if (!IsReady(progress, bag)) return new LocalText("quest.not_ready");
             var quest = QuestCatalog.Get(questId);
 
             // Confere o espaço numa cópia antes de mexer na bolsa de verdade.
@@ -333,7 +329,7 @@ namespace Game.Shared.Progression
                 if (objective.Kind == QuestObjectiveKind.Collect) trial.TryRemove(objective.TargetId, objective.Count);
             long trialUid = 0;
             foreach (var (itemId, quantity) in quest.RewardItems)
-                if (!trial.TryAdd(itemId, quantity, () => --trialUid)) return "Bolsa cheia: libere espaço para a recompensa.";
+                if (!trial.TryAdd(itemId, quantity, () => --trialUid)) return new LocalText("quest.bag_full");
 
             foreach (var objective in quest.Objectives)
                 if (objective.Kind == QuestObjectiveKind.Collect) bag.TryRemove(objective.TargetId, objective.Count);

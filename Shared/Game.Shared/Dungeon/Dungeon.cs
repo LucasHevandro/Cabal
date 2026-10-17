@@ -5,6 +5,7 @@ using Game.Shared.Items;
 using Game.Shared.Loot;
 using Game.Shared.Monsters;
 using Game.Shared.World;
+using Game.Shared.Text;
 
 namespace Game.Shared.Dungeon
 {
@@ -56,7 +57,7 @@ namespace Game.Shared.Dungeon
             _ => 0,
         };
 
-        public static string MedalName(DungeonMedal medal) => medal == DungeonMedal.None ? "-" : medal.ToString();
+        public static string MedalName(DungeonMedal medal) => medal == DungeonMedal.None ? "-" : Loc.T("medal." + medal);
 
         public static string FormatTime(double seconds)
         {
@@ -83,7 +84,11 @@ namespace Game.Shared.Dungeon
     /// <summary>Uma sala: faixa no eixo Z (a partir da origem da instância) e os monstros dela.</summary>
     public sealed class DungeonRoom
     {
-        public string Name = "";
+        public string Id = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>room.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("room." + Id);
+
         public float StartZ;
         public float EndZ;
 
@@ -97,7 +102,10 @@ namespace Game.Shared.Dungeon
     public sealed class DungeonDefinition
     {
         public string Id = "";
-        public string Name = "";
+
+        /// <summary>Nome no idioma do jogador (chave <c>dungeon.&lt;id&gt;</c>).</summary>
+        public string Name => Loc.T("dungeon." + Id);
+
         public int MinLevel;
         public string KeyItemId = "";
 
@@ -133,33 +141,33 @@ namespace Game.Shared.Dungeon
         {
             var crypt = new DungeonDefinition
             {
-                Id = CryptId, Name = "Cripta Esquecida", MinLevel = 18, KeyItemId = CryptKey, BossId = "senhor_da_cripta",
+                Id = CryptId, MinLevel = 18, KeyItemId = CryptKey, BossId = "senhor_da_cripta",
                 ChestZ = 172,
                 Chest = new DropTable(800, 1500,
-                    new DropEntry(ItemCatalog.CoreMedium, "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.6, 1, 2),
-                    new DropEntry(ItemCatalog.CoreHigh, "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.3),
+                    new DropEntry(ItemCatalog.CoreMedium, ItemRarity.Rare, 0.6, 1, 2),
+                    new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.3),
                     Item("pedra_vigor", 0.15), Item("pedra_furia", 0.15), Item("pedra_precisao", 0.15),
                     Item("armadura_astralita", 0.1), Item("luvas_astralita", 0.1), Item("botas_astralita", 0.1),
                     Item("anel_astralita", 0.1), Item("espada_astralita", 0.07), Item("cajado_astralita", 0.07)),
             };
             crypt.Rooms.Add(new DungeonRoom
             {
-                Name = "Salão dos Ossos", StartZ = 0, EndZ = 40,
+                Id = "salao_dos_ossos", StartZ = 0, EndZ = 40,
                 Spawns = { Group(0, 26, 4, 6, Warrior()) },
             });
             crypt.Rooms.Add(new DungeonRoom
             {
-                Name = "Galeria das Flechas", StartZ = 44, EndZ = 84,
+                Id = "galeria_das_flechas", StartZ = 44, EndZ = 84,
                 Spawns = { Group(0, 72, 3, 7, Archer()), Group(0, 62, 2, 4, Warrior()) },
             });
             crypt.Rooms.Add(new DungeonRoom
             {
-                Name = "Câmara dos Cavaleiros", StartZ = 88, EndZ = 128,
+                Id = "camara_dos_cavaleiros", StartZ = 88, EndZ = 128,
                 Spawns = { Group(0, 112, 2, 5, Knight()), Group(0, 104, 3, 6, Warrior()) },
             });
             crypt.Rooms.Add(new DungeonRoom
             {
-                Name = "Trono da Cripta", StartZ = 132, EndZ = 180, IsBossRoom = true,
+                Id = "trono_da_cripta", StartZ = 132, EndZ = 180, IsBossRoom = true,
                 // Sem IsBoss: essa marca é do chefe de campo; o da cripta tem regras próprias (CryptBossRules).
                 Spawns = { new SpawnDefinition { CenterX = 0, CenterZ = 160, Count = 1, Data = Boss() } },
             });
@@ -171,41 +179,41 @@ namespace Game.Shared.Dungeon
         /// <summary>Servo chamado pelo chefe durante o escudo.</summary>
         public static MonsterData Servant() => new MonsterData
         {
-            Id = "servo_da_cripta", Name = "Servo da Cripta", Level = 22, MaxHp = 20000, AttackDamage = 150, AttackPower = 60,
+            Id = "servo_da_cripta", Level = 22, MaxHp = 20000, AttackDamage = 150, AttackPower = 60,
             Defense = 100, AttackRange = 1.5f, MoveSpeed = 4.5f, AggroRadius = 30, LeashRadius = 40, WanderRadius = 0,
             XpReward = 600, RespawnSeconds = 9999, Drops = new DropTable(20, 40),
         };
 
         private static MonsterData Warrior() => new MonsterData
         {
-            Id = "esqueleto_guerreiro", Name = "Esqueleto Guerreiro", Level = 22, MaxHp = 45000, AttackDamage = 220,
+            Id = "esqueleto_guerreiro", Level = 22, MaxHp = 45000, AttackDamage = 220,
             AttackPower = 80, Defense = 160, AttackRange = 1.6f, AttackWindupSeconds = 0.6f, MoveSpeed = 4.2f,
             AggroRadius = 10, LeashRadius = 26, WanderRadius = 2, XpReward = 1800, RespawnSeconds = 9999,
-            Drops = new DropTable(60, 120, new DropEntry("po_de_osso", "Pó de osso", ItemRarity.Common, 0.5, 1, 2)),
+            Drops = new DropTable(60, 120, new DropEntry("po_de_osso", ItemRarity.Common, 0.5, 1, 2)),
         };
 
         private static MonsterData Archer() => new MonsterData
         {
-            Id = "esqueleto_arqueiro", Name = "Esqueleto Arqueiro", Level = 22, MaxHp = 30000, AttackDamage = 180,
+            Id = "esqueleto_arqueiro", Level = 22, MaxHp = 30000, AttackDamage = 180,
             AttackPower = 80, Defense = 110, AttackRange = 9f, AttackCooldownSeconds = 2.4f, AttackWindupSeconds = 0.8f,
             MoveSpeed = 3.5f, AggroRadius = 13, LeashRadius = 26, WanderRadius = 0, XpReward = 1600, RespawnSeconds = 9999,
-            Drops = new DropTable(60, 120, new DropEntry("po_de_osso", "Pó de osso", ItemRarity.Common, 0.5, 1, 2)),
+            Drops = new DropTable(60, 120, new DropEntry("po_de_osso", ItemRarity.Common, 0.5, 1, 2)),
         };
 
         private static MonsterData Knight() => new MonsterData
         {
-            Id = "cavaleiro_ossudo", Name = "Cavaleiro Ossudo", Level = 24, MaxHp = 90000, AttackDamage = 300,
+            Id = "cavaleiro_ossudo", Level = 24, MaxHp = 90000, AttackDamage = 300,
             AttackPower = 110, Defense = 260, AttackRange = 2.2f, AttackCooldownSeconds = 2.6f, AttackWindupSeconds = 0.9f,
             MoveSpeed = 3.2f, BodyRadius = 0.8f, AggroRadius = 10, LeashRadius = 26, WanderRadius = 0, XpReward = 3600,
             RespawnSeconds = 9999,
             Drops = new DropTable(120, 240,
-                new DropEntry("po_de_osso", "Pó de osso", ItemRarity.Common, 0.6, 1, 3),
-                new DropEntry(ItemCatalog.CoreMedium, "Núcleo de melhoria (médio)", ItemRarity.Rare, 0.1)),
+                new DropEntry("po_de_osso", ItemRarity.Common, 0.6, 1, 3),
+                new DropEntry(ItemCatalog.CoreMedium, ItemRarity.Rare, 0.1)),
         };
 
         private static MonsterData Boss() => new MonsterData
         {
-            Id = "senhor_da_cripta", Name = "Senhor da Cripta", Level = 25, MaxHp = 450000, AttackDamage = 360, AttackPower = 130,
+            Id = "senhor_da_cripta", Level = 25, MaxHp = 450000, AttackDamage = 360, AttackPower = 130,
             Defense = 240, AttackRange = 3f, AttackCooldownSeconds = 2.4f, AttackWindupSeconds = 0.9f, MoveSpeed = 3.5f,
             BodyRadius = 1.1f, AggroRadius = 16, LeashRadius = 40, WanderRadius = 0, XpReward = 30000, RespawnSeconds = 9999,
             Drops = new DropTable(1000, 2000),
@@ -217,7 +225,7 @@ namespace Game.Shared.Dungeon
         private static DropEntry Item(string itemId, double chance)
         {
             var item = ItemCatalog.Get(itemId);
-            return new DropEntry(itemId, item.Name, item.Rarity, chance);
+            return new DropEntry(itemId, item.Rarity, chance);
         }
     }
 }
