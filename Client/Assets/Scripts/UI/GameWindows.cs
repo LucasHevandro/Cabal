@@ -18,7 +18,7 @@ namespace Game.Client.UI
     /// equipamento, tooltip com comparação, armazém, ferreira, conversa de missões, atributos e rastreador de missões.
     /// Só mostra o que o servidor mandou (<see cref="CharacterState"/>) e envia pedidos; o servidor decide tudo.
     /// </summary>
-    public sealed class GameWindows : MonoBehaviour
+    public sealed partial class GameWindows : MonoBehaviour
     {
         private const float VirtualWidth = 1920f;
         private const float VirtualHeight = 1080f;
@@ -203,19 +203,23 @@ namespace Game.Client.UI
             var npc = dialog != null ? NpcCatalog.Find(dialog.NpcId) : null;
             var warehouseOpen = npc != null && npc.Role == NpcRole.Warehouse;
             var smithOpen = npc != null && npc.Role == NpcRole.Smith;
-            var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen;
+            var shopOpen = npc != null && npc.Role == NpcRole.Merchant && !Trading;
+            var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || Trading;
 
             if (!inventoryShown && !_questLogOpen) DrawQuestTracker();
             if (inventoryShown) DrawInventory();
             if (warehouseOpen) DrawWarehouse();
             if (smithOpen) DrawSmith(npc);
+            if (shopOpen) DrawShop(npc);
+            if (Trading) DrawTrade();
+            DrawTradeInvite();
             if (npc != null && npc.Role == NpcRole.QuestGiver) DrawQuestDialog(npc, dialog);
             if (_attributesOpen) DrawAttributes();
             if (_questLogOpen) DrawQuestLog();
             DrawTalkPrompt();
             if (_discardSlot >= 0) DrawDiscardConfirm();
 
-            HandleDrop(inventoryShown, warehouseOpen, smithOpen);
+            HandleDrop(inventoryShown, warehouseOpen, smithOpen, shopOpen);
             if (_dragging) DrawDragged();
             else if (_hoverItem != null) DrawTooltip(_hoverItem, _hoverWorn);
 
@@ -343,6 +347,16 @@ namespace Game.Client.UI
             var dialog = CharacterState.Dialog;
             var npc = dialog != null ? NpcCatalog.Find(dialog.NpcId) : null;
 
+            if (Trading && kind == Msg.ItemContainerKind.Bag)
+            {
+                AddToOffer(slot);
+                return;
+            }
+            if (npc != null && npc.Role == NpcRole.Merchant && kind == Msg.ItemContainerKind.Bag)
+            {
+                _sellUid = item.Uid;
+                return;
+            }
             if (npc != null && npc.Role == NpcRole.Smith && kind != Msg.ItemContainerKind.Warehouse)
             {
                 if (definition.IsOptionStone) _smithStoneUid = item.Uid;
@@ -384,7 +398,7 @@ namespace Game.Client.UI
             Send(new Msg.ItemCommand { Action = Msg.ItemActionKind.Move, From = from, FromSlot = (ushort)fromSlot, To = to, ToSlot = (ushort)toSlot });
 
         /// <summary>Solta o item arrastado: em outra posição, no equipamento, no armazém, na ferreira ou na lixeira.</summary>
-        private void HandleDrop(bool inventoryShown, bool warehouseOpen, bool smithOpen)
+        private void HandleDrop(bool inventoryShown, bool warehouseOpen, bool smithOpen, bool shopOpen)
         {
             var e = Event.current;
             if (_dragSlot < 0) return;
@@ -434,6 +448,16 @@ namespace Game.Client.UI
                     if (from != Msg.ItemContainerKind.Warehouse || slot != fromSlot) SendMove(from, fromSlot, Msg.ItemContainerKind.Warehouse, slot);
                     return;
                 }
+            }
+            if (Trading && TradeRect.Contains(point) && from == Msg.ItemContainerKind.Bag)
+            {
+                AddToOffer(fromSlot);
+                return;
+            }
+            if (shopOpen && ShopRect.Contains(point) && from == Msg.ItemContainerKind.Bag)
+            {
+                _sellUid = item.Uid;
+                return;
             }
             if (smithOpen && SmithRect.Contains(point) && from != Msg.ItemContainerKind.Warehouse)
             {
@@ -889,7 +913,7 @@ namespace Game.Client.UI
             if (npc == null) return;
             var hasQuest = npc.Role == NpcRole.QuestGiver;
             GUI.Label(new Rect(0, VirtualHeight - 340, VirtualWidth, 30),
-                $"<b>T</b>: falar com {npc.Name}{(npc.Role == NpcRole.Smith ? " (melhoria)" : npc.Role == NpcRole.Warehouse ? " (armazém)" : hasQuest ? " (missões)" : "")}",
+                $"<b>T</b>: falar com {npc.Name}{(npc.Role == NpcRole.Smith ? " (melhoria)" : npc.Role == NpcRole.Warehouse ? " (armazém)" : npc.Role == NpcRole.Merchant ? " (loja)" : hasQuest ? " (missões)" : "")}",
                 _label.WithCenter());
         }
 
@@ -907,7 +931,7 @@ namespace Game.Client.UI
                 if (screen.z <= 0) continue;
                 // Não escreve por cima das janelas do chat e de amigos (coordenadas virtuais do quadro anterior).
                 if (SocialWindows.Contains(new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale))) continue;
-                var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", _ => "Missões" };
+                var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", NpcRole.Merchant => "Loja", _ => "Missões" };
                 var rect = new Rect(screen.x - 150, Screen.height - screen.y - 20, 300, 40);
                 GUI.color = new Color(0, 0, 0, 0.8f);
                 GUI.Label(new Rect(rect.x + 2, rect.y + 2, rect.width, rect.height), $"<b>{npc.Name}</b>\n<size=13>{role}</size>", _small.WithCenter());

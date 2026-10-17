@@ -484,6 +484,9 @@ namespace Game.Client.UI
                 case ChatInputKind.Report:
                     Relation(RelationActionKind.Report, input.Target, input.Text);
                     break;
+                case ChatInputKind.TradeRequest:
+                    _session.Send(new TradeCommand { Action = TradeActionKind.Request, TargetName = input.Target });
+                    break;
                 case ChatInputKind.FriendsWindow:
                     _friendsOpen = !_friendsOpen;
                     break;

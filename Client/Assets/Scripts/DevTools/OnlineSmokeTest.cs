@@ -7,6 +7,7 @@ using Game.Client.Loot;
 using Game.Client.Net;
 using Game.Client.Player;
 using Game.Shared.Net;
+using Game.Shared.Social;
 using Game.Shared.Progression;
 using UnityEngine;
 
@@ -468,9 +469,68 @@ namespace Game.Client.DevTools
                 yield break;
             }
 
+            // Loja: vende 4 poções (4 x 10 Alz) e compra 1 (40 Alz).
+            yield return WalkTo(NpcCatalog.Merchant);
+            var windows = UI.GameWindows.Instance;
+            windows.TalkToNearestNpc();
+            yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.Merchant, 3f);
+            var potions = CharacterState.Bag.Count("pocao_hp_p");
+            var potionSlot = FirstSlotOf("pocao_hp_p");
+            if (CharacterState.Dialog == null || potionSlot < 0)
+            {
+                outcome.Message = "não abriu a loja ou não há poções na bolsa";
+                yield break;
+            }
+            windows.SelectForSale(CharacterState.Bag[potionSlot].Uid);
+            session.Send(new ShopCommand { Action = ShopActionKind.Sell, Slot = (ushort)potionSlot, Quantity = 4 });
+            yield return WaitFor(() => CharacterState.Bag.Count("pocao_hp_p") == potions - 4, 3f);
+            yield return new WaitForSecondsRealtime(0.3f);
+            Capture("9-loja");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            session.Send(new ShopCommand { Action = ShopActionKind.Buy, ItemId = "pocao_hp_p", Quantity = 1 });
+            yield return WaitFor(() => CharacterState.Bag.Count("pocao_hp_p") == potions - 3, 3f);
+            if (CharacterState.Bag.Count("pocao_hp_p") != potions - 3)
+            {
+                outcome.Message = $"loja: esperava {potions - 3} poções, tem {CharacterState.Bag.Count("pocao_hp_p")}";
+                yield break;
+            }
+            CharacterState.CloseDialog();
+
+            // Troca: o bot (perto da mercadora) aceita, oferece 2 poções e confirma quando a gente confirma.
+            social.Submit($"/trocar {inviter}");
+            yield return WaitFor(() => CharacterState.Trade != null && CharacterState.Trade.Active && CharacterState.Trade.TheirItems.Count > 0, 10f);
+            if (CharacterState.Trade == null || !CharacterState.Trade.Active)
+            {
+                var last = new List<string>(social.RecentLines);
+                outcome.Message = "a troca não abriu (chat: " + string.Join(" | ", last.GetRange(Math.Max(0, last.Count - 3), Math.Min(3, last.Count))) + ")";
+                yield break;
+            }
+            windows.OfferInTrade(FirstSlotOf("pocao_hp_p"));
+            yield return WaitFor(() => CharacterState.Trade.MyItems.Count > 0, 3f);
+            session.Send(new TradeCommand { Action = TradeActionKind.Lock });
+            yield return WaitFor(() => CharacterState.Trade.MyLocked && CharacterState.Trade.TheirLocked, 5f);
+            Capture("10-troca");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            session.Send(new TradeCommand { Action = TradeActionKind.Confirm });
+            yield return WaitFor(() => !CharacterState.Trade.Active, 5f);
+            if (CharacterState.Trade.Active || !Contains(social, $"Troca com {inviter} concluída"))
+            {
+                outcome.Message = "a troca não foi concluída";
+                yield break;
+            }
+
             outcome.Ok = true;
             outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), " +
-                              "chat, filtro, amigos, bloqueio e denúncia ok";
+                              "chat, filtro, amigos, bloqueio, denúncia, loja e troca ok";
+        }
+
+        private static int FirstSlotOf(string itemId)
+        {
+            for (var i = 0; i < CharacterState.Bag.Size; i++)
+                if (CharacterState.Bag[i] != null && CharacterState.Bag[i].ItemId == itemId) return i;
+            return -1;
         }
 
         private static bool Contains(UI.SocialWindows social, string text)

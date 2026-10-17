@@ -82,6 +82,12 @@ namespace Game.Client.Net
                     CharacterState.Apply(upgrade);
                     SoundPlayer.Play(upgrade.Outcome == 1 ? SoundId.Excellent : upgrade.Outcome == 0 ? SoundId.Error : SoundId.Miss, 0.8f, 0f);
                     break;
+                case TradeState trade:
+                    CharacterState.Apply(trade);
+                    break;
+                case TradeInvite tradeInvite:
+                    CharacterState.Apply(tradeInvite);
+                    break;
                 case AreaWarning area:
                     ShowAreaWarning(area);
                     break;

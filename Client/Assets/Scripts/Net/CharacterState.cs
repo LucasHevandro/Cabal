@@ -27,6 +27,14 @@ namespace Game.Client.Net
         public static Msg.NpcDialog Dialog { get; private set; }
 
         public static Msg.UpgradeResult LastUpgrade { get; private set; }
+
+        /// <summary>Troca aberta (nulo ou Active falso = nenhuma) e pedido de troca esperando resposta.</summary>
+        public static Msg.TradeState Trade { get; private set; }
+
+        private static Msg.TradeInvite _tradeInvite;
+        private static float _tradeInviteUntil;
+
+        public static Msg.TradeInvite PendingTradeInvite => Time.unscaledTime < _tradeInviteUntil ? _tradeInvite : null;
         public static float LastUpgradeAt { get; private set; } = float.NegativeInfinity;
 
         public static CharacterClass Class => Sheet != null ? (CharacterClass)Sheet.Class : CharacterClass.Blade;
@@ -43,7 +51,24 @@ namespace Game.Client.Net
             Dialog = null;
             LastUpgrade = null;
             LastUpgradeAt = float.NegativeInfinity;
+            Trade = null;
+            _tradeInvite = null;
         }
+
+        public static void Apply(Msg.TradeState trade)
+        {
+            Trade = trade;
+            Changed?.Invoke();
+        }
+
+        public static void Apply(Msg.TradeInvite invite)
+        {
+            _tradeInvite = invite;
+            _tradeInviteUntil = Time.unscaledTime + invite.Seconds;
+            Changed?.Invoke();
+        }
+
+        public static void ClearTradeInvite() => _tradeInvite = null;
 
         public static void Apply(Msg.Inventory inventory)
         {

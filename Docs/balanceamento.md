@@ -105,3 +105,30 @@ Jogador rápido = 4 s entre monstros, 8% parado, +30% pelo combo; sem pressa = 1
 
 - Lâmina: jogador rápido 7,1 h, sem pressa 14,3 h
 - Arcanista: jogador rápido 7,1 h, sem pressa 14,4 h
+
+## Economia (2026-10-17)
+
+`dotnet run --project Tools/Game.Balance` também estima o Alz de 1 a 30 com a mesma caçada da simulação acima.
+
+- **Entra:** o Alz dos monstros e a venda dos drops na mercadora. Núcleos e pedras não são vendidos: vão para a
+  melhoria.
+- **Sai:** melhoria das 5 peças de cada grau até o nível médio (+2, +4 e +5), núcleos que faltarem (comprados na
+  loja), 25 poções por hora de caça e o conjunto de Ferro da loja.
+
+| Faixa | Horas | Entra | Sai | Saldo |
+|---|---:|---:|---:|---:|
+| Nv 1–10 (Ferro) | 2,1 | 23.800 | 7.015 | 16.785 |
+| Nv 10–20 (Aço Negro) | 4,4 | 85.119 | 50.778 | 34.341 |
+| Nv 20–30 (Astralita) | 3,9 | 126.595 | 115.494 | 11.101 |
+
+Valores da Lâmina; o Arcanista fica praticamente igual.
+
+- No total entram cerca de 235 mil Alz e saem 74%. Sobram cerca de 62 mil no nível 30, para trocas, para a entrada
+  da dungeon e para tentar passar do +5.
+- Os núcleos baixos que caem bastam para o Ferro. Por isso a compra de núcleos aparece zerada: a loja é só uma
+  reserva para quem tiver azar.
+- A faixa 20–30 é a mais apertada, porque a melhoria de Astralita custa caro. É de propósito: o +6 em diante, com
+  risco de queda, fica para depois do nível 30.
+- O teste `Economia_fecha_positiva_em_cada_faixa_e_gasta_boa_parte` exige saldo positivo em cada faixa e um gasto
+  entre 60% e 90% do que entra.
+- **Revisar** quando a dungeon (entrada e baú) e o PvP entrarem na conta.

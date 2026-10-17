@@ -76,3 +76,21 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   palavrões), para a moderação ver o que foi dito. Limite: a mesma pessoa uma vez a cada 10 minutos, e no máximo
   5 denúncias por hora. Por enquanto a moderação lê a tabela `player_reports` direto no banco.
 - Amigos, bloqueados e denúncias vão para o banco junto com o salvamento do personagem (a cada 10 s e ao sair).
+
+## 2026-10-17 — Loja e troca entre jogadores
+
+- **Mercadora Lia** (perto da praça) vende poções, núcleo baixo e o conjunto de Ferro, e compra qualquer item da
+  bolsa. Nada da loja revende com lucro (o preço de venda é sempre menor que o de compra). O preço de venda de
+  equipamento sobe com o grau e com a melhoria.
+- **Troca com dupla confirmação:** cada lado monta a oferta (até 8 itens e Alz) e aperta Pronto; com os dois
+  prontos, cada um aperta Confirmar. Qualquer mudança de oferta destrava os dois, para ninguém confirmar uma coisa
+  e receber outra. A troca é tudo ou nada: o servidor simula em cópias das bolsas e só mexe se tudo couber.
+- Durante a troca a bolsa fica parada (só dá para usar poção), porque a oferta aponta para posições da bolsa. Os
+  jogadores precisam estar a até 6 m para pedir e confirmar; a troca cancela se passarem de 12 m, se alguém morrer
+  ou sair.
+- **Convidados só trocam com convidados**, para itens de teste não chegarem a personagens de verdade.
+- Cada item e o Alz que muda de mão ficam no `item_log` dos dois lados (`troca_saida`, `troca_entrada`,
+  `troca_alz`, com o número da troca).
+- **Risco conhecido:** os dois personagens são salvos em transações separadas. Se o servidor cair entre os dois
+  salvamentos, um lado pode perder o que recebeu (nunca duplica). Revisar se aparecer em produção: salvar os dois
+  juntos logo depois da troca.
