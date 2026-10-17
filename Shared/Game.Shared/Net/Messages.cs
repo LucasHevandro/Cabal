@@ -26,6 +26,8 @@ namespace Game.Shared.Net
         ShopCommand = 18,
         TradeCommand = 19,
         DungeonCommand = 20,
+        DuelCommand = 21,
+        ArenaCommand = 22,
 
         // Servidor → cliente
         Welcome = 100,
@@ -55,6 +57,8 @@ namespace Game.Shared.Net
         TradeInvite = 124,
         DungeonState = 125,
         DungeonInfo = 126,
+        DuelInvite = 127,
+        PvpState = 128,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -67,7 +71,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 8;
+        public const int Version = 9;
         public const int DefaultPort = 7777;
     }
 
@@ -714,6 +718,10 @@ namespace Game.Shared.Net
                 MessageType.DungeonCommand => DungeonCommand.Read(reader),
                 MessageType.DungeonState => DungeonState.Read(reader),
                 MessageType.DungeonInfo => DungeonInfo.Read(reader),
+                MessageType.DuelCommand => DuelCommand.Read(reader),
+                MessageType.ArenaCommand => ArenaCommand.Read(reader),
+                MessageType.DuelInvite => DuelInvite.Read(reader),
+                MessageType.PvpState => PvpState.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

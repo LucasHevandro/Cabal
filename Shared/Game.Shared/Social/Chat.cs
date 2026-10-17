@@ -184,6 +184,12 @@ namespace Game.Shared.Social
         /// <summary>Pede troca a <see cref="ChatInput.Target"/>.</summary>
         TradeRequest,
 
+        /// <summary>Desafia <see cref="ChatInput.Target"/> para um duelo.</summary>
+        DuelRequest,
+
+        /// <summary>Entra ou sai da fila da arena.</summary>
+        ArenaQueue,
+
         Help,
 
         /// <summary>Comando errado; <see cref="ChatInput.Error"/> diz o porquê.</summary>
@@ -212,7 +218,7 @@ namespace Game.Shared.Social
         public const string HelpText =
             "/m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · " +
             "/convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · " +
-            "/bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome";
+            "/bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome · /duelo nome · /arena";
 
         public static ChatInput Parse(string line, ChatChannel current, string lastWhisperFrom = "")
         {
@@ -263,6 +269,11 @@ namespace Game.Shared.Social
                 case "denunciar":
                     if (first.Length == 0 || afterFirst.Length == 0) return Invalid("Use /denunciar nome motivo");
                     return new ChatInput { Kind = ChatInputKind.Report, Target = first, Text = afterFirst };
+                case "duelo":
+                case "duelar":
+                    return first.Length == 0 ? Invalid("Use /duelo nome") : Command(ChatInputKind.DuelRequest, first);
+                case "arena":
+                    return Command(ChatInputKind.ArenaQueue, "");
                 case "trocar":
                     return first.Length == 0 ? Invalid("Use /trocar nome") : Command(ChatInputKind.TradeRequest, first);
                 case "amigos":
