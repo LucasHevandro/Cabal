@@ -27,6 +27,9 @@ namespace Game.Client.Fx
 
         public static CombatFx Instance => _instance;
 
+        /// <summary>Material das partículas (para os outros efeitos usarem o mesmo shader incluído no build).</summary>
+        public Material ParticleMaterial => particleMaterial;
+
         public void SetMaterials(Material particles, Material projectile)
         {
             particleMaterial = particles;
@@ -36,6 +39,13 @@ namespace Game.Client.Fx
         private void Awake()
         {
             _instance = this;
+            // Partícula suave do catálogo de visuais (disco esfumado e aditivo), se existir; senão a opaca da cena.
+            var soft = Resources.Load<Material>("Visuals/fx/particula_suave");
+            if (soft != null)
+            {
+                particleMaterial = soft;
+                sparkSize *= 1.7f; // o disco esfumado parece menor que o quadrado do mesmo tamanho
+            }
             _sparks = CreateSparkSystem();
         }
 

@@ -16,6 +16,10 @@ namespace Game.Client.Fx
         ComboStart,
         Finisher,
         Error,
+        LevelUp,
+        RareDrop,
+        UpgradeSuccess,
+        UpgradeFail,
     }
 
     /// <summary>
@@ -71,6 +75,22 @@ namespace Game.Client.Fx
                     break;
                 case SoundId.Error:
                     data = Sequence(0.09f, Tone(180, 180, 0.06f, Wave.Square, 0.2f), Tone(180, 180, 0.06f, Wave.Square, 0.2f));
+                    break;
+                case SoundId.LevelUp:
+                    // Arpejo maior subindo, com um brilho agudo no fim.
+                    data = Mix(Sequence(0.08f, Tone(523, 523, 0.18f, Wave.Triangle, 0.4f), Tone(659, 659, 0.18f, Wave.Triangle, 0.4f),
+                            Tone(784, 784, 0.18f, Wave.Triangle, 0.4f), Tone(1047, 1047, 0.45f, Wave.Triangle, 0.45f)),
+                        Sequence(0.32f, new float[0], Tone(2093, 2093, 0.4f, Wave.Sine, 0.15f)));
+                    break;
+                case SoundId.RareDrop:
+                    data = Sequence(0.06f, Tone(1175, 1175, 0.25f, Wave.Sine, 0.3f), Tone(1568, 1568, 0.35f, Wave.Sine, 0.3f));
+                    break;
+                case SoundId.UpgradeSuccess:
+                    data = Mix(Noise(0.12f, 0.4f, attack: 0.002f, smoothing: 0.3f),
+                        Sequence(0.07f, Tone(784, 784, 0.15f, Wave.Triangle, 0.4f), Tone(1175, 1175, 0.4f, Wave.Triangle, 0.45f)));
+                    break;
+                case SoundId.UpgradeFail:
+                    data = Mix(Noise(0.25f, 0.5f, attack: 0.002f, smoothing: 0.75f), Tone(260, 90, 0.4f, Wave.Square, 0.2f));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(id), id, null);

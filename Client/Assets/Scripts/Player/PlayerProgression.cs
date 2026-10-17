@@ -45,9 +45,10 @@ namespace Game.Client.Player
         private void CelebrateLevelUp()
         {
             DamageNumbers.Spawn(transform.position + Vector3.up * 3.1f, Loc.T("fx.level_up", Progress.Level), new Color(1f, 0.9f, 0.3f), 40f);
-            SoundPlayer.Play(SoundId.Route, 1f, 0f);
+            SoundPlayer.Play(SoundId.LevelUp, 1f, 0f);
             if (CombatFx.Instance != null)
                 CombatFx.Instance.Sparks(transform.position + Vector3.up, new Color(1f, 0.9f, 0.3f), 60);
+            ItemFx.LevelUp(transform);
             LeveledUp?.Invoke(Progress.Level);
         }
 

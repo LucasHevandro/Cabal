@@ -582,6 +582,21 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x + 12, rect.y + 10, rect.width - 24, rect.height - 16), text, _small);
         }
 
+        /// <summary>Clarão no quadro do item logo depois da melhoria: dourado no sucesso, cinza ou vermelho na falha.</summary>
+        private static void DrawUpgradeFlash(Rect itemRect)
+        {
+            var result = CharacterState.LastUpgrade;
+            var age = Time.unscaledTime - CharacterState.LastUpgradeAt;
+            if (result == null || age > 1.2f || result.Outcome == (byte)UpgradeOutcome.Refused) return;
+            var color = result.Outcome == (byte)UpgradeOutcome.Success ? new Color(1f, 0.85f, 0.3f)
+                : result.Outcome == (byte)UpgradeOutcome.FailedDowngraded ? new Color(1f, 0.3f, 0.25f) : new Color(0.6f, 0.6f, 0.65f);
+            var alpha = 1f - age / 1.2f;
+            var grow = (1f - alpha) * 14f;
+            var glow = new Rect(itemRect.x - grow, itemRect.y - grow, itemRect.width + grow * 2, itemRect.height + grow * 2);
+            Box(itemRect, new Color(color.r, color.g, color.b, 0.35f * alpha));
+            Outline(glow, new Color(color.r, color.g, color.b, alpha));
+        }
+
         private static string ColoredDelta(StatBlock delta)
         {
             var parts = delta.Describe().Split(new[] { ", " }, System.StringSplitOptions.RemoveEmptyEntries);
@@ -614,6 +629,7 @@ namespace Game.Client.UI
             var (item, container, slot) = FindByUid(_smithItemUid);
             var itemRect = new Rect(x, y + 30, SlotSize + 10, SlotSize + 10);
             Box(itemRect, SlotBack);
+            DrawUpgradeFlash(itemRect);
             if (item == null)
             {
                 _smithItemUid = 0;

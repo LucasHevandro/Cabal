@@ -143,6 +143,9 @@ namespace Game.Client.Loot
             session.Send(new Msg.PickupLoot { LootId = pickup.NetworkId });
         }
 
+        /// <summary>Só para o teste automático: um item de enfeite no chão (não existe no servidor).</summary>
+        public LootPickup SpawnPreview(ItemDrop drop, Vector3 position) => SpawnPickup(drop, position);
+
         private LootPickup SpawnPickup(ItemDrop drop, Vector3 position)
         {
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -168,6 +171,9 @@ namespace Game.Client.Loot
                 model.transform.localScale = Vector3.one / cube.transform.localScale.x;
                 renderer.enabled = false;
             }
+
+            Fx.ItemFx.AttachRarityGlow(cube.transform, drop.Rarity, LootPickup.ColorFor(drop.Rarity));
+            Fx.ItemFx.RareDrop(cube.transform.position, drop.Rarity, LootPickup.ColorFor(drop.Rarity));
 
             var pickup = cube.AddComponent<LootPickup>();
             pickup.Initialize(drop);

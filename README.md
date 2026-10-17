@@ -157,6 +157,8 @@ Tutorial nos primeiros minutos: andar, alvo, ataque, esquiva e, quando a missão
 na janela e finalizar). Fica salvo por personagem; dá para pular e rever nas opções.
 Catálogo de visuais: um prefab em `Client/Assets/Resources/Visuals/<categoria>/<id>` troca a forma simples pelo modelo
 (monstros, NPCs, classes e itens no chão); sem prefab, fica a forma de hoje. Guia em `Docs/visuais.md`.
+Efeitos de raridade nos itens no chão (luzes, feixe nos raros e épicos, anel nos épicos), de subida de nível e de
+melhoria com sucesso ou falha, com sons próprios e partículas suaves.
 Fases 1 a 6 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30, grupo, chat, amigos, loja, troca,
 dungeon em instância, duelo e arena 5v5) concluídas. Veja o Backlog do
 MVP no GDD.

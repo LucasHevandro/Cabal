@@ -7,6 +7,7 @@ using Game.Client.Loot;
 using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
+using Game.Shared.Loot;
 using Game.Shared.Net;
 using Game.Shared.Social;
 using Game.Shared.Progression;
@@ -439,6 +440,30 @@ namespace Game.Client.DevTools
             Capture("9c-mapa");
             yield return new WaitForEndOfFrame();
             Minimap.BigOpen = false;
+
+            // Efeitos: item de cada raridade no chão, subida de nível e melhoria (só na tela, nada vai ao servidor).
+            var loot = me.GetComponent<PlayerLoot>();
+            var forward = me.transform.forward;
+            var right = me.transform.right;
+            var previews = new List<Game.Client.Loot.LootPickup>();
+            var rarities = new[] { ItemRarity.Common, ItemRarity.Uncommon, ItemRarity.Rare, ItemRarity.Epic };
+            for (var i = 0; i < rarities.Length; i++)
+            {
+                var spot = me.transform.position + forward * 4f + right * (i - 1.5f) * 1.6f;
+                previews.Add(loot.SpawnPreview(new ItemDrop("fragmento_guardiao", "", rarities[i], 1), spot));
+            }
+            yield return new WaitForSecondsRealtime(1.5f);
+            Capture("9d-raridade");
+            yield return new WaitForSecondsRealtime(0.3f);
+            Game.Client.Fx.ItemFx.LevelUp(me.transform);
+            yield return new WaitForSecondsRealtime(0.6f);
+            Capture("9e-nivel");
+            yield return new WaitForSecondsRealtime(1.5f);
+            Game.Client.Fx.ItemFx.UpgradeResult(me.transform, success: true, downgraded: false, newLevel: 8);
+            yield return new WaitForSecondsRealtime(0.25f);
+            Capture("9f-melhoria");
+            yield return new WaitForSecondsRealtime(0.3f);
+            foreach (var preview in previews) if (preview != null) Destroy(preview.gameObject);
             outcome.Ok = true;
             outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
         }
