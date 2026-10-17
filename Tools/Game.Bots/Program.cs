@@ -1,17 +1,23 @@
 ﻿using System.Diagnostics;
 using Game.Bots;
 using Game.Shared.Net;
+using Game.Shared.Social;
 
 // Teste de carga: N jogadores falsos conectam, caçam nos Campos do Vento e fazem combos pelo protocolo real.
-// Uso: Game.Bots [--host 127.0.0.1] [--port 7777] [--count 20] [--seconds 60]
+// Uso: Game.Bots [--host 127.0.0.1] [--port 7777] [--count 20] [--seconds 60] [--party] [--invite Nome]
+//   --party: os bots formam grupos de 4 (o primeiro de cada grupo convida, os outros aceitam) e conversam no chat.
+//   --invite Nome: o primeiro bot convida esse personagem (um cliente de verdade) e fala no grupo quando ele entra.
 var host = "127.0.0.1";
 var port = Protocol.DefaultPort;
 var count = 20;
 var seconds = 60.0;
+var party = args.Contains("--party");
+var inviteName = "";
 for (var i = 0; i < args.Length - 1; i++)
 {
     switch (args[i])
     {
+        case "--invite": inviteName = args[i + 1]; break;
         case "--host": host = args[i + 1]; break;
         case "--port": int.TryParse(args[i + 1], out port); break;
         case "--count": int.TryParse(args[i + 1], out count); break;
@@ -29,7 +35,11 @@ for (var i = 0; i < count; i++)
     // Um terço caça na Mata Sombria (mais monstros e com mais vida), o resto nos Campos do Vento.
     var forest = i % 3 == 2;
     var prey = forest ? new[] { "javali_furioso", "aranha_da_mata" } : new[] { "coelho_saltador", "lobo_cinzento" };
+    // No modo grupo, cada grupo de 4 caça no mesmo lugar (para dividir XP e drop).
+    if (party) forest = i / 4 % 3 == 2;
+    if (party) prey = forest ? new[] { "javali_furioso", "aranha_da_mata" } : new[] { "coelho_saltador", "lobo_cinzento" };
     var bot = forest ? new Bot($"Bot{i + 1:00}", 1000 + i, prey, 45, 85) : new Bot($"Bot{i + 1:00}", 1000 + i, prey, 0, 40);
+    bot.AutoAcceptInvites = party && i % 4 != 0;
     try
     {
         await bot.StartAsync(host, port);
@@ -44,12 +54,46 @@ for (var i = 0; i < count; i++)
 
 var last = clock.Elapsed.TotalSeconds;
 var nextReport = last + 10;
+var invitesSent = false;
+var nextChatAt = last + 6;
+var clientJoined = false;
+var nextClientInviteAt = 0.0;
 while (clock.Elapsed.TotalSeconds < seconds)
 {
     var now = clock.Elapsed.TotalSeconds;
     var dt = (float)(now - last);
     last = now;
     foreach (var bot in bots) bot.Update(now, dt);
+
+    // Convida depois que todos entraram no mundo (o convite vai pelo nome).
+    if (!invitesSent && now > 2 && bots.All(b => b.PlayerId != 0))
+    {
+        invitesSent = true;
+        if (party)
+            for (var i = 0; i < bots.Count; i += 4)
+                for (var j = i + 1; j < Math.Min(i + 4, bots.Count); j++)
+                    bots[i].Invite(bots[j].Name);
+    }
+    // O cliente pode entrar depois dos bots: convida de novo a cada 5 s até ele aceitar.
+    if (invitesSent && inviteName.Length > 0 && !clientJoined && bots.Count > 0 && now >= nextClientInviteAt)
+    {
+        nextClientInviteAt = now + 5;
+        bots[0].Invite(inviteName);
+    }
+    if (party && now >= nextChatAt)
+    {
+        nextChatAt = now + 10;
+        for (var i = 0; i < bots.Count; i += 4) bots[i].Say(ChatChannel.Party, $"grupo {i / 4 + 1}: tudo certo? que merda de lobo");
+        if (bots.Count > 0) bots[^1].Say(ChatChannel.Map, "alguém vende poção?");
+    }
+    if (inviteName.Length > 0 && !clientJoined && bots.Count > 0 &&
+        bots[0].Party.Members.Any(m => string.Equals(m.Name, inviteName, StringComparison.OrdinalIgnoreCase)))
+    {
+        clientJoined = true;
+        bots[0].Say(ChatChannel.Party, "bem-vindo ao grupo!");
+        bots[0].Say(ChatChannel.Whisper, "oi, sussurro do bot", inviteName);
+        Console.WriteLine($"[{now:0}s] {inviteName} entrou no grupo do {bots[0].Name}");
+    }
 
     if (now >= nextReport)
     {
@@ -93,6 +137,18 @@ var disconnected = bots.Where(b => !b.Connection.Connected).ToList();
 foreach (var bot in disconnected) Console.WriteLine($"{bot.Name} desconectou: {bot.Connection.Error}");
 
 var ok = bots.Count == count && disconnected.Count == 0 && bots.Sum(b => b.Stats.HitsConfirmed) > 0;
+if (party)
+{
+    var grouped = bots.Count(b => b.Party.Members.Count == Math.Min(4, bots.Count - bots.IndexOf(b) / 4 * 4));
+    Console.WriteLine($"Grupos: {grouped}/{bots.Count} bots no grupo certo | estados de grupo recebidos {bots.Sum(b => b.Stats.PartyStates)} | " +
+                      $"chat recebido {bots.Sum(b => b.Stats.ChatReceived)} (grupo {bots.Sum(b => b.Stats.PartyChatReceived)}, sistema {bots.Sum(b => b.Stats.SystemChat)})");
+    ok &= grouped == bots.Count && bots.Sum(b => b.Stats.PartyChatReceived) > 0;
+}
+if (inviteName.Length > 0)
+{
+    Console.WriteLine(clientJoined ? $"{inviteName} entrou no grupo" : $"{inviteName} NÃO entrou no grupo");
+    ok &= clientJoined;
+}
 Console.WriteLine(ok ? "SUCESSO" : "FALHA");
 foreach (var bot in bots) bot.Connection.Dispose();
 return ok ? 0 : 1;

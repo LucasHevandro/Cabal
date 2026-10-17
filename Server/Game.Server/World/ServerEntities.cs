@@ -6,6 +6,7 @@ using Game.Shared.Items;
 using Game.Shared.Loot;
 using Game.Shared.Monsters;
 using Game.Shared.Progression;
+using Game.Shared.Social;
 using Game.Shared.World;
 
 namespace Game.Server.World;
@@ -79,6 +80,20 @@ public sealed class ServerPlayer
     public bool ComboDirty { get; set; } = true;
     public bool SheetDirty { get; set; } = true;
     public bool QuestsDirty { get; set; } = true;
+
+    /// <summary>Grupo atual (0 = sem grupo).</summary>
+    public int PartyId { get; set; }
+
+    /// <summary>Convite de grupo esperando resposta: quem convidou e até quando vale.</summary>
+    public (int InviterId, double ExpiresAt)? PendingInvite { get; set; }
+
+    /// <summary>Assinatura do último PartyState enviado (só reenvia quando muda).</summary>
+    public int LastPartySignature { get; set; }
+
+    /// <summary>Precisa mandar o PartyState mesmo sem mudança de assinatura (entrou ou saiu do grupo).</summary>
+    public bool PartyDirty { get; set; }
+
+    public ChatRateLimiter ChatLimiter { get; } = new();
 
     public ServerPlayer(CharacterClass characterClass = CharacterClass.Blade)
     {
@@ -160,8 +175,13 @@ public sealed class ServerLoot
     public float X { get; init; }
     public float Z { get; init; }
     public int OwnerId { get; init; }
+
+    /// <summary>Grupo do dono quando caiu (0 = sozinho): qualquer membro pode pegar.</summary>
+    public int OwnerPartyId { get; init; }
+
     public double OwnerUntil { get; init; }
     public double ExpiresAt { get; init; }
 
-    public bool CanBePickedBy(int playerId, double now) => playerId == OwnerId || now >= OwnerUntil;
+    public bool CanBePickedBy(int playerId, int partyId, double now) =>
+        playerId == OwnerId || (OwnerPartyId != 0 && partyId == OwnerPartyId) || now >= OwnerUntil;
 }

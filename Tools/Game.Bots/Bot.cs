@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Game.Shared.Combat;
 using Game.Shared.Net;
+using Game.Shared.Social;
 using ComboStateMessage = Game.Shared.Net.ComboState;
 
 namespace Game.Bots;
@@ -102,6 +103,12 @@ public sealed class BotStats
 
     /// <summary>Avisos do servidor por texto (sem números), para achar o que está recusando as ações.</summary>
     public readonly Dictionary<string, int> Notices = new();
+
+    // Social
+    public int PartyStates;
+    public int ChatReceived;
+    public int PartyChatReceived;
+    public int SystemChat;
 }
 
 /// <summary>
@@ -141,6 +148,17 @@ public sealed class Bot
     public float X { get; private set; }
     public float Z { get; private set; }
     public string Name => _name;
+
+    /// <summary>Aceita sozinho qualquer convite de grupo (modo --party).</summary>
+    public bool AutoAcceptInvites { get; set; }
+
+    /// <summary>Último estado do grupo recebido (vazio = sem grupo).</summary>
+    public PartyState Party { get; private set; } = new();
+
+    public void Invite(string name) => Connection.Send(new PartyCommand { Action = PartyActionKind.Invite, TargetName = name });
+
+    public void Say(ChatChannel channel, string text, string target = "") =>
+        Connection.Send(new ChatSend { Channel = channel, Target = target, Text = text });
 
     /// <summary>
     /// <paramref name="prey"/> = tipos de monstro que este bot caça (espalha os bots pelo mapa: 20 bots num campo
@@ -331,6 +349,18 @@ public sealed class Bot
             case Notice notice:
                 var key = new string(notice.Text.Where(c => !char.IsDigit(c)).ToArray());
                 Stats.Notices[key] = Stats.Notices.GetValueOrDefault(key) + 1;
+                break;
+            case PartyInvite invite:
+                if (AutoAcceptInvites) Connection.Send(new PartyCommand { Action = PartyActionKind.Accept, TargetId = invite.InviterId });
+                break;
+            case PartyState party:
+                Party = party;
+                Stats.PartyStates++;
+                break;
+            case ChatMessage chat:
+                Stats.ChatReceived++;
+                if (chat.Channel == ChatChannel.Party) Stats.PartyChatReceived++;
+                if (chat.Channel == ChatChannel.System) Stats.SystemChat++;
                 break;
             case CombatEvent hit:
                 if (hit.AttackerId == PlayerId)

@@ -5,6 +5,7 @@ using Game.Shared.Items;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
 using Game.Shared.Progression;
+using Game.Shared.Social;
 using Game.Shared.World;
 using ComboPhase = Game.Shared.Combat.ComboState;
 
@@ -340,26 +341,34 @@ public sealed partial class GameWorld
         monster.RespawnAt = now + monster.Data.RespawnSeconds;
         monster.PendingArea = null;
 
-        // Quem causou mais dano fica com o XP e é o dono do drop.
-        var killerId = monster.DamageBy.Count == 0 ? 0 : monster.DamageBy.MaxBy(kv => kv.Value).Key;
+        // Quem causou mais dano (somando o grupo) fica com o XP e o drop; dentro do grupo, quem bateu mais é o "dono".
+        var killer = TopDamager(monster);
         monster.DamageBy.Clear();
         monster.AggroPlayerId = 0;
-        if (!_players.TryGetValue(killerId, out var killer)) return;
+        if (killer == null) return;
 
-        var xp = XpRules.Adjusted(monster.Data.XpReward, killer.Progress.Level, monster.Data.Level);
-        GrantXp(killer, xp);
-        if (killer.Quests.OnKill(monster.Data.Id).Count > 0) killer.QuestsDirty = true;
-
+        // Divide com os membros vivos perto do monstro; quem matou vem primeiro (fica com o resto do Alz).
+        var sharing = PartyMembers(killer)
+            .Where(m => m == killer || (!m.IsDead && InRange(m.X, m.Z, monster.X, monster.Z, PartyRules.ShareRadius)))
+            .OrderBy(m => m == killer ? 0 : 1)
+            .ToList();
         var loot = monster.Data.Drops.Roll(_random);
-        killer.Alz += loot.Alz;
-        killer.StatsDirty = true;
-        if (killer.CharacterId != 0)
+        var alzParts = PartyRules.SplitAlz(loot.Alz, sharing.Count);
+        for (var i = 0; i < sharing.Count; i++)
         {
-            var at = DateTimeOffset.UtcNow;
-            if (loot.Alz > 0)
-                killer.PendingLogs.Add(new ItemLogEntry(killer.CharacterId, at, "alz_monstro", null, 0, loot.Alz, $"{monster.Data.Id} (id {monster.Id})"));
+            var member = sharing[i];
+            var xp = sharing.Count == 1
+                ? XpRules.Adjusted(monster.Data.XpReward, member.Progress.Level, monster.Data.Level)
+                : PartyRules.SharedXp(monster.Data.XpReward, monster.Data.Level, member.Progress.Level, sharing.Count);
+            GrantXp(member, xp);
+            if (member.Quests.OnKill(monster.Data.Id).Count > 0) member.QuestsDirty = true;
+            member.Alz += alzParts[i];
+            member.StatsDirty = true;
+            if (member.CharacterId != 0 && alzParts[i] > 0)
+                member.PendingLogs.Add(new ItemLogEntry(member.CharacterId, DateTimeOffset.UtcNow, "alz_monstro", null, 0, alzParts[i],
+                    $"{monster.Data.Id} (id {monster.Id}){(sharing.Count > 1 ? $", grupo de {sharing.Count}" : "")}"));
+            Notify(member, $"+{xp} XP, +{alzParts[i]} Alz");
         }
-        Notify(killer, $"+{xp} XP, +{loot.Alz} Alz");
 
         for (var i = 0; i < loot.Items.Count; i++)
         {
@@ -367,11 +376,28 @@ public sealed partial class GameWorld
             var id = _nextLootId++;
             _loot.Add(id, new ServerLoot
             {
-                Id = id, Drop = loot.Items[i], OwnerId = killer.Id,
+                Id = id, Drop = loot.Items[i], OwnerId = killer.Id, OwnerPartyId = killer.PartyId,
                 X = monster.X + MathF.Cos(angle) * (0.6f + 0.25f * i), Z = monster.Z + MathF.Sin(angle) * (0.6f + 0.25f * i),
                 OwnerUntil = now + ServerLoot.OwnerSeconds, ExpiresAt = now + ServerLoot.LifetimeSeconds,
             });
         }
+    }
+
+    /// <summary>
+    /// Quem leva o crédito: soma o dano por grupo (ou por jogador sozinho), o maior vence, e dentro dele
+    /// quem causou mais dano. Nulo se ninguém que bateu está online.
+    /// </summary>
+    private ServerPlayer? TopDamager(ServerMonster monster)
+    {
+        var online = monster.DamageBy
+            .Where(kv => _players.ContainsKey(kv.Key))
+            .Select(kv => (Player: _players[kv.Key], Damage: kv.Value))
+            .ToList();
+        if (online.Count == 0) return null;
+        var best = online
+            .GroupBy(e => e.Player.PartyId != 0 ? e.Player.PartyId : -e.Player.Id)
+            .MaxBy(g => g.Sum(e => (long)e.Damage))!;
+        return best.MaxBy(e => e.Damage).Player;
     }
 
     private void RespawnMonster(ServerMonster monster, double now)
@@ -440,7 +466,7 @@ public sealed partial class GameWorld
             Notify(player, "Longe demais para pegar");
             return;
         }
-        if (!loot.CanBePickedBy(player.Id, now))
+        if (!loot.CanBePickedBy(player.Id, player.PartyId, now))
         {
             Notify(player, "Este item ainda é de outro jogador");
             return;

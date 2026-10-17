@@ -130,7 +130,9 @@ public sealed partial class GameWorld
 
     public void RemovePlayer(int playerId)
     {
-        if (!_players.Remove(playerId)) return;
+        if (!_players.TryGetValue(playerId, out var leaving)) return;
+        _players.Remove(playerId);
+        if (leaving.PartyId != 0) LeaveParty(leaving, $"{leaving.Name} saiu do jogo e deixou o grupo");
         foreach (var monster in _monsters.Values)
         {
             if (monster.AggroPlayerId == playerId) monster.AggroPlayerId = 0;
@@ -187,6 +189,12 @@ public sealed partial class GameWorld
                 break;
             case ActivateAwakening:
                 HandleAwakening(player, now);
+                break;
+            case PartyCommand party:
+                HandleParty(player, party, now);
+                break;
+            case ChatSend chat:
+                HandleChat(player, chat, now);
                 break;
         }
     }
@@ -298,6 +306,7 @@ public sealed partial class GameWorld
             player.ComboDirty = false;
             _outbox.Send(player.Id, ComboMessage(player));
         }
+        SendPartyState(player);
     }
 
     /// <summary>Manda a mensagem a todos os jogadores perto do ponto.</summary>
