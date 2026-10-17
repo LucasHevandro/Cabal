@@ -95,6 +95,9 @@ namespace Game.Client.UI
 
         public static GameWindows Instance { get; private set; }
 
+        /// <summary>Alguma janela do lado direito (inventário, loja, troca...) está aberta: o minimapa sai da frente.</summary>
+        public static bool RightPanelOpen { get; private set; }
+
         // Usados pelo teste automático (DevTools/OnlineSmokeTest) para abrir janelas sem teclado.
         public void SetInventoryOpen(bool open) => _inventoryOpen = open;
         public void SetAttributesOpen(bool open) => _attributesOpen = open;
@@ -117,7 +120,11 @@ namespace Game.Client.UI
             if (Instance == this) Instance = null;
         }
 
-        private void OnDisable() => OpenRects.Clear();
+        private void OnDisable()
+        {
+            OpenRects.Clear();
+            RightPanelOpen = false;
+        }
 
         private void Update()
         {
@@ -205,6 +212,7 @@ namespace Game.Client.UI
             var smithOpen = npc != null && npc.Role == NpcRole.Smith;
             var shopOpen = npc != null && npc.Role == NpcRole.Merchant && !Trading;
             var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || Trading;
+            RightPanelOpen = inventoryShown;
 
             var pvp = CharacterState.Pvp;
             var pvpBusy = pvp != null && (pvp.InQueue || pvp.Mode == Msg.PvpMode.Arena);
@@ -813,7 +821,7 @@ namespace Game.Client.UI
             var active = CharacterState.Quests.Active;
             if (active.Count == 0) return;
             var x = VirtualWidth - 470f;
-            var y = 104f;
+            var y = Minimap.PanelsTop;
             var height = 40f + active.Sum(q => 28f + 20f * (QuestCatalog.Find(q.QuestId)?.Objectives.Count ?? 0));
             Box(new Rect(x, y, 450, height), new Color(0, 0, 0, 0.45f));
             GUI.Label(new Rect(x + 12, y + 6, 420, 24), Loc.T("tracker.title", KeyBindings.Label(GameAction.QuestLog)), _small);

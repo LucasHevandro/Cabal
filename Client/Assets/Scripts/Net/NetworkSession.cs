@@ -245,7 +245,7 @@ namespace Game.Client.Net
             collider.center = new Vector3(0, parts.Height / 2f, 0);
 
             var target = root.AddComponent<Targetable>();
-            target.Configure(spawned.Name, Mathf.Max(1, spawned.MaxHp), parts.Height + 0.3f, parts.Radius, parts.Ring,
+            target.Configure(spawned.Kind == EntityKind.Monster ? "monster." + spawned.TypeId : spawned.Name, Mathf.Max(1, spawned.MaxHp), parts.Height + 0.3f, parts.Radius, parts.Ring,
                 data?.Defense ?? 0);
             target.Level = spawned.Level;
             target.NetworkId = spawned.Id;

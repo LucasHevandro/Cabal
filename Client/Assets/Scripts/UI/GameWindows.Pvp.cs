@@ -42,7 +42,7 @@ namespace Game.Client.UI
 
         private void DrawQueue(Msg.PvpState pvp)
         {
-            var rect = new Rect(VirtualWidth - 480, 104, 460, 44);
+            var rect = new Rect(VirtualWidth - 480, Minimap.PanelsTop, 460, 44);
             OpenRects.Add(rect);
             Box(rect, Panel);
             GUI.Label(new Rect(rect.x + 14, rect.y + 10, 300, 26), Loc.T("arena.queue_title", pvp.QueueSize, pvp.QueueNeeded), _small);

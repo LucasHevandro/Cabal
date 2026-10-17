@@ -95,7 +95,7 @@ namespace Game.Client.UI
             var left = state.LimitSeconds - elapsed;
 
             // À direita, embaixo da zona (o rastreador de missões some na dungeon e os anúncios ficam no centro).
-            var rect = new Rect(VirtualWidth - 480, 104, 460, 64);
+            var rect = new Rect(VirtualWidth - 480, Minimap.PanelsTop, 460, 64);
             OpenRects.Add(rect);
             Box(rect, Panel);
             GUI.Label(new Rect(rect.x + 14, rect.y + 6, 300, 26), Loc.T("dungeon.hud_room", state.Room + 1, state.Rooms, room.Name), _small);

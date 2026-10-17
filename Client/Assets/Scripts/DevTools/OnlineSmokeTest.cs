@@ -426,6 +426,13 @@ namespace Game.Client.DevTools
             Capture("9b-atalhos");
             yield return new WaitForEndOfFrame();
             OptionsWindow.Close();
+
+            // Mapa grande (tecla M) e o minimapa no canto.
+            Minimap.BigOpen = true;
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("9c-mapa");
+            yield return new WaitForEndOfFrame();
+            Minimap.BigOpen = false;
             outcome.Ok = true;
             outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
         }

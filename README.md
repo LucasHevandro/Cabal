@@ -151,6 +151,8 @@ Fase 7 — Interface, áudio e polimento (em andamento): todos os textos do jogo
 Janela de opções (F10 ou botão no menu de entrada): resolução, tela cheia, qualidade, limite de FPS, VSync,
 volumes e idioma, salvos entre uma sessão e outra. Na aba Atalhos dá para trocar a tecla de cada comando
 (andar, skills, combo, janelas); os textos da tela mostram a tecla escolhida.
+Minimapa no canto de cima à direita (zonas, NPCs, monstros, chefes, grupo, itens; corredor da dungeon e pontos
+da arena) e mapa grande na tecla M.
 Fases 1 a 6 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30, grupo, chat, amigos, loja, troca,
 dungeon em instância, duelo e arena 5v5) concluídas. Veja o Backlog do
 MVP no GDD.

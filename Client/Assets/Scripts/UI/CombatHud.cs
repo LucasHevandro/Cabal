@@ -69,6 +69,8 @@ namespace Game.Client.UI
             var keyboard = GameInput.Keyboard;
             // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
             if (KeyBindings.Pressed(GameAction.Inventory) && !GameMode.IsOnline) _showInventory = !_showInventory;
+            if (KeyBindings.Pressed(GameAction.Map)) Minimap.Toggle();
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Minimap.BigOpen = false;
         }
 
         private void OnGUI()
@@ -99,6 +101,8 @@ namespace Game.Client.UI
             DrawAnnouncement();
             DrawDeathOverlay();
             if (_showInventory) DrawInventory();
+            // Com o inventário (ou outra janela do lado direito) aberto, o minimapa sai da frente.
+            Minimap.Draw(combat.transform, combat.Target, VirtualWidth, VirtualHeight, _showInventory || GameWindows.RightPanelOpen);
 
             GUI.matrix = Matrix4x4.identity;
             GUI.color = Color.white;
@@ -107,10 +111,10 @@ namespace Game.Client.UI
         private void DrawHelp()
         {
             var online = GameMode.IsOnline;
-            Box(new Rect(20, 20, 420, online ? 346 : 270), Panel);
-            GUI.Label(new Rect(36, 30, 400, online ? 336 : 260),
+            Box(new Rect(20, 20, 470, online ? 346 : 270), Panel);
+            GUI.Label(new Rect(36, 30, 450, online ? 336 : 260),
                 Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
-                    KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget)) + "\n" +
+                    KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map)) + "\n" +
                 (online
                     ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
                         KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
@@ -255,7 +259,7 @@ namespace Game.Client.UI
 
         private void DrawInventory()
         {
-            var rect = new Rect(VirtualWidth - 440, 140, 400, 500);
+            var rect = new Rect(VirtualWidth - 440, Minimap.PanelsTop, 400, 500);
             Box(rect, Panel);
             GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), Loc.T("hud.inventory_title", KeyBindings.Label(GameAction.Inventory)), _label);
             if (_loot == null || _loot.Inventory.Count == 0)
@@ -437,7 +441,7 @@ namespace Game.Client.UI
             var age = Time.unscaledTime - combat.MessageAt;
             if (age > 2.5f || string.IsNullOrEmpty(combat.Message)) return;
             GUI.color = new Color(1, 1, 1, 1f - Mathf.Clamp01((age - 2f) / 0.5f));
-            GUI.Label(new Rect(0, VirtualHeight - 250, VirtualWidth, 30), combat.Message, _center);
+            ShadowLabel(new Rect(0, VirtualHeight - 548, VirtualWidth, 30), combat.Message, _center, Color.white, 1f);
             GUI.color = Color.white;
         }
 
