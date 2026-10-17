@@ -22,6 +22,10 @@ namespace Game.Client.UI
             }
         }
 
-        public static Keyboard Keyboard => _typing || Time.frameCount <= _typingEndedFrame + 1 ? null : UnityEngine.InputSystem.Keyboard.current;
+        /// <summary>Alguma outra caixa de texto (ex.: nome na janela de amigos) está com o foco.</summary>
+        public static bool FieldFocused { get; set; }
+
+        public static Keyboard Keyboard =>
+            _typing || FieldFocused || Time.frameCount <= _typingEndedFrame + 1 ? null : UnityEngine.InputSystem.Keyboard.current;
     }
 }

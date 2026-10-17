@@ -114,7 +114,7 @@ namespace Game.Client.UI
                 "Tab / clique: selecionar alvo · Esc limpar\n" +
                 (online
                     ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n" +
-                      "Enter chat · /convidar nome forma grupo\n"
+                      "Enter chat · O amigos · /convidar nome forma grupo\n"
                     : "1–4 skills · E coletar itens · I inventário\n") +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +

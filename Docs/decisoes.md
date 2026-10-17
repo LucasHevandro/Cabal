@@ -64,3 +64,15 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   (sem acento, com números no lugar de letras e letras repetidas), para não estragar palavras como "cubo".
 - **Revisar se:** o raio de 50 m deixar alguém ganhar XP parado na vila enquanto o grupo caça perto dela
   (aparece nos testes); se acontecer, exigir que o membro tenha causado dano ou esteja em combate.
+
+## 2026-10-17 — Amigos, bloqueio e denúncia
+
+- **Amigos de um lado só:** adicionar não pede aceite (quem foi adicionado só recebe um aviso). Para adicionar ou
+  bloquear, a pessoa precisa estar online (o servidor pega o id do personagem); remover e desbloquear funcionam
+  pelo nome, com ela offline. Até 50 amigos e 100 bloqueados. Convidados não têm listas.
+- **Bloquear** tira dos amigos, esconde as mensagens de mapa, grupo e sussurro daquela pessoa e recusa os
+  convites dela. Quem foi bloqueado só descobre ao tentar sussurrar ("não está recebendo suas mensagens").
+- **Denúncia** guarda o motivo e as 10 últimas mensagens do denunciado com o **texto original** (sem o filtro de
+  palavrões), para a moderação ver o que foi dito. Limite: a mesma pessoa uma vez a cada 10 minutos, e no máximo
+  5 denúncias por hora. Por enquanto a moderação lê a tabela `player_reports` direto no banco.
+- Amigos, bloqueados e denúncias vão para o banco junto com o salvamento do personagem (a cada 10 s e ao sair).

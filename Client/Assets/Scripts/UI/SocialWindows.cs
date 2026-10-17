@@ -19,6 +19,7 @@ namespace Game.Client.UI
         private const int VisibleLines = 9;
         private const float FadeAfterSeconds = 12f;
         private const string InputControl = "chat-input";
+        private const string FriendControl = "friend-name";
 
         private static readonly Color Panel = new Color(0.05f, 0.06f, 0.09f, 0.82f);
         private static readonly Color HpColor = new Color(0.85f, 0.2f, 0.2f);
@@ -48,11 +49,17 @@ namespace Game.Client.UI
         private int _scroll;
 
         private PartyState _party = new PartyState();
+        private SocialLists _lists = new SocialLists();
+        private bool _friendsOpen;
+        private string _friendName = "";
+        private Vector2 _friendsScroll;
+        private bool _cursorToEnd;
         private PartyInvite _invite;
         private float _inviteUntil;
 
         private GUIStyle _label;
         private GUIStyle _small;
+        private GUIStyle _wrapped;
         private GUIStyle _input;
         private GUIStyle _button;
         private float _scale = 1f;
@@ -71,6 +78,8 @@ namespace Game.Client.UI
 
         private static void AddRect(Rect rect) => OpenRects.Add(rect);
         public PartyState Party => _party;
+        public SocialLists Lists => _lists;
+        public void SetFriendsOpen(bool open) => _friendsOpen = open;
         public PartyInvite PendingInvite => Time.unscaledTime < _inviteUntil ? _invite : null;
         public IEnumerable<string> RecentLines { get { foreach (var line in _lines) yield return line.Text; } }
 
@@ -102,6 +111,15 @@ namespace Game.Client.UI
             if (Instance == this) Instance = null;
             OpenRects.Clear();
             GameInput.Typing = false;
+            GameInput.FieldFocused = false;
+        }
+
+        private void Update()
+        {
+            var keyboard = GameInput.Keyboard;
+            if (keyboard == null || ConnectMenu.IsOpen) return;
+            if (keyboard.oKey.wasPressedThisFrame) _friendsOpen = !_friendsOpen;
+            if (keyboard.escapeKey.wasPressedThisFrame) _friendsOpen = false;
         }
 
         private void OnMessage(INetMessage message)
@@ -113,6 +131,9 @@ namespace Game.Client.UI
                     break;
                 case PartyState party:
                     _party = party;
+                    break;
+                case SocialLists lists:
+                    _lists = lists;
                     break;
                 case PartyInvite invite:
                     _invite = invite;
@@ -166,6 +187,8 @@ namespace Game.Client.UI
 
             DrawParty();
             DrawChat();
+            if (_friendsOpen) DrawFriends();
+            else GameInput.FieldFocused = false;
             if (PendingInvite != null) DrawInvite();
 
             GUI.matrix = Matrix4x4.identity;
@@ -177,6 +200,18 @@ namespace Game.Client.UI
         {
             if (e.type != EventType.KeyDown) return;
             var enter = e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter;
+            if (GameInput.FieldFocused)
+            {
+                // Enter na caixa de nome da janela de amigos adiciona; Esc sai da caixa.
+                if (enter) AddFriendFromField();
+                if (enter || e.keyCode == KeyCode.Escape)
+                {
+                    GUI.FocusControl(null);
+                    GameInput.FieldFocused = false;
+                    e.Use();
+                }
+                return;
+            }
             if (!GameInput.Typing)
             {
                 if (!enter) return;
@@ -229,24 +264,25 @@ namespace Game.Client.UI
 
             // Sem digitar, as linhas antigas somem; o fundo só aparece enquanto digita.
             if (typing) Box(rect, Panel);
-            var lineHeight = 26f;
+            // De baixo para cima: linhas longas quebram em várias e ocupam mais altura.
+            var width = rect.width - 24;
+            var bottom = rect.yMax - 44;
+            var top = rect.y + 28;
             var end = _lines.Count - (typing ? _scroll : 0);
-            var start = Mathf.Max(0, end - VisibleLines);
-            var y = rect.yMax - 44 - (end - start) * lineHeight;
-            for (var i = start; i < end; i++)
+            var y = bottom;
+            for (var i = end - 1; i >= 0 && end - i <= VisibleLines; i--)
             {
                 var line = _lines[i];
-                var age = now - line.At;
-                var alpha = typing ? 1f : Mathf.Clamp01((FadeAfterSeconds + 2f - age) / 2f);
-                if (alpha > 0)
-                {
-                    var text = $"<color=#{ColorUtility.ToHtmlStringRGB(ChannelColor(line.Channel))}>{Prefix(line.Channel)}{line.Text}</color>";
-                    GUI.color = new Color(0, 0, 0, 0.8f * alpha);
-                    GUI.Label(new Rect(rect.x + 13, y + 1, rect.width - 24, lineHeight), text, _small);
-                    GUI.color = new Color(1, 1, 1, alpha);
-                    GUI.Label(new Rect(rect.x + 12, y, rect.width - 24, lineHeight), text, _small);
-                }
-                y += lineHeight;
+                var text = $"<color=#{ColorUtility.ToHtmlStringRGB(ChannelColor(line.Channel))}>{Prefix(line.Channel)}{line.Text}</color>";
+                var height = _wrapped.CalcHeight(new GUIContent(text), width) + 2;
+                if (y - height < top) break;
+                y -= height;
+                var alpha = typing ? 1f : Mathf.Clamp01((FadeAfterSeconds + 2f - (now - line.At)) / 2f);
+                if (alpha <= 0) continue;
+                GUI.color = new Color(0, 0, 0, 0.8f * alpha);
+                GUI.Label(new Rect(rect.x + 13, y + 1, width, height), text, _wrapped);
+                GUI.color = new Color(1, 1, 1, alpha);
+                GUI.Label(new Rect(rect.x + 12, y, width, height), text, _wrapped);
             }
             GUI.color = Color.white;
 
@@ -264,6 +300,14 @@ namespace Game.Client.UI
             {
                 GUI.FocusControl(InputControl);
                 _focusInput = false;
+            }
+            else if (_cursorToEnd && Event.current.type == EventType.Repaint)
+            {
+                // Abriu com texto pronto ("/s Nome "): o cursor vai para o fim em vez de selecionar tudo.
+                var editor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+                editor.text = _draft;
+                editor.MoveTextEnd();
+                _cursorToEnd = false;
             }
             GUI.Label(new Rect(rect.x + 12, rect.y + 4, rect.width - 24, 22),
                 "<size=12>Enter envia · Esc cancela · Tab troca o canal · PgUp/PgDn rola · /ajuda</size>", _small);
@@ -301,6 +345,83 @@ namespace Game.Client.UI
                 GUI.color = Color.white;
                 y += 62;
             }
+        }
+
+        /// <summary>Janela de amigos (O): adicionar pelo nome, quem está online, sussurrar, convidar, remover e bloqueados.</summary>
+        private void DrawFriends()
+        {
+            var rect = new Rect(460, 140, 500, 440); // à direita da ajuda
+            Box(rect, Panel);
+            AddRect(rect);
+            GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30),
+                $"<b>Amigos</b>  <size=13>({_lists.Friends.Count}/{RelationRules.MaxFriends} · O fecha)</size>", _label);
+
+            GUI.SetNextControlName(FriendControl);
+            _friendName = GUI.TextField(new Rect(rect.x + 14, rect.y + 46, 350, 30), _friendName, AccountRules.MaxCharacterNameLength, _input);
+            var fieldRect = new Rect(rect.x + 14, rect.y + 46, 350, 30);
+            if (Event.current.type == EventType.MouseDown && !fieldRect.Contains(Event.current.mousePosition)) GUI.FocusControl(null);
+            if (GUI.Button(new Rect(rect.x + 372, rect.y + 46, 114, 30), "Adicionar", _button)) AddFriendFromField();
+            GameInput.FieldFocused = GUI.GetNameOfFocusedControl() == FriendControl;
+
+            var listRect = new Rect(rect.x + 8, rect.y + 86, rect.width - 16, rect.height - 94);
+            var rowHeight = 40f;
+            var contentHeight = 30 + _lists.Friends.Count * rowHeight + 40 + _lists.Blocked.Count * 32 + 10;
+            _friendsScroll = GUI.BeginScrollView(listRect, _friendsScroll, new Rect(0, 0, listRect.width - 20, contentHeight));
+            var y = 0f;
+            if (_lists.Friends.Count == 0)
+            {
+                GUI.Label(new Rect(6, y, 400, 26), "<size=14>Nenhum amigo ainda. Digite o nome de alguém online.</size>", _small);
+                y += 30;
+            }
+            foreach (var friend in _lists.Friends)
+            {
+                Box(new Rect(8, y + 13, 12, 12), friend.Online ? new Color(0.3f, 0.9f, 0.35f) : new Color(0.45f, 0.45f, 0.45f));
+                var info = friend.Online
+                    ? $"Nv {friend.Level} · {AccountRules.ClassDisplayName((CharacterClass)friend.Class)}"
+                    : "offline";
+                GUI.color = friend.Online ? Color.white : new Color(1, 1, 1, 0.6f);
+                GUI.Label(new Rect(28, y + 6, 200, 28), $"<b>{Escape(friend.Name)}</b> <size=12>{info}</size>", _small);
+                GUI.color = Color.white;
+                if (friend.Online)
+                {
+                    if (GUI.Button(new Rect(226, y + 6, 88, 26), "Sussurrar", _button)) StartWhisper(friend.Name);
+                    if (GUI.Button(new Rect(318, y + 6, 66, 26), "Grupo", _button))
+                        _session.Send(new PartyCommand { Action = PartyActionKind.Invite, TargetName = friend.Name });
+                }
+                if (GUI.Button(new Rect(388, y + 6, 76, 26), "Remover", _button)) Relation(RelationActionKind.RemoveFriend, friend.Name);
+                y += rowHeight;
+            }
+
+            y += 8;
+            GUI.Label(new Rect(6, y, 400, 26), $"<b>Bloqueados</b> <size=12>({_lists.Blocked.Count} · /bloquear nome)</size>", _small);
+            y += 32;
+            foreach (var name in _lists.Blocked)
+            {
+                GUI.Label(new Rect(28, y, 220, 26), Escape(name), _small);
+                if (GUI.Button(new Rect(348, y, 116, 26), "Desbloquear", _button)) Relation(RelationActionKind.Unblock, name);
+                y += 32;
+            }
+            GUI.EndScrollView();
+        }
+
+        private void AddFriendFromField()
+        {
+            var name = _friendName.Trim();
+            if (name.Length == 0) return;
+            Relation(RelationActionKind.AddFriend, name);
+            _friendName = "";
+        }
+
+        private void Relation(RelationActionKind action, string name, string text = "") =>
+            _session.Send(new SocialCommand { Action = action, TargetName = name, Text = text });
+
+        /// <summary>Abre o chat já com "/s Nome " para sussurrar.</summary>
+        private void StartWhisper(string name)
+        {
+            _draft = $"/s {name} ";
+            GameInput.Typing = true;
+            _focusInput = true;
+            _cursorToEnd = true;
         }
 
         private void DrawInvite()
@@ -348,6 +469,24 @@ namespace Game.Client.UI
                 case ChatInputKind.PartyPromote:
                     _session.Send(new PartyCommand { Action = PartyActionKind.Promote, TargetName = input.Target });
                     break;
+                case ChatInputKind.FriendAdd:
+                    Relation(RelationActionKind.AddFriend, input.Target);
+                    break;
+                case ChatInputKind.FriendRemove:
+                    Relation(RelationActionKind.RemoveFriend, input.Target);
+                    break;
+                case ChatInputKind.Block:
+                    Relation(RelationActionKind.Block, input.Target);
+                    break;
+                case ChatInputKind.Unblock:
+                    Relation(RelationActionKind.Unblock, input.Target);
+                    break;
+                case ChatInputKind.Report:
+                    Relation(RelationActionKind.Report, input.Target, input.Text);
+                    break;
+                case ChatInputKind.FriendsWindow:
+                    _friendsOpen = !_friendsOpen;
+                    break;
                 case ChatInputKind.Help:
                     AddLine(ChatChannel.System, ChatParser.HelpText);
                     break;
@@ -392,6 +531,7 @@ namespace Game.Client.UI
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, wordWrap = false };
             _label.normal.textColor = Color.white;
             _small = new GUIStyle(_label) { fontSize = 16, clipping = TextClipping.Clip };
+            _wrapped = new GUIStyle(_small) { wordWrap = true };
             _input = new GUIStyle(GUI.skin.textField) { fontSize = 16, alignment = TextAnchor.MiddleLeft };
             _button = new GUIStyle(GUI.skin.button) { fontSize = 14, richText = true };
         }

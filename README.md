@@ -78,18 +78,24 @@ R ativa o Despertar quando a barra enche. O combo de um personagem novo libera n
 
 **Chat e grupo:** Enter abre o chat (Enter envia, Esc cancela, Tab troca entre mapa e grupo). Comandos: `/m` mapa,
 `/g` grupo, `/s nome` sussurro, `/r` responde o último sussurro, `/convidar nome`, `/sair`, `/expulsar nome`,
-`/lider nome`, `/ajuda`. Grupo de até 4: quem está a até 50 m do monstro divide o XP (com bônus de 15% por membro a
+`/lider nome`, `/amigo nome`, `/remover nome`, `/bloquear nome`, `/desbloquear nome`, `/denunciar nome motivo`,
+`/ajuda`. O abre a janela de amigos (quem está online, sussurrar, convidar, remover e desbloquear). Bloquear esconde
+as mensagens e recusa os convites daquela pessoa; a denúncia guarda o motivo e as últimas mensagens dela para a
+moderação (tabela `player_reports`). Grupo de até 4: quem está a até 50 m do monstro divide o XP (com bônus de 15% por membro a
 mais) e o Alz, conta a missão e pode pegar o drop. O servidor filtra palavrões e limita mensagens seguidas.
 
-**Teste do grupo com um cliente:** com o servidor aceitando convidados, um bot convida o personagem do cliente,
-o teste aceita, conversa e confere o quadro do grupo e o chat.
+**Teste do social com um cliente:** um bot com conta convida o personagem do cliente; o teste aceita, conversa,
+adiciona o bot como amigo, bloqueia, desbloqueia e denuncia, conferindo cada passo.
 
 ```bash
-dotnet run --project Tools/Game.Bots -- --port 7777 --count 3 --seconds 60 --invite NomeDoPersonagem
+dotnet run --project Tools/Game.Bots -- --port 7777 --count 3 --seconds 80 --accounts --invite NomeDoPersonagem
 Client/Builds/Windows/Prototipo.exe -server 127.0.0.1:7777 -autologin conta senha12345 -onlinetest saida-online -onlinesocial
 ```
 
-`--party` nos bots forma grupos de 4 entre eles e conversa no chat (teste de carga do social).
+`--party` nos bots forma grupos de 4 entre eles e conversa no chat (teste de carga do social). `--accounts` faz
+cada bot entrar com conta (`bot01`, `bot02`...) em vez de convidado.
+
+**Atalho:** `Tools/iniciar-servidor.bat` liga o banco no Docker e o servidor na porta 7777.
 
 **Protótipo de combate** (Unity 6000.6.6f1):
 
@@ -112,8 +118,8 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 ## Status
 
-Fase 6 — Conteúdo e social (em andamento): grupo de até 4 com XP e drop divididos e chat (mapa, grupo, sussurro,
-sistema) com filtro e limite de mensagens. Próximas partes: amigos, bloquear e denunciar; loja e troca; dungeon;
-duelo e arena 5v5.
+Fase 6 — Conteúdo e social (em andamento): grupo de até 4 com XP e drop divididos, chat (mapa, grupo, sussurro,
+sistema) com filtro e limite de mensagens, lista de amigos, bloquear e denunciar. Próximas partes: loja e troca;
+dungeon; duelo e arena 5v5.
 Fases 1 a 5 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30) concluídas. Veja o Backlog do
 MVP no GDD.

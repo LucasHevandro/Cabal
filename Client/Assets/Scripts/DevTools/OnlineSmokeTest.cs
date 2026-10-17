@@ -436,8 +436,41 @@ namespace Game.Client.DevTools
                 outcome.Message = "o chat não recebeu as mensagens esperadas";
                 yield break;
             }
+            // Amigos, bloqueio e denúncia (o bot precisa ter entrado com conta: Game.Bots --accounts).
+            var inviter = social.Party.Members.Find(m => m.Id != session.PlayerId).Name;
+            social.Submit($"/amigo {inviter}");
+            yield return WaitFor(() => social.Lists.Friends.Exists(f => f.Name == inviter && f.Online), 5f);
+            if (!social.Lists.Friends.Exists(f => f.Name == inviter && f.Online))
+            {
+                outcome.Message = $"{inviter} não apareceu online na lista de amigos";
+                yield break;
+            }
+            social.SetFriendsOpen(true);
+            yield return new WaitForSecondsRealtime(0.5f);
+            Capture("7-amigos");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            social.Submit($"/bloquear {inviter}");
+            yield return WaitFor(() => social.Lists.Blocked.Contains(inviter), 5f);
+            var blocked = social.Lists.Blocked.Contains(inviter) && !social.Lists.Friends.Exists(f => f.Name == inviter);
+            Capture("8-bloqueado");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            social.Submit($"/desbloquear {inviter}");
+            yield return WaitFor(() => social.Lists.Blocked.Count == 0, 5f);
+            social.Submit($"/denunciar {inviter} teste automático de denúncia");
+            yield return WaitFor(() => Contains(social, $"Denúncia de {inviter} enviada"), 5f);
+            social.SetFriendsOpen(false);
+            if (!blocked || social.Lists.Blocked.Count != 0 || !Contains(social, $"Denúncia de {inviter} enviada"))
+            {
+                outcome.Message = "bloquear, desbloquear ou denunciar não funcionou";
+                yield break;
+            }
+
             outcome.Ok = true;
-            outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), chat e filtro ok";
+            outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), " +
+                              "chat, filtro, amigos, bloqueio e denúncia ok";
         }
 
         private static bool Contains(UI.SocialWindows social, string text)

@@ -905,6 +905,8 @@ namespace Game.Client.UI
                 if ((view.position - Player.transform.position).sqrMagnitude > 40f * 40f) continue;
                 var screen = cam.WorldToScreenPoint(view.position + Vector3.up * 2.6f);
                 if (screen.z <= 0) continue;
+                // Não escreve por cima das janelas do chat e de amigos (coordenadas virtuais do quadro anterior).
+                if (SocialWindows.Contains(new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale))) continue;
                 var role = npc.Role switch { NpcRole.Smith => "Ferreira", NpcRole.Warehouse => "Armazém", _ => "Missões" };
                 var rect = new Rect(screen.x - 150, Screen.height - screen.y - 20, 300, 40);
                 GUI.color = new Color(0, 0, 0, 0.8f);
