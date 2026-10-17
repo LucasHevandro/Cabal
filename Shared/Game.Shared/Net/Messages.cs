@@ -263,7 +263,7 @@ namespace Game.Shared.Net
         public int Id;
         public EntityKind Kind;
 
-        /// <summary>Id do tipo (ex.: "lobo_cinzento"); vazio para jogadores.</summary>
+        /// <summary>Id do tipo (ex.: "lobo_cinzento"); para jogadores, a classe ("blade" ou "arcanist").</summary>
         public string TypeId = "";
 
         public string Name = "";

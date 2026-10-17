@@ -501,8 +501,9 @@ public sealed partial class GameWorld
 
     private static EntitySpawned SpawnMessage(ServerPlayer player) => new()
     {
-        Id = player.Id, Kind = EntityKind.Player, Name = player.Name, Level = player.Progress.Level,
-        MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
+        // Jogadores levam a classe no TypeId ("blade"/"arcanist"): o cliente escolhe o modelo por ela.
+        Id = player.Id, Kind = EntityKind.Player, TypeId = player.Class == CharacterClass.Arcanist ? "arcanist" : "blade",
+        Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
     };
 
     private static EntitySpawned SpawnMessage(ServerMonster monster) => new()
