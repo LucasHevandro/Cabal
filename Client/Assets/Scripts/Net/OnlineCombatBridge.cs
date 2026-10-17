@@ -32,6 +32,8 @@ namespace Game.Client.Net
             _combat = PlayerCombat.Local;
             if (_combat != null) _loot = _combat.GetComponent<PlayerLoot>();
             _session.MessageReceived += OnMessage;
+            // Janelas do jogo online (inventário, NPCs, ferreira, missões, atributos).
+            if (GetComponent<UI.GameWindows>() == null) gameObject.AddComponent<UI.GameWindows>();
         }
 
         private void OnDestroy()
@@ -62,6 +64,21 @@ namespace Game.Client.Net
                     break;
                 case Inventory inventory:
                     if (_loot != null) _loot.SetServerInventory(inventory);
+                    CharacterState.Apply(inventory);
+                    break;
+                case CharacterSheet sheet:
+                    CharacterState.Apply(sheet);
+                    _combat.ApplyCharacterSheet(sheet);
+                    break;
+                case QuestState quests:
+                    CharacterState.Apply(quests);
+                    break;
+                case NpcDialog dialog:
+                    CharacterState.Apply(dialog);
+                    break;
+                case UpgradeResult upgrade:
+                    CharacterState.Apply(upgrade);
+                    SoundPlayer.Play(upgrade.Outcome == 1 ? SoundId.Excellent : upgrade.Outcome == 0 ? SoundId.Error : SoundId.Miss, 0.8f, 0f);
                     break;
                 case AreaWarning area:
                     ShowAreaWarning(area);

@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using System.Linq;
 using Game.Client.Fx;
 using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
+using Game.Shared.Accounts;
 using Game.Shared.Combat;
 using Game.Shared.Core;
+using Game.Shared.Progression;
 using Game.Shared.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -59,6 +62,7 @@ namespace Game.Client.Combat
         private float _mpRegenCarry;
         private Vector3 _spawnPoint;
         private float _respawnAt;
+        private CharacterClass? _classSkillsFor;
 
         /// <summary>O jogador local (o protótipo tem um só).</summary>
         public static PlayerCombat Local { get; private set; }
@@ -154,6 +158,11 @@ namespace Game.Client.Combat
             if (keyboard.digit2Key.wasPressedThisFrame) RequestSkill(1);
             if (keyboard.digit3Key.wasPressedThisFrame) RequestSkill(2);
             if (keyboard.digit4Key.wasPressedThisFrame) RequestSkill(3);
+            if (keyboard.digit5Key.wasPressedThisFrame) RequestSkill(4);
+            if (keyboard.digit6Key.wasPressedThisFrame) RequestSkill(5);
+            if (keyboard.digit7Key.wasPressedThisFrame) RequestSkill(6);
+            if (keyboard.digit8Key.wasPressedThisFrame) RequestSkill(7);
+            if (keyboard.rKey.wasPressedThisFrame && Online) NetworkSession.Instance.Send(new Msg.ActivateAwakening());
         }
 
         // Ações públicas: usadas pelo teclado hoje e, depois, pela rede, IA e testes automáticos.
@@ -170,6 +179,11 @@ namespace Game.Client.Combat
         private void TryStartCombo(double now)
         {
             if (Combo.State == ComboState.Active) return;
+            if (Online && CharacterState.HasSheet && !CharacterState.Sheet.ComboUnlocked)
+            {
+                Refuse($"Conclua a missão \"{QuestCatalog.Get(ClassCatalog.ComboQuestId).Name}\" para liberar o combo");
+                return;
+            }
             if (Target == null || !Target.IsAlive)
             {
                 ShowMessage("Selecione um alvo (Tab ou clique)");
@@ -223,6 +237,11 @@ namespace Game.Client.Combat
         {
             if (index >= skills.Count) return;
             var skill = skills[index];
+            if (Online && !CharacterState.SkillUnlocked(index))
+            {
+                Refuse($"{skill.Name} ainda não foi liberada ({UnlockText(index)})");
+                return;
+            }
             var target = Target;
             double? distance = target != null && target.IsAlive ? DistanceToEdge(target) : (double?)null;
 
@@ -399,6 +418,8 @@ namespace Game.Client.Combat
         /// <summary>Subiu de nível: novos máximos de HP e MP, e volta cheio.</summary>
         private void OnLeveledUp(int level)
         {
+            // Online quem avisa e calcula os novos valores (com atributos e equipamento) é o servidor.
+            if (GameMode.IsOnline) return;
             var stats = _progression.Stats;
             Hp.SetMax(stats.MaxHp);
             Mp.SetMax(stats.MaxMp);
@@ -484,6 +505,33 @@ namespace Game.Client.Combat
         }
 
         // ===== Modo online: o servidor manda, o cliente mostra =====
+
+        /// <summary>
+        /// Ficha do personagem: a classe define as 8 skills da barra e a rota de combo própria. Troca só quando a
+        /// classe muda (na primeira ficha), para não zerar recargas a cada atualização.
+        /// </summary>
+        public void ApplyCharacterSheet(Msg.CharacterSheet sheet)
+        {
+            var characterClass = (CharacterClass)sheet.Class;
+            if (_classSkillsFor == characterClass) return;
+            _classSkillsFor = characterClass;
+            skills = ClassCatalog.SkillsFor(characterClass).Select(s => s.Skill).ToList();
+            _cooldowns = new SkillCooldowns(skills.Count);
+            var config = comboTuning.ToConfig();
+            config.Routes.Add(ClassCatalog.RouteFor(characterClass));
+            Combo = new ComboSession(config);
+        }
+
+        /// <summary>O que falta para liberar a skill da barra (para o HUD e os avisos).</summary>
+        public string UnlockText(int index, bool compact = false)
+        {
+            if (_classSkillsFor == null || index >= skills.Count) return "";
+            var classSkill = ClassCatalog.SkillsFor(_classSkillsFor.Value)[index];
+            var text = $"Nv {classSkill.RequiredLevel}";
+            if (!string.IsNullOrEmpty(classSkill.RequiredQuestId))
+                text += compact ? "\n+ missão" : $" + missão \"{QuestCatalog.Get(classSkill.RequiredQuestId).Name}\"";
+            return text;
+        }
 
         /// <summary>Recursos e vida decididos pelo servidor.</summary>
         public void ApplyServerStats(Msg.PlayerStats stats)

@@ -70,7 +70,7 @@ namespace Game.Client.Combat
 
         private void SelectUnderMouse(Mouse mouse)
         {
-            if (viewCamera == null) return;
+            if (viewCamera == null || UI.GameWindows.PointerOverUi) return;
             var ray = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
             if (Physics.Raycast(ray, out var hit, 200f, ~0, QueryTriggerInteraction.Collide))
             {

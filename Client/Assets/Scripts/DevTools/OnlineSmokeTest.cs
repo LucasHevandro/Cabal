@@ -7,6 +7,7 @@ using Game.Client.Loot;
 using Game.Client.Net;
 using Game.Client.Player;
 using Game.Shared.Net;
+using Game.Shared.Progression;
 using UnityEngine;
 
 namespace Game.Client.DevTools
@@ -22,6 +23,7 @@ namespace Game.Client.DevTools
         private string _folder;
         private float _stayOnline;
         private bool _fight;
+        private bool _uiTour;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,6 +39,7 @@ namespace Game.Client.DevTools
             var wait = Array.IndexOf(args, "-onlinewait");
             if (wait >= 0 && wait + 1 < args.Length) float.TryParse(args[wait + 1], out test._stayOnline);
             test._fight = Array.IndexOf(args, "-onlinefight") >= 0;
+            test._uiTour = Array.IndexOf(args, "-onlineui") >= 0;
             DontDestroyOnLoad(test.gameObject);
         }
 
@@ -112,6 +115,18 @@ namespace Game.Client.DevTools
                     yield break;
                 }
                 fightResult = "; " + outcome.Message;
+            }
+
+            if (_uiTour)
+            {
+                var outcome = new FightOutcome();
+                yield return UiTour(outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
             }
 
             if (_stayOnline > 0)
@@ -257,8 +272,10 @@ namespace Game.Client.DevTools
             foreach (var stack in loot.Inventory) items += stack.Quantity;
 
             var excellent = grades.FindAll(g => g == (byte)Shared.Combat.ComboGrade.Excellent).Count;
-            outcome.Ok = kills > 0 && damageDealt > 0 && xpAfter > xpBefore && loot.Alz > alzBefore && excellent > 0 && items > 0;
-            outcome.Message = $"{kills} coelho(s) mortos pelo servidor ({damageDealt} de dano), {excellent} Excellent confirmados, " +
+            // Personagem de conta novo ainda não tem o combo (libera na missão "A arte do combo"): aí não exige Excellent.
+            var comboLocked = CharacterState.HasSheet && !CharacterState.Sheet.ComboUnlocked;
+            outcome.Ok = kills > 0 && damageDealt > 0 && xpAfter > xpBefore && loot.Alz > alzBefore && (excellent > 0 || comboLocked) && items > 0;
+            outcome.Message = $"{kills} coelho(s) mortos pelo servidor ({damageDealt} de dano), {(comboLocked ? "combo ainda bloqueado pela missão" : $"{excellent} Excellent confirmados")}, " +
                               $"XP +{xpAfter - xpBefore}, Alz +{loot.Alz - alzBefore}, {items} itens coletados";
         }
 
@@ -276,6 +293,110 @@ namespace Game.Client.DevTools
             var offset = view.transform.position - motor.transform.position;
             offset.y = 0;
             return offset.magnitude;
+        }
+
+        /// <summary>
+        /// Passeio pela interface online: inventário, ficha, conversa com o ancião, missão "Primeiros passos"
+        /// (aceitar, falar com a ferreira, entregar) e a janela da ferreira — com screenshots de cada uma.
+        /// </summary>
+        private IEnumerator UiTour(FightOutcome outcome)
+        {
+            var windows = UI.GameWindows.Instance;
+            var me = PlayerCombat.Local;
+            if (windows == null || me == null)
+            {
+                outcome.Message = "janelas do jogo online não existem";
+                yield break;
+            }
+            var giveUp = Time.realtimeSinceStartup + 5f;
+            while (!CharacterState.HasSheet && Time.realtimeSinceStartup < giveUp) yield return null;
+            if (!CharacterState.HasSheet)
+            {
+                outcome.Message = "a ficha do personagem não chegou";
+                yield break;
+            }
+            var weapon = CharacterState.Equipment[Game.Shared.Items.EquipSlot.Weapon];
+            Log($"Ficha: classe {CharacterState.Class}, ataque {CharacterState.Sheet.AttackPower}, combo liberado {CharacterState.Sheet.ComboUnlocked}; " +
+                $"arma {weapon?.ItemId ?? "nenhuma"}, {CharacterState.Bag.FreeSlots} posições livres na bolsa");
+            if (weapon == null)
+            {
+                outcome.Message = "personagem sem a arma inicial";
+                yield break;
+            }
+
+            windows.SetInventoryOpen(true);
+            windows.SetAttributesOpen(true);
+            yield return new WaitForSecondsRealtime(0.5f);
+            Capture("5-inventario");
+            yield return new WaitForEndOfFrame();
+            windows.SetInventoryOpen(false);
+            windows.SetAttributesOpen(false);
+
+            var quest = "primeiros_passos";
+            if (!CharacterState.QuestCompleted(quest))
+            {
+                yield return WalkTo(NpcCatalog.Elder);
+                windows.TalkToNearestNpc();
+                yield return WaitFor(() => CharacterState.Dialog != null, 3f);
+                Capture("6-anciao");
+                yield return new WaitForEndOfFrame();
+                if (CharacterState.Dialog == null || !CharacterState.Dialog.Offered.Contains(quest))
+                {
+                    outcome.Message = "o ancião não ofereceu a missão";
+                    yield break;
+                }
+                NetworkSession.Instance.Send(new QuestCommand { Action = QuestActionKind.Accept, QuestId = quest });
+                yield return WaitFor(() => CharacterState.CountsOf(quest) != null, 3f);
+
+                yield return WalkTo(NpcCatalog.Smith);
+                windows.TalkToNearestNpc();
+                yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.Smith, 3f);
+                windows.SelectForSmith(weapon.Uid);
+                yield return new WaitForSecondsRealtime(0.5f);
+                Capture("7-ferreira");
+                yield return new WaitForEndOfFrame();
+
+                yield return WalkTo(NpcCatalog.Elder);
+                windows.TalkToNearestNpc();
+                yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.ReadyToTurnIn.Contains(quest), 3f);
+                NetworkSession.Instance.Send(new QuestCommand { Action = QuestActionKind.TurnIn, QuestId = quest });
+                yield return WaitFor(() => CharacterState.QuestCompleted(quest), 3f);
+                if (!CharacterState.QuestCompleted(quest))
+                {
+                    outcome.Message = "a missão não foi concluída";
+                    yield break;
+                }
+            }
+
+            yield return new WaitForSecondsRealtime(0.5f);
+            Capture("8-missao-concluida");
+            yield return new WaitForEndOfFrame();
+            outcome.Ok = true;
+            outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
+        }
+
+        /// <summary>Anda até perto do NPC no ritmo de caminhada (o servidor recusa teleporte).</summary>
+        private IEnumerator WalkTo(string npcId)
+        {
+            var npc = NpcCatalog.Find(npcId);
+            var motor = PlayerCombat.Local.GetComponent<PlayerMotor>();
+            var target = new Vector3(npc.X, 0, npc.Z - 2f);
+            var giveUp = Time.realtimeSinceStartup + 25f;
+            while (Time.realtimeSinceStartup < giveUp)
+            {
+                var position = motor.transform.position;
+                var flat = new Vector3(target.x - position.x, 0, target.z - position.z);
+                if (flat.magnitude < 0.2f) break;
+                motor.Teleport(position + Vector3.ClampMagnitude(flat, 6f * Time.deltaTime));
+                yield return null;
+            }
+            yield return new WaitForSecondsRealtime(0.3f); // a última posição chega ao servidor
+        }
+
+        private static IEnumerator WaitFor(Func<bool> condition, float seconds)
+        {
+            var giveUp = Time.realtimeSinceStartup + seconds;
+            while (!condition() && Time.realtimeSinceStartup < giveUp) yield return null;
         }
 
         private void Capture(string name)

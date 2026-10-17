@@ -6,6 +6,7 @@ using Game.Client.Player;
 using Game.Client.UI;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
+using Game.Shared.Progression;
 using Game.Shared.World;
 using UnityEngine;
 using Ping = Game.Shared.Net.Ping;
@@ -75,6 +76,7 @@ namespace Game.Client.Net
                 return;
             }
             Instance = this;
+            CharacterState.Reset();
             // Online o jogo não pode pausar ao perder o foco: pararia de ler o servidor e "congelaria" o mundo.
             Application.runInBackground = true;
             foreach (var spawn in WorldContent.Spawns()) _monsterData[spawn.Data.Id] = spawn.Data;
@@ -86,7 +88,33 @@ namespace Game.Client.Net
             if (_combat != null) _motor = _combat.GetComponent<PlayerMotor>();
             _client = new NetClient();
             _client.Connect(GameMode.Host, GameMode.Port);
+            CreateNpcs();
         }
+
+        /// <summary>NPCs da vila: fixos, iguais para todos (o servidor confere a distância ao falar).</summary>
+        private void CreateNpcs()
+        {
+            foreach (var npc in NpcCatalog.All)
+            {
+                var root = new GameObject($"NPC: {npc.Name}");
+                root.transform.position = new Vector3(npc.X, 0, npc.Z);
+                var color = npc.Role switch
+                {
+                    NpcRole.Smith => new Color(0.85f, 0.45f, 0.2f),
+                    NpcRole.Warehouse => new Color(0.55f, 0.45f, 0.3f),
+                    _ => new Color(0.85f, 0.8f, 0.5f),
+                };
+                var parts = MonsterVisuals.Build(root.transform, MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f),
+                    MaterialFor("npc_" + npc.Id, color), telegraphMaterial, ringMaterial);
+                if (parts.Ring != null) parts.Ring.SetActive(false);
+                // Vira para a praça (ponto de nascimento).
+                root.transform.rotation = Quaternion.LookRotation(new Vector3(-npc.X, 0, -npc.Z).normalized + Vector3.forward * 0.001f);
+                NpcViews[npc.Id] = root.transform;
+            }
+        }
+
+        /// <summary>Onde está cada NPC na cena (para o nome em cima e o clique).</summary>
+        public Dictionary<string, Transform> NpcViews { get; } = new Dictionary<string, Transform>();
 
         private void OnDestroy()
         {

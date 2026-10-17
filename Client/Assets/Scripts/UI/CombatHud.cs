@@ -66,7 +66,8 @@ namespace Game.Client.UI
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.iKey.wasPressedThisFrame) _showInventory = !_showInventory;
+            // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
+            if (keyboard != null && keyboard.iKey.wasPressedThisFrame && !GameMode.IsOnline) _showInventory = !_showInventory;
         }
 
         private void OnGUI()
@@ -86,6 +87,7 @@ namespace Game.Client.UI
             DrawTargetFrame();
             DrawComboBar();
             DrawSpBar();
+            DrawAwakening();
             DrawPlayerFrame();
             DrawSkillBar();
             DrawGradePopup();
@@ -103,13 +105,16 @@ namespace Game.Client.UI
 
         private void DrawHelp()
         {
-            Box(new Rect(20, 20, 420, 270), Panel);
-            GUI.Label(new Rect(36, 30, 400, 260),
+            var online = GameMode.IsOnline;
+            Box(new Rect(20, 20, 420, online ? 300 : 270), Panel);
+            GUI.Label(new Rect(36, 30, 400, online ? 290 : 260),
                 "<b>Controles</b>\n" +
                 "WASD andar · Shift correr · Espaço esquivar\n" +
                 "Botão direito girar câmera · Roda zoom\n" +
                 "Tab / clique: selecionar alvo · Esc limpar\n" +
-                "1–4 skills · E coletar itens · I inventário\n" +
+                (online
+                    ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n"
+                    : "1–4 skills · E coletar itens · I inventário\n") +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +
                 "<b>Rotas de combo</b> (F = físico, M = mágico)\n" +
@@ -327,11 +332,31 @@ namespace Game.Client.UI
             GUI.Label(mpRect, $"MP {combat.Mp.Current} / {combat.Mp.Max}", _small.WithCenter());
         }
 
+        /// <summary>Barra do Despertar (online): enche com acertos de combo bons; cheia, R ativa.</summary>
+        private void DrawAwakening()
+        {
+            var sheet = CharacterState.Sheet;
+            if (!GameMode.IsOnline || sheet == null) return;
+            var rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight - 232, 660, 14);
+            var session = NetworkSession.Instance;
+            var remaining = session != null ? sheet.AwakeningUntil - session.ServerNow : 0;
+            if (remaining > 0)
+            {
+                var pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 8f);
+                Bar(rect, (float)(remaining / AwakeningState.DurationSeconds), new Color(1f, 0.35f * pulse, 0.9f * pulse));
+                GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), $"<b>DESPERTAR</b> {remaining:0.0} s", _small.WithCenter());
+                return;
+            }
+            var full = sheet.AwakeningGauge >= AwakeningState.MaxGauge;
+            Bar(rect, sheet.AwakeningGauge / (float)AwakeningState.MaxGauge, full ? new Color(1f, 0.4f, 0.95f) : new Color(0.6f, 0.3f, 0.6f));
+            GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? "<b>R: DESPERTAR</b>" : $"Despertar {sheet.AwakeningGauge}%", _small.WithCenter());
+        }
+
         private void DrawSkillBar()
         {
-            const float size = 150f;
-            const float gap = 20f;
             var skills = combat.Skills;
+            var size = skills.Count > 4 ? 104f : 150f;
+            var gap = skills.Count > 4 ? 10f : 20f;
             var total = skills.Count * size + (skills.Count - 1) * gap;
             var x = VirtualWidth / 2 - total / 2;
             var y = VirtualHeight - 180;
@@ -349,6 +374,14 @@ namespace Game.Client.UI
 
                 // Sem mana: escurece a skill inteira.
                 if (!combat.Mp.Has(skill.MpCost)) Box(rect, new Color(0.1f, 0.1f, 0.4f, 0.5f));
+
+                if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i))
+                {
+                    Box(rect, new Color(0.05f, 0.05f, 0.07f, 0.95f));
+                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), $"<b>{i + 1}</b>", _big);
+                    GUI.Label(new Rect(rect.x + 4, rect.y + 36, rect.width - 8, 80), $"<color=#999999>{skill.Name}</color>\n{combat.UnlockText(i, compact: true)}", _small.WithCenter());
+                    continue;
+                }
 
                 var remaining = combat.CooldownRemaining(i);
                 if (remaining > 0)

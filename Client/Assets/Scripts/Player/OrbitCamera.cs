@@ -76,7 +76,7 @@ namespace Game.Client.Player
             var mouse = Mouse.current;
             if (mouse == null) return;
 
-            if (mouse.rightButton.isPressed)
+            if (mouse.rightButton.isPressed && !UI.GameWindows.PointerOverUi)
             {
                 var delta = mouse.delta.ReadValue();
                 _yaw += delta.x * sensitivity;
