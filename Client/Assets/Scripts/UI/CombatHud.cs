@@ -65,7 +65,7 @@ namespace Game.Client.UI
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
+            var keyboard = GameInput.Keyboard;
             // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
             if (keyboard != null && keyboard.iKey.wasPressedThisFrame && !GameMode.IsOnline) _showInventory = !_showInventory;
         }
@@ -106,14 +106,15 @@ namespace Game.Client.UI
         private void DrawHelp()
         {
             var online = GameMode.IsOnline;
-            Box(new Rect(20, 20, 420, online ? 300 : 270), Panel);
-            GUI.Label(new Rect(36, 30, 400, online ? 290 : 260),
+            Box(new Rect(20, 20, 420, online ? 324 : 270), Panel);
+            GUI.Label(new Rect(36, 30, 400, online ? 314 : 260),
                 "<b>Controles</b>\n" +
                 "WASD andar · Shift correr · Espaço esquivar\n" +
                 "Botão direito girar câmera · Roda zoom\n" +
                 "Tab / clique: selecionar alvo · Esc limpar\n" +
                 (online
-                    ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n"
+                    ? "1–8 skills · E coletar · I inventário · C atributos\nT falar com NPC · J missões · R Despertar\n" +
+                      "Enter chat · /convidar nome forma grupo\n"
                     : "1–4 skills · E coletar itens · I inventário\n") +
                 "Q iniciar combo (gasta SP)\n" +
                 "F finalizador (depois de 3 acertos)\n\n" +

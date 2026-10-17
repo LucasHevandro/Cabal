@@ -27,7 +27,7 @@ namespace Game.Client.Combat
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
+            var keyboard = UI.GameInput.Keyboard;
             var mouse = Mouse.current;
 
             if (keyboard != null && keyboard.tabKey.wasPressedThisFrame) SelectNext();

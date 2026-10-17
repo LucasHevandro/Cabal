@@ -76,6 +76,21 @@ falta), I inventário (arraste para mover, vestir, guardar ou jogar fora; botão
 J diário de missões, T fala com o NPC por perto (ancião = missões, ferreira = melhoria e opções, armazém),
 R ativa o Despertar quando a barra enche. O combo de um personagem novo libera na missão "A arte do combo".
 
+**Chat e grupo:** Enter abre o chat (Enter envia, Esc cancela, Tab troca entre mapa e grupo). Comandos: `/m` mapa,
+`/g` grupo, `/s nome` sussurro, `/r` responde o último sussurro, `/convidar nome`, `/sair`, `/expulsar nome`,
+`/lider nome`, `/ajuda`. Grupo de até 4: quem está a até 50 m do monstro divide o XP (com bônus de 15% por membro a
+mais) e o Alz, conta a missão e pode pegar o drop. O servidor filtra palavrões e limita mensagens seguidas.
+
+**Teste do grupo com um cliente:** com o servidor aceitando convidados, um bot convida o personagem do cliente,
+o teste aceita, conversa e confere o quadro do grupo e o chat.
+
+```bash
+dotnet run --project Tools/Game.Bots -- --port 7777 --count 3 --seconds 60 --invite NomeDoPersonagem
+Client/Builds/Windows/Prototipo.exe -server 127.0.0.1:7777 -autologin conta senha12345 -onlinetest saida-online -onlinesocial
+```
+
+`--party` nos bots forma grupos de 4 entre eles e conversa no chat (teste de carga do social).
+
 **Protótipo de combate** (Unity 6000.6.6f1):
 
 1. Abra a pasta `Client/` no Unity Hub.
@@ -97,7 +112,8 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 ## Status
 
-Fase 5 — Itens e progressão (em andamento): duas classes com 8 skills e rota de combo própria, modo Despertar,
-equipamento com melhoria até +10 e proteção contra azar, pedras de opção, atributos, armazém, três NPCs e oito
-missões do nível 1 ao 30 — tudo decidido pelo servidor. O modo offline segue como campo de treino de combate.
-Fases 1 a 4 (combate, mundo, rede e contas com PostgreSQL) concluídas. Veja o Backlog do MVP no GDD.
+Fase 6 — Conteúdo e social (em andamento): grupo de até 4 com XP e drop divididos e chat (mapa, grupo, sussurro,
+sistema) com filtro e limite de mensagens. Próximas partes: amigos, bloquear e denunciar; loja e troca; dungeon;
+duelo e arena 5v5.
+Fases 1 a 5 (combate, mundo, rede, contas com PostgreSQL, itens e progressão 1→30) concluídas. Veja o Backlog do
+MVP no GDD.

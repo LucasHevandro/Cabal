@@ -82,11 +82,11 @@ namespace Game.Client.UI
             get
             {
                 var mouse = Mouse.current;
-                if (mouse == null || OpenRects.Count == 0) return false;
+                if (mouse == null) return false;
                 var screen = mouse.position.ReadValue();
                 var point = new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale);
                 foreach (var rect in OpenRects) if (rect.Contains(point)) return true;
-                return false;
+                return SocialWindows.Contains(point);
             }
         }
 
@@ -121,7 +121,7 @@ namespace Game.Client.UI
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
+            var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
 
             if (keyboard.iKey.wasPressedThisFrame) _inventoryOpen = !_inventoryOpen;

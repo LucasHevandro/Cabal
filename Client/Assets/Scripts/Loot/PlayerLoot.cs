@@ -60,7 +60,7 @@ namespace Game.Client.Loot
             var player = PlayerCombat.Local;
             if (player != null && player.IsDead) return;
 
-            var keyboard = Keyboard.current;
+            var keyboard = UI.GameInput.Keyboard;
             var pressedE = keyboard != null && keyboard.eKey.wasPressedThisFrame;
 
             for (var i = LootPickup.All.Count - 1; i >= 0; i--)

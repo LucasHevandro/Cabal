@@ -49,3 +49,18 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   (combo liberado pela missão "A arte do combo").
 - **Coletar** em missão é conferido na bolsa na hora de entregar (os itens são consumidos), em vez de contar o que
   foi pego: assim guardar ou jogar fora no caminho não dessincroniza nada.
+
+## 2026-10-17 — Grupo e chat
+
+- **XP de grupo:** o XP do monstro cresce 15% por membro a mais e é dividido entre os membros vivos a até 50 m;
+  cada um recebe o ajuste de nível próprio. Em 4, cada um ganha 36% do XP de matar sozinho, mas o grupo mata bem
+  mais rápido, então subir em grupo rende mais por hora. O Alz é dividido igual (o resto fica com quem matou).
+- **Quem leva o monstro:** o dano é somado por grupo; o grupo (ou jogador sozinho) com mais dano leva. Dentro do
+  grupo, quem bateu mais é o dono do drop, mas qualquer membro pode pegar durante o tempo de dono.
+- **Só o líder convida, expulsa e passa a liderança.** Se o líder sai, o membro mais antigo assume; grupo de um
+  só é desfeito. Sair do jogo tira do grupo (não há grupo salvo no banco).
+- **Chat:** canal de mapa vai para todos no mundo (um mapa só no MVP); o servidor corta em 120 caracteres, limita a
+  5 mensagens seguidas (uma nova a cada 1,5 s) e troca palavrões por asteriscos. O filtro compara palavras inteiras
+  (sem acento, com números no lugar de letras e letras repetidas), para não estragar palavras como "cubo".
+- **Revisar se:** o raio de 50 m deixar alguém ganhar XP parado na vila enquanto o grupo caça perto dela
+  (aparece nos testes); se acontecer, exigir que o membro tenha causado dano ou esteja em combate.

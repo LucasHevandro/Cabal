@@ -34,6 +34,8 @@ namespace Game.Client.Net
             _session.MessageReceived += OnMessage;
             // Janelas do jogo online (inventário, NPCs, ferreira, missões, atributos).
             if (GetComponent<UI.GameWindows>() == null) gameObject.AddComponent<UI.GameWindows>();
+            // Chat e grupo.
+            if (GetComponent<UI.SocialWindows>() == null) gameObject.AddComponent<UI.SocialWindows>();
         }
 
         private void OnDestroy()

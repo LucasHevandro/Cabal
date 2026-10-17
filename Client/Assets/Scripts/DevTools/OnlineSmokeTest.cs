@@ -24,6 +24,7 @@ namespace Game.Client.DevTools
         private float _stayOnline;
         private bool _fight;
         private bool _uiTour;
+        private bool _social;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -40,6 +41,7 @@ namespace Game.Client.DevTools
             if (wait >= 0 && wait + 1 < args.Length) float.TryParse(args[wait + 1], out test._stayOnline);
             test._fight = Array.IndexOf(args, "-onlinefight") >= 0;
             test._uiTour = Array.IndexOf(args, "-onlineui") >= 0;
+            test._social = Array.IndexOf(args, "-onlinesocial") >= 0;
             DontDestroyOnLoad(test.gameObject);
         }
 
@@ -121,6 +123,18 @@ namespace Game.Client.DevTools
             {
                 var outcome = new FightOutcome();
                 yield return UiTour(outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
+            }
+
+            if (_social)
+            {
+                var outcome = new FightOutcome();
+                yield return Social(session, outcome);
                 if (!outcome.Ok)
                 {
                     Finish("FALHA: " + outcome.Message);
@@ -376,6 +390,62 @@ namespace Game.Client.DevTools
         }
 
         /// <summary>Anda até perto do NPC no ritmo de caminhada (o servidor recusa teleporte).</summary>
+        /// <summary>
+        /// Espera o convite de grupo de um bot (Game.Bots --invite Nome), aceita, manda mensagens no grupo e no mapa
+        /// (uma com palavrão, que o servidor filtra) e confere o quadro do grupo, o chat e o sussurro do bot.
+        /// </summary>
+        private IEnumerator Social(NetworkSession session, FightOutcome outcome)
+        {
+            var social = UI.SocialWindows.Instance;
+            if (social == null)
+            {
+                outcome.Message = "sem SocialWindows";
+                yield break;
+            }
+            yield return WaitFor(() => social.PendingInvite != null, 30f);
+            if (social.PendingInvite == null)
+            {
+                outcome.Message = "nenhum convite de grupo chegou";
+                yield break;
+            }
+            Log($"Convite de {social.PendingInvite.InviterName}");
+            Capture("5-convite");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            social.AcceptInvite();
+            yield return WaitFor(() => social.Party.Members.Count >= 2, 5f);
+            if (social.Party.Members.Count < 2)
+            {
+                outcome.Message = "aceitou o convite mas o grupo não chegou";
+                yield break;
+            }
+            social.Submit("/g oi, cheguei!");
+            social.Submit("/m que porra de lobo");
+            UI.GameInput.Typing = true; // mostra a caixa do chat aberta na foto
+            yield return WaitFor(() => Contains(social, "bem-vindo ao grupo") && Contains(social, "sussurro do bot")
+                                      && Contains(social, "oi, cheguei") && Contains(social, "que *****"), 8f);
+            var ok = Contains(social, "bem-vindo ao grupo") && Contains(social, "sussurro do bot") && Contains(social, "que *****");
+            Capture("6-grupo-e-chat");
+            yield return new WaitForEndOfFrame();
+            yield return null;
+            UI.GameInput.Typing = false;
+            foreach (var line in social.RecentLines) Log("Chat: " + line);
+            if (!ok)
+            {
+                outcome.Message = "o chat não recebeu as mensagens esperadas";
+                yield break;
+            }
+            outcome.Ok = true;
+            outcome.Message = $"grupo com {social.Party.Members.Count} ({string.Join(", ", social.Party.Members.ConvertAll(m => m.Name))}), chat e filtro ok";
+        }
+
+        private static bool Contains(UI.SocialWindows social, string text)
+        {
+            foreach (var line in social.RecentLines) if (line.Contains(text)) return true;
+            return false;
+        }
+
         private IEnumerator WalkTo(string npcId)
         {
             var npc = NpcCatalog.Find(npcId);

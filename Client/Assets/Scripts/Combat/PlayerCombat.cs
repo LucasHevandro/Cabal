@@ -149,7 +149,7 @@ namespace Game.Client.Combat
             KeepComboOnTargetDeath();
             if (!GameMode.IsOnline) RegenerateMp();
 
-            var keyboard = Keyboard.current;
+            var keyboard = UI.GameInput.Keyboard;
             if (keyboard == null) return;
 
             if (keyboard.qKey.wasPressedThisFrame) RequestStartCombo();

@@ -60,13 +60,12 @@ namespace Game.Client.Player
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            var input = ReadMoveInput(keyboard);
+            // Nulo enquanto digita no chat: o personagem fica parado (mas a gravidade e a esquiva em curso continuam).
+            var keyboard = UI.GameInput.Keyboard;
+            var input = keyboard != null ? ReadMoveInput(keyboard) : Vector2.zero;
             var moveDirection = ToWorldDirection(input);
 
-            if (keyboard.spaceKey.wasPressedThisFrame && Time.time >= _nextDodgeAt)
+            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame && Time.time >= _nextDodgeAt)
             {
                 // Esquiva na direção do movimento; parado, esquiva para trás.
                 _dodgeDirection = moveDirection.sqrMagnitude > 0.01f ? moveDirection : -transform.forward;
@@ -86,7 +85,7 @@ namespace Game.Client.Player
             }
             else
             {
-                var speed = keyboard.leftShiftKey.isPressed ? runSpeed : walkSpeed;
+                var speed = keyboard != null && keyboard.leftShiftKey.isPressed ? runSpeed : walkSpeed;
                 horizontal = moveDirection * speed;
                 if (moveDirection.sqrMagnitude > 0.01f) FaceDirection(moveDirection);
             }
