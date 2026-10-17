@@ -16,7 +16,7 @@ namespace Game.Shared.Progression
         {
             if (level < 1) throw new ArgumentOutOfRangeException(nameof(level));
             if (level >= MaxLevel) return 0;
-            return (int)Math.Round(80 * Math.Pow(level, 1.6) + 20 * level);
+            return (int)Math.Round(450 * Math.Pow(level, 1.6) + 110 * level);
         }
     }
 

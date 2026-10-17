@@ -244,7 +244,7 @@ public class ProgressionWorldTests
         Assert.True(player.Quests.IsCompleted("primeiros_passos"));
         Assert.Equal(10, player.Bag.Count("pocao_hp_p"));
         Assert.Equal(500, player.Alz);
-        Assert.Equal(2, player.Progress.Level); // 150 XP passa do nível 1
+        Assert.Equal((1, 300), (player.Progress.Level, player.Progress.Xp)); // 300 dos 560 do nível 1
         world.Tick(4);
         Assert.Contains("primeiros_passos", outbox.To<QuestState>(player.Id).Last().Completed);
         var saved = world.CaptureForSave(player).Snapshot;

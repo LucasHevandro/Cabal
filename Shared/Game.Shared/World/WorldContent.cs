@@ -69,7 +69,7 @@ namespace Game.Shared.World
             // Campos do Vento (Nv 1–10)
             Spawn(-10, 36, 5, 7, new MonsterData
             {
-                Id = "coelho_saltador", Name = "Coelho Saltador", Level = 2, MaxHp = 350, AttackDamage = 25,
+                Id = "coelho_saltador", Name = "Coelho Saltador", Level = 2, MaxHp = 700, AttackDamage = 25,
                 AttackPower = 5, Defense = 20, AttackRange = 1.2f, MoveSpeed = 3.5f, BodyRadius = 0.35f, Aggressive = false,
                 XpReward = 30, RespawnSeconds = 6,
                 Drops = new DropTable(3, 8,
@@ -79,7 +79,7 @@ namespace Game.Shared.World
             }),
             Spawn(10, 46, 4, 7, new MonsterData
             {
-                Id = "lobo_cinzento", Name = "Lobo Cinzento", Level = 6, MaxHp = 900, AttackDamage = 60,
+                Id = "lobo_cinzento", Name = "Lobo Cinzento", Level = 6, MaxHp = 1800, AttackDamage = 60,
                 AttackPower = 15, Defense = 40, AttackRange = 1.5f, MoveSpeed = 4.5f, AggroRadius = 8,
                 XpReward = 70, RespawnSeconds = 8,
                 Drops = new DropTable(10, 25,
@@ -93,7 +93,7 @@ namespace Game.Shared.World
             // Mata Sombria (Nv 10–20)
             Spawn(36, 79, 4, 8, new MonsterData
             {
-                Id = "javali_furioso", Name = "Javali Furioso", Level = 12, MaxHp = 2200, AttackDamage = 120,
+                Id = "javali_furioso", Name = "Javali Furioso", Level = 12, MaxHp = 4400, AttackDamage = 120,
                 AttackPower = 40, Defense = 90, AttackRange = 1.6f, AttackWindupSeconds = 0.7f, MoveSpeed = 5f,
                 AggroRadius = 9, XpReward = 200, RespawnSeconds = 10,
                 Drops = new DropTable(30, 70,
@@ -103,7 +103,7 @@ namespace Game.Shared.World
             }),
             Spawn(54, 92, 4, 8, new MonsterData
             {
-                Id = "aranha_da_mata", Name = "Aranha da Mata", Level = 16, MaxHp = 2600, AttackDamage = 150,
+                Id = "aranha_da_mata", Name = "Aranha da Mata", Level = 16, MaxHp = 5200, AttackDamage = 150,
                 AttackPower = 55, Defense = 80, AttackRange = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 4f, BodyRadius = 0.8f,
                 AggroRadius = 10, XpReward = 300, RespawnSeconds = 10,
                 Drops = new DropTable(40, 90,
@@ -117,7 +117,7 @@ namespace Game.Shared.World
             // Ruínas Esquecidas (Nv 20–30)
             Spawn(-37, 118, 3, 8, new MonsterData
             {
-                Id = "golem_de_pedra", Name = "Golem de Pedra", Level = 22, MaxHp = 6000, AttackDamage = 240,
+                Id = "golem_de_pedra", Name = "Golem de Pedra", Level = 22, MaxHp = 12000, AttackDamage = 240,
                 AttackPower = 80, Defense = 260, AttackRange = 2.2f, AttackCooldownSeconds = 3f,
                 AttackWindupSeconds = 1.0f, MoveSpeed = 2.2f, BodyRadius = 0.8f, AggroRadius = 7, XpReward = 700, RespawnSeconds = 15,
                 Drops = new DropTable(80, 160,
@@ -127,7 +127,7 @@ namespace Game.Shared.World
             }),
             Spawn(-53, 133, 4, 8, new MonsterData
             {
-                Id = "espectro", Name = "Espectro", Level = 26, MaxHp = 4500, AttackDamage = 280,
+                Id = "espectro", Name = "Espectro", Level = 26, MaxHp = 9000, AttackDamage = 280,
                 AttackPower = 100, Defense = 120, AttackRange = 2.5f, AttackCooldownSeconds = 1.6f,
                 AttackWindupSeconds = 0.45f, MoveSpeed = 5.5f, AggroRadius = 11, XpReward = 900, RespawnSeconds = 12,
                 Drops = new DropTable(100, 200,
@@ -135,6 +135,18 @@ namespace Game.Shared.World
                     new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.05),
                     Equip("luvas_astralita", 0.02), Equip("anel_astralita", 0.015), Equip("espada_astralita", 0.01),
                     Equip("cajado_astralita", 0.01)),
+            }),
+
+            Spawn(-30, 140, 3, 6, new MonsterData
+            {
+                Id = "cavaleiro_caido", Name = "Cavaleiro Caído", Level = 29, MaxHp = 14000, AttackDamage = 330,
+                AttackPower = 120, Defense = 230, AttackRange = 2.4f, AttackCooldownSeconds = 2.2f,
+                AttackWindupSeconds = 0.7f, MoveSpeed = 4f, BodyRadius = 0.7f, AggroRadius = 9, XpReward = 1400, RespawnSeconds = 15,
+                Drops = new DropTable(150, 300,
+                    new DropEntry("essencia", "Essência espectral", ItemRarity.Uncommon, 0.3),
+                    new DropEntry("nucleo_alto", "Núcleo de melhoria (alto)", ItemRarity.Rare, 0.07),
+                    Equip("armadura_astralita", 0.02), Equip("espada_astralita", 0.012), Equip("cajado_astralita", 0.012),
+                    Equip("pedra_precisao", 0.015)),
             }),
 
             // Chefe de campo

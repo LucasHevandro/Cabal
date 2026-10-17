@@ -8,6 +8,7 @@
     <Project Path="Shared/Game.Shared/Game.Shared.csproj" />
   </Folder>
   <Folder Name="/Tools/">
+    <Project Path="Tools/Game.Balance/Game.Balance.csproj" />
     <Project Path="Tools/Game.Bots/Game.Bots.csproj" />
   </Folder>
 </Solution>

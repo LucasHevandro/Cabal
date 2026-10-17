@@ -10,7 +10,7 @@ public class ProgressionTests
         for (var level = 1; level < LevelCurve.MaxLevel - 1; level++)
             Assert.True(LevelCurve.XpToNext(level + 1) > LevelCurve.XpToNext(level));
 
-        Assert.Equal(100, LevelCurve.XpToNext(1));
+        Assert.Equal(560, LevelCurve.XpToNext(1)); // 450 × 1^1,6 + 110
         Assert.Equal(0, LevelCurve.XpToNext(LevelCurve.MaxLevel));
     }
 
@@ -19,7 +19,7 @@ public class ProgressionTests
     {
         var progress = new CharacterProgress();
 
-        var gained = progress.AddXp(130);
+        var gained = progress.AddXp(LevelCurve.XpToNext(1) + 30);
 
         Assert.Equal(1, gained);
         Assert.Equal(2, progress.Level);

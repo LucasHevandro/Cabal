@@ -45,6 +45,7 @@ namespace Game.Client.Monsters
                 ["aranha_da_mata"] = (MonsterShape.Sphere, new Vector3(1.6f, 0.6f, 1.6f), new Color(0.2f, 0.3f, 0.12f)),
                 ["golem_de_pedra"] = (MonsterShape.Cube, new Vector3(1.6f, 1.3f, 1.6f), new Color(0.55f, 0.55f, 0.58f)),
                 ["espectro"] = (MonsterShape.Capsule, new Vector3(0.9f, 1.1f, 0.9f), new Color(0.45f, 0.3f, 0.7f)),
+                ["cavaleiro_caido"] = (MonsterShape.Capsule, new Vector3(1.1f, 1.25f, 1.1f), new Color(0.3f, 0.32f, 0.4f)),
                 ["guardiao_das_ruinas"] = (MonsterShape.Capsule, new Vector3(2.2f, 2.2f, 2.2f), new Color(0.6f, 0.15f, 0.12f)),
             };
 

@@ -113,14 +113,14 @@ namespace Game.Shared.Progression
                 Id = "primeiros_passos", Name = "Primeiros passos", MinLevel = 1,
                 Description = "Apresente-se à Ferreira Ilsa: ela cuida das armas e da melhoria dos equipamentos.",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Talk, NpcCatalog.Smith) },
-                RewardXp = 150, RewardAlz = 500, RewardItems = { ("pocao_hp_p", 5) },
+                RewardXp = 300, RewardAlz = 500, RewardItems = { ("pocao_hp_p", 5) },
             },
             new QuestDefinition
             {
                 Id = ClassCatalog.ComboQuestId, Name = "A arte do combo", MinLevel = 3, PreviousQuestId = "primeiros_passos",
                 Description = "Derrote coelhos nos Campos do Vento para treinar o ritmo dos golpes.",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "coelho_saltador", 10) },
-                RewardXp = 600, RewardAlz = 1500, RewardItems = { (ItemCatalog.CoreLow, 2) },
+                RewardXp = 1200, RewardAlz = 1500, RewardItems = { (ItemCatalog.CoreLow, 2) },
                 Unlocks = "Libera o combo.",
             },
             new QuestDefinition
@@ -132,7 +132,7 @@ namespace Game.Shared.Progression
                     new QuestObjective(QuestObjectiveKind.Kill, "lobo_cinzento", 12),
                     new QuestObjective(QuestObjectiveKind.Collect, "pele_lobo", 6),
                 },
-                RewardXp = 2000, RewardAlz = 4000, RewardItems = { (ItemCatalog.CoreLow, 3), ("pedra_vigor", 1) },
+                RewardXp = 4000, RewardAlz = 4000, RewardItems = { (ItemCatalog.CoreLow, 3), ("pedra_vigor", 1) },
             },
             new QuestDefinition
             {
@@ -143,7 +143,7 @@ namespace Game.Shared.Progression
                     new QuestObjective(QuestObjectiveKind.Kill, "javali_furioso", 15),
                     new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 15),
                 },
-                RewardXp = 5000, RewardAlz = 12000, RewardItems = { (ItemCatalog.CoreMedium, 2) },
+                RewardXp = 10000, RewardAlz = 12000, RewardItems = { (ItemCatalog.CoreMedium, 2) },
                 Unlocks = "Libera as skills de rank 2.",
             },
             new QuestDefinition
@@ -155,7 +155,7 @@ namespace Game.Shared.Progression
                     new QuestObjective(QuestObjectiveKind.Collect, "veneno", 8),
                     new QuestObjective(QuestObjectiveKind.Talk, NpcCatalog.Smith),
                 },
-                RewardXp = 9000, RewardAlz = 20000, RewardItems = { (ItemCatalog.CoreMedium, 3), ("pedra_furia", 1) },
+                RewardXp = 18000, RewardAlz = 20000, RewardItems = { (ItemCatalog.CoreMedium, 3), ("pedra_furia", 1) },
             },
             new QuestDefinition
             {
@@ -166,7 +166,7 @@ namespace Game.Shared.Progression
                     new QuestObjective(QuestObjectiveKind.Kill, "golem_de_pedra", 20),
                     new QuestObjective(QuestObjectiveKind.Collect, "fragmento_pedra", 10),
                 },
-                RewardXp = 14000, RewardAlz = 45000, RewardItems = { (ItemCatalog.CoreHigh, 2) },
+                RewardXp = 28000, RewardAlz = 45000, RewardItems = { (ItemCatalog.CoreHigh, 2) },
                 Unlocks = "Libera as skills de rank 3.",
             },
             new QuestDefinition
@@ -178,7 +178,7 @@ namespace Game.Shared.Progression
                     new QuestObjective(QuestObjectiveKind.Kill, "espectro", 25),
                     new QuestObjective(QuestObjectiveKind.Collect, "essencia", 10),
                 },
-                RewardXp = 20000, RewardAlz = 80000, RewardItems = { (ItemCatalog.CoreHigh, 3), ("pedra_precisao", 1) },
+                RewardXp = 40000, RewardAlz = 80000, RewardItems = { (ItemCatalog.CoreHigh, 3), ("pedra_precisao", 1) },
             },
             new QuestDefinition
             {

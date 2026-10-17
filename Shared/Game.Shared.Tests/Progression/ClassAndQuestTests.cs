@@ -171,7 +171,7 @@ public class QuestTests
         Assert.Single(log.OnTalk(NpcCatalog.Smith));
         Assert.Empty(log.OnTalk(NpcCatalog.Smith)); // já contou
         Assert.Null(log.TurnIn("primeiros_passos", bag, NewUid, out var reward));
-        Assert.Equal(150, reward.Xp);
+        Assert.Equal(300, reward.Xp);
         Assert.Equal(5, bag.Count("pocao_hp_p"));
         Assert.True(log.IsCompleted("primeiros_passos"));
         Assert.NotNull(log.Accept("primeiros_passos", 1)); // não repete
@@ -239,5 +239,34 @@ public class QuestTests
         log.Restore(previous, new QuestProgress[0]);
         Assert.Null(log.Accept(questId, quest.MinLevel));
         return log;
+    }
+}
+
+public class LevelingBalanceTests
+{
+    [Theory]
+    [InlineData(CharacterClass.Blade)]
+    [InlineData(CharacterClass.Arcanist)]
+    public void Do_um_ao_trinta_leva_de_oito_a_doze_horas(CharacterClass characterClass)
+    {
+        var steps = LevelingSimulation.Run(characterClass);
+        var hours = LevelingSimulation.TotalHours(steps);
+
+        Assert.InRange(hours, 8, 12); // meta do GDD
+        Assert.Equal(LevelCurve.MaxLevel - 1, steps.Count);
+        // Sem "muro": nenhum nível sozinho passa de 8% do tempo total, e todos têm um monstro de nível próximo.
+        Assert.All(steps, s => Assert.True(s.Minutes <= hours * 60 * 0.08, $"nível {s.Level}: {s.Minutes:0} min de {hours * 60:0}"));
+        Assert.All(steps, s => Assert.InRange(s.MonsterLevel, s.Level - 5, s.Level + 5));
+    }
+
+    [Fact]
+    public void Jogador_rapido_ou_lento_continua_numa_faixa_razoavel()
+    {
+        var fast = LevelingSimulation.TotalHours(LevelingSimulation.Run(CharacterClass.Blade,
+            new LevelingAssumptions { SecondsBetweenKills = 4, Downtime = 0.08, ComboBonus = 0.3 }));
+        var slow = LevelingSimulation.TotalHours(LevelingSimulation.Run(CharacterClass.Blade,
+            new LevelingAssumptions { SecondsBetweenKills = 10, Downtime = 0.3, ComboBonus = 0.05 }));
+        Assert.InRange(fast, 5, 10);
+        Assert.InRange(slow, 10, 18);
     }
 }
