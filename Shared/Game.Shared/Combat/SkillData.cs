@@ -14,7 +14,7 @@ namespace Game.Shared.Combat
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>skill.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("skill." + Id);
+        public string Name => Loc.T(Loc.Key("skill.", Id));
 
         /// <summary>Físico ou mágico: define as rotas de combo e se gasta MP.</summary>
         public SkillKind Kind = SkillKind.Physical;

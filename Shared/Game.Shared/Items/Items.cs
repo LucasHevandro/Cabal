@@ -80,7 +80,7 @@ namespace Game.Shared.Items
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>item.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("item." + Id);
+        public string Name => Loc.T(Loc.Key("item.", Id));
 
         public ItemKind Kind;
         public ItemRarity Rarity;
@@ -118,7 +118,7 @@ namespace Game.Shared.Items
         public string Description =>
             UpgradeCoreGrade > 0 ? Loc.T("item.desc.core", Loc.Ref("grade." + UpgradeCoreGrade)) :
             IsOptionStone ? Loc.T("item.desc.stone", OptionStats.Describe()) :
-            Loc.Optional("item." + Id + ".desc");
+            Loc.Optional(Loc.Key("item.", Id, ".desc"));
     }
 
     /// <summary>Um item que existe no jogo (no inventário, equipado ou no armazém).</summary>

@@ -87,7 +87,7 @@ namespace Game.Shared.Dungeon
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>room.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("room." + Id);
+        public string Name => Loc.T(Loc.Key("room.", Id));
 
         public float StartZ;
         public float EndZ;
@@ -104,7 +104,7 @@ namespace Game.Shared.Dungeon
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>dungeon.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("dungeon." + Id);
+        public string Name => Loc.T(Loc.Key("dungeon.", Id));
 
         public int MinLevel;
         public string KeyItemId = "";

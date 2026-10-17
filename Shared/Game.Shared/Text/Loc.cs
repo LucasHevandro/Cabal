@@ -20,6 +20,9 @@ namespace Game.Shared.Text
         private static Dictionary<string, string>? _texts;
         private static CultureInfo _culture = CultureInfo.GetCultureInfo(DefaultLanguage);
 
+        /// <summary>Muda a cada idioma carregado: quem guarda textos prontos sabe quando montar de novo.</summary>
+        public static int Version { get; private set; }
+
         /// <summary>Idioma carregado (ex.: "pt-BR").</summary>
         public static string Language { get; private set; } = DefaultLanguage;
 
@@ -40,6 +43,7 @@ namespace Game.Shared.Text
             var texts = fallback != null ? Parse(fallback, out _) : new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var pair in Parse(contents, out _)) texts[pair.Key] = pair.Value;
             _texts = texts;
+            Version++;
             Language = language;
             try
             {
@@ -71,6 +75,46 @@ namespace Game.Shared.Text
             {
                 return template;
             }
+        }
+
+        private static readonly Dictionary<(string, string, string), string> KeyCache = new Dictionary<(string, string, string), string>();
+        private static readonly Dictionary<string, (int Version, long A, long B, int Count, string Text)> NumberCache =
+            new Dictionary<string, (int, long, long, int, string)>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Chave montada de partes (ex.: "item." + id), guardada para não criar um texto novo a cada leitura: os nomes
+        /// dos catálogos são lidos todo quadro pela interface.
+        /// </summary>
+        public static string Key(string prefix, string id, string suffix = "")
+        {
+            var parts = (prefix, id ?? "", suffix);
+            lock (KeyCache) // o servidor e a API de contas podem ler nomes de threads diferentes
+            {
+                if (!KeyCache.TryGetValue(parts, out var key))
+                {
+                    key = prefix + parts.Item2 + suffix;
+                    KeyCache[parts] = key;
+                }
+                return key;
+            }
+        }
+
+        /// <summary>Texto com um número. Se o número não mudou desde a última vez, devolve o mesmo texto (sem montar de novo).</summary>
+        public static string T(string key, long a) => Number(key, a, 0, 1);
+
+        /// <summary>Texto com dois números (ex.: "HP 120 / 300"), reaproveitado enquanto os números não mudam.</summary>
+        public static string T(string key, long a, long b) => Number(key, a, b, 2);
+
+        private static string Number(string key, long a, long b, int count)
+        {
+            lock (NumberCache)
+            {
+                if (NumberCache.TryGetValue(key, out var last) && last.Version == Version && last.A == a && last.B == b && last.Count == count)
+                    return last.Text;
+            }
+            var text = count == 1 ? T(key, new object?[] { a }) : T(key, new object?[] { a, b });
+            lock (NumberCache) NumberCache[key] = (Version, a, b, count, text);
+            return text;
         }
 
         /// <summary>Texto da chave, ou vazio se ela não existir (para textos opcionais, como descrições).</summary>

@@ -482,7 +482,7 @@ namespace Game.Shared.Net
         public string ItemId = "";
 
         /// <summary>Nome do item no idioma do jogador.</summary>
-        public string Name => Loc.T("item." + ItemId);
+        public string Name => Loc.T(Loc.Key("item.", ItemId));
 
         public byte Rarity;
         public int Quantity;
@@ -603,7 +603,7 @@ namespace Game.Shared.Net
         public string ItemId;
 
         /// <summary>Nome do item no idioma do jogador.</summary>
-        public string Name => Loc.T("item." + ItemId);
+        public string Name => Loc.T(Loc.Key("item.", ItemId));
 
         public byte Rarity;
         public int Quantity;

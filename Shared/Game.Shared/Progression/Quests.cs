@@ -25,7 +25,7 @@ namespace Game.Shared.Progression
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>npc.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("npc." + Id);
+        public string Name => Loc.T(Loc.Key("npc.", Id));
 
         public NpcRole Role;
         public float X;
@@ -97,9 +97,9 @@ namespace Game.Shared.Progression
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>quest.&lt;id&gt;</c>; a descrição é <c>.desc</c>).</summary>
-        public string Name => Loc.T("quest." + Id);
+        public string Name => Loc.T(Loc.Key("quest.", Id));
 
-        public string Description => Loc.T("quest." + Id + ".desc");
+        public string Description => Loc.T(Loc.Key("quest.", Id, ".desc"));
         public int MinLevel = 1;
 
         /// <summary>Missão que precisa estar concluída antes (vazio = nenhuma).</summary>
@@ -112,7 +112,7 @@ namespace Game.Shared.Progression
         public List<(string ItemId, int Quantity)> RewardItems = new List<(string, int)>();
 
         /// <summary>Texto curto do que a missão libera, para mostrar na janela (vazio = nada).</summary>
-        public string Unlocks => Loc.Optional("quest." + Id + ".unlocks");
+        public string Unlocks => Loc.Optional(Loc.Key("quest.", Id, ".unlocks"));
     }
 
     /// <summary>

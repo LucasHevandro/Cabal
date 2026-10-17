@@ -21,7 +21,7 @@ namespace Game.Shared.Loot
         public string ItemId = "";
 
         /// <summary>Nome do item no idioma do jogador.</summary>
-        public string Name => Loc.T("item." + ItemId);
+        public string Name => Loc.T(Loc.Key("item.", ItemId));
 
         public ItemRarity Rarity = ItemRarity.Common;
 

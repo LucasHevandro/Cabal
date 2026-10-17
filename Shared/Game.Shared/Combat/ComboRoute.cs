@@ -26,7 +26,7 @@ namespace Game.Shared.Combat
         public string Id { get; }
 
         /// <summary>Nome no idioma do jogador (chave <c>route.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("route." + Id);
+        public string Name => Loc.T(Loc.Key("route.", Id));
 
         /// <summary>Sequência de tipos, do mais antigo para o mais recente.</summary>
         public IReadOnlyList<SkillKind> Pattern => _pattern;

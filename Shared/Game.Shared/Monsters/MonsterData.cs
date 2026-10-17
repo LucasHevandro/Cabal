@@ -11,7 +11,7 @@ namespace Game.Shared.Monsters
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>monster.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("monster." + Id);
+        public string Name => Loc.T(Loc.Key("monster.", Id));
 
         public int Level = 1;
         public int MaxHp = 500;

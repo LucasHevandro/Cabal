@@ -280,6 +280,7 @@ hud.sp = SP {0} / {1}
 hud.you = <b>Você</b> · Nv {0}
 hud.alz = {0:N0} Alz
 hud.hp = HP {0} / {1}
+hud.hp_value = {0} / {1}
 hud.mp = MP {0} / {1}
 hud.awakening_active = <b>DESPERTAR</b> {0:0.0} s
 hud.awakening_gauge = Despertar {0}%

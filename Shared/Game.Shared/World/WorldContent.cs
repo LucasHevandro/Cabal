@@ -14,7 +14,7 @@ namespace Game.Shared.World
         public string Id = "";
 
         /// <summary>Nome no idioma do jogador (chave <c>zone.&lt;id&gt;</c>).</summary>
-        public string Name => Loc.T("zone." + Id);
+        public string Name => Loc.T(Loc.Key("zone.", Id));
 
         public int MinLevel;
         public int MaxLevel;
