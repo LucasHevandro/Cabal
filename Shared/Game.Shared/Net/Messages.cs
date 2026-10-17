@@ -20,6 +20,8 @@ namespace Game.Shared.Net
         TalkToNpc = 12,
         QuestCommand = 13,
         ActivateAwakening = 14,
+        PartyCommand = 15,
+        ChatSend = 16,
 
         // Servidor → cliente
         Welcome = 100,
@@ -41,6 +43,9 @@ namespace Game.Shared.Net
         QuestState = 116,
         NpcDialog = 117,
         UpgradeResult = 118,
+        PartyState = 119,
+        PartyInvite = 120,
+        ChatMessage = 121,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -53,7 +58,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 4;
+        public const int Version = 5;
         public const int DefaultPort = 7777;
     }
 
@@ -686,6 +691,11 @@ namespace Game.Shared.Net
                 MessageType.QuestState => QuestState.Read(reader),
                 MessageType.NpcDialog => NpcDialog.Read(reader),
                 MessageType.UpgradeResult => UpgradeResult.Read(reader),
+                MessageType.PartyCommand => PartyCommand.Read(reader),
+                MessageType.ChatSend => ChatSend.Read(reader),
+                MessageType.PartyState => PartyState.Read(reader),
+                MessageType.PartyInvite => PartyInvite.Read(reader),
+                MessageType.ChatMessage => ChatMessage.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.
