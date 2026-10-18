@@ -732,7 +732,8 @@ namespace Game.Shared.Net
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.
             var otherVersionHello = message is Hello hello && hello.ProtocolVersion != Protocol.Version;
-            if (reader.Remaining != 0 && !otherVersionHello) throw new ProtocolException($"{type}: sobraram {reader.Remaining} bytes.");
+            // A recusa também pode vir de um servidor de outra versão (com mais campos): o motivo vem primeiro e é lido.
+            if (reader.Remaining != 0 && !otherVersionHello && message is not Reject) throw new ProtocolException($"{type}: sobraram {reader.Remaining} bytes.");
             return message;
         }
     }
