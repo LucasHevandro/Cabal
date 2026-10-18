@@ -135,7 +135,7 @@ namespace Game.Client.UI
             GUI.matrix = Matrix4x4.TRS(new Vector3(_offset.x, _offset.y, 0), Quaternion.identity, new Vector3(_scale, _scale, 1));
             if (Event.current.type == EventType.MouseDown && _rect.Contains(Event.current.mousePosition)) UiSounds.Click();
 
-            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 360, 660, 720);
+            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 380, 660, 760);
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0, 0, 0, 0.35f));
             Box(_rect, Panel);
             var x = _rect.x + 28;
@@ -226,6 +226,14 @@ namespace Game.Client.UI
                 GameLocale.Select(_languages[next]);
             });
             GUI.enabled = true;
+
+            // Métricas do cliente (tutorial, FPS, erros): ligadas por padrão, explicado na política de privacidade.
+            var metrics = GUI.Toggle(new Rect(x, y + 4, width, 28), GameSettings.ClientMetrics, " " + Loc.T("options.client_metrics"), _toggle);
+            if (metrics != GameSettings.ClientMetrics)
+            {
+                GameSettings.ClientMetrics = metrics;
+                GameSettings.Save();
+            }
 
             if (GUI.Button(new Rect(x, _rect.yMax - 60, 220, 40), Loc.T("options.defaults"), _button))
             {

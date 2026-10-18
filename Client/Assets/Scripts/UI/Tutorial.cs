@@ -165,6 +165,8 @@ namespace Game.Client.UI
             _missAt = float.NegativeInfinity;
             _lastGradeSeen = player.LastGradeAt;
             if (!save) return;
+            // Métrica do teste fechado: até onde cada um chega no tutorial (sem os passos restaurados ao entrar).
+            Net.ClientMetrics.Report(Game.Shared.Accounts.ClientReportRules.Tutorial, (int)step, step.ToString());
             try
             {
                 PlayerPrefs.SetInt(_owner, (int)step);

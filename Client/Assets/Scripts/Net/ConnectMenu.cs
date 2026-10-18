@@ -20,6 +20,7 @@ namespace Game.Client.Net
             Register,
             Characters,
             CreateCharacter,
+            Terms,
             Busy,
         }
 
@@ -39,6 +40,14 @@ namespace Game.Client.Net
         private GUIStyle _label;
         private GUIStyle _small;
 
+        // Termos e política: aceite no cadastro, leitura e novo aceite quando a versão muda.
+        private bool _acceptTerms;
+        private bool _termsUpdate;
+        private string _termsShown = Legal.TermsName;
+        private Screen _termsReturn = Screen.Register;
+        private Vector2 _termsScroll;
+        private GUIStyle _termsText;
+
         public static bool IsOpen => !GameMode.ChoiceMade;
 
         private void Awake()
@@ -54,12 +63,19 @@ namespace Game.Client.Net
 
         // ===== Ações =====
 
-        private async Task LoginAsync()
+        private async Task LoginAsync(string acceptTerms = "")
         {
             if (!PrepareApi()) return;
             await Run(Loc.T("login.entering"), async () =>
             {
-                var login = await _api.LoginAsync(_account, _password);
+                var login = await _api.LoginAsync(_account, _password, acceptTerms);
+                if (!login.Ok && login.ErrorKey == "auth.terms_updated")
+                {
+                    // Termos novos: mostra o texto com o botão de aceitar (que tenta o login de novo).
+                    ShowError(login.Error);
+                    OpenTerms(Legal.TermsName, Screen.Login, update: true);
+                    return;
+                }
                 if (!login.Ok)
                 {
                     ShowError(login.Error);
@@ -75,6 +91,7 @@ namespace Game.Client.Net
         {
             var error = (AccountRules.ValidateAccount(_account) ?? AccountRules.ValidatePassword(_password))?.ToString();
             if (error == null && _password != _passwordAgain) error = Loc.T("login.passwords_differ");
+            if (error == null && !_acceptTerms) error = Loc.T("auth.terms_required");
             if (error != null)
             {
                 ShowError(error);
@@ -83,7 +100,7 @@ namespace Game.Client.Net
             if (!PrepareApi()) return;
             await Run(Loc.T("login.creating_account"), async () =>
             {
-                var register = await _api.RegisterAsync(_account, _password);
+                var register = await _api.RegisterAsync(_account, _password, Legal.Version);
                 if (!register.Ok)
                 {
                     ShowError(register.Error);
@@ -149,8 +166,9 @@ namespace Game.Client.Net
             var login = await _api.LoginAsync(_account, _password);
             if (!login.Ok)
             {
-                await _api.RegisterAsync(_account, _password);
-                login = await _api.LoginAsync(_account, _password);
+                // Teste automático: aceita os termos em nome de quem rodou o teste.
+                await _api.RegisterAsync(_account, _password, Legal.Version);
+                login = await _api.LoginAsync(_account, _password, Legal.Version);
             }
             if (!login.Ok)
             {
@@ -198,6 +216,22 @@ namespace Game.Client.Net
             if (_screen == Screen.Busy) _screen = previous;
         }
 
+        private void OpenTerms(string name, Screen back, bool update = false)
+        {
+            _termsShown = name;
+            _termsReturn = back;
+            _termsUpdate = update;
+            _termsScroll = Vector2.zero;
+            _screen = Screen.Terms;
+        }
+
+        /// <summary>Texto dos termos ou da política (Resources/Legal do Shared; o mesmo que o servidor publica).</summary>
+        private static string LegalText(string name)
+        {
+            var asset = Resources.Load<TextAsset>("Legal/" + name);
+            return asset != null ? asset.text : Loc.T("login.terms_missing");
+        }
+
         private void ShowError(string text)
         {
             _message = text;
@@ -224,8 +258,9 @@ namespace Game.Client.Net
             GUI.color = Color.white;
 
             var scale = Mathf.Max(1f, UnityEngine.Screen.height / 900f);
-            var width = 480 * scale;
-            var height = 470 * scale;
+            // Os termos precisam de mais espaço para ler.
+            var width = (_screen == Screen.Terms ? 820 : 480) * scale;
+            var height = (_screen == Screen.Terms ? 780 : 520) * scale;
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
             GUILayout.BeginArea(area, GUI.skin.box);
             GUILayout.Space(8 * scale);
@@ -238,6 +273,7 @@ namespace Game.Client.Net
                 case Screen.Register: DrawRegister(scale); break;
                 case Screen.Characters: DrawCharacters(scale); break;
                 case Screen.CreateCharacter: DrawCreate(scale); break;
+                case Screen.Terms: DrawTerms(scale); break;
                 case Screen.Busy: GUILayout.Label(_busyText, _label); break;
             }
 
@@ -281,12 +317,46 @@ namespace Game.Client.Net
             _password = GUILayout.PasswordField(_password, '•', AccountRules.MaxPasswordLength, GUILayout.Height(26 * scale));
             GUILayout.Label(Loc.T("login.repeat_password"), _small);
             _passwordAgain = GUILayout.PasswordField(_passwordAgain, '•', AccountRules.MaxPasswordLength, GUILayout.Height(26 * scale));
-            GUILayout.Space(10 * scale);
+            GUILayout.Space(8 * scale);
+            _acceptTerms = GUILayout.Toggle(_acceptTerms, " " + Loc.T("login.accept_terms"), GUILayout.Height(24 * scale));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Loc.T("login.view_terms"), GUILayout.Height(24 * scale))) OpenTerms(Legal.TermsName, Screen.Register);
+            if (GUILayout.Button(Loc.T("login.view_privacy"), GUILayout.Height(24 * scale))) OpenTerms(Legal.PrivacyName, Screen.Register);
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8 * scale);
             if (GUILayout.Button(Loc.T("login.create_and_enter"), GUILayout.Height(38 * scale))) _ = RegisterAsync();
             if (GUILayout.Button(Loc.T("ui.back"), GUILayout.Height(28 * scale)))
             {
                 _screen = Screen.Login;
                 _message = "";
+            }
+        }
+
+        private void DrawTerms(float scale)
+        {
+            _termsText ??= new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true, richText = false };
+            _termsText.fontSize = Mathf.RoundToInt(15 * scale);
+            if (_termsUpdate) GUILayout.Label(Loc.T("login.terms_updated_title"), _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(_termsShown == Legal.TermsName, Loc.T("login.view_terms"), GUI.skin.button, GUILayout.Height(28 * scale)))
+                _termsShown = Legal.TermsName;
+            if (GUILayout.Toggle(_termsShown == Legal.PrivacyName, Loc.T("login.view_privacy"), GUI.skin.button, GUILayout.Height(28 * scale)))
+                _termsShown = Legal.PrivacyName;
+            GUILayout.EndHorizontal();
+            _termsScroll = GUILayout.BeginScrollView(_termsScroll, GUI.skin.box, GUILayout.Height((_termsUpdate ? 470 : 510) * scale));
+            GUILayout.Label(LegalText(_termsShown), _termsText);
+            GUILayout.EndScrollView();
+            GUILayout.Space(8 * scale);
+            if (_termsUpdate && GUILayout.Button(Loc.T("login.accept_and_enter"), GUILayout.Height(38 * scale)))
+            {
+                _termsUpdate = false;
+                _message = "";
+                _ = LoginAsync(Legal.Version);
+            }
+            if (GUILayout.Button(_termsUpdate ? Loc.T("ui.back") : Loc.T("login.close"), GUILayout.Height(28 * scale)))
+            {
+                _termsUpdate = false;
+                _screen = _termsReturn;
             }
         }
 

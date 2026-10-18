@@ -81,6 +81,7 @@ namespace Game.Client.Net
                 return;
             }
             Instance = this;
+            gameObject.AddComponent<ClientMetrics>();
             CharacterState.Reset();
             // Online o jogo não pode pausar ao perder o foco: pararia de ler o servidor e "congelaria" o mundo.
             Application.runInBackground = true;

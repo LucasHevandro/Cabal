@@ -17,11 +17,15 @@ namespace Game.Client.Net
         public T Value { get; }
         public string Error { get; }
 
-        public ApiResult(bool ok, T value, string error)
+        /// <summary>Chave do motivo (ex.: "auth.terms_updated"), para o menu reagir a casos específicos.</summary>
+        public string ErrorKey { get; }
+
+        public ApiResult(bool ok, T value, string error, string errorKey = "")
         {
             Ok = ok;
             Value = value;
             Error = error;
+            ErrorKey = errorKey ?? "";
         }
     }
 
@@ -44,12 +48,15 @@ namespace Game.Client.Net
             _baseUrl = (GameMode.ApiOverride.Length > 0 ? GameMode.ApiOverride : ServerAddress.ApiUrl(host, gamePort)).TrimEnd('/');
         }
 
-        public Task<ApiResult<ApiError>> RegisterAsync(string account, string password) =>
-            SendAsync<ApiError>(HttpMethod.Post, "/register", new Credentials { Account = account, Password = password });
+        /// <param name="acceptTerms">Versão dos termos que o jogador aceitou (<see cref="Legal.Version"/>); o servidor exige.</param>
+        public Task<ApiResult<ApiError>> RegisterAsync(string account, string password, string acceptTerms) =>
+            SendAsync<ApiError>(HttpMethod.Post, "/register", new Credentials { Account = account, Password = password, AcceptTerms = acceptTerms });
 
-        public async Task<ApiResult<LoginResponse>> LoginAsync(string account, string password)
+        /// <param name="acceptTerms">Só quando o servidor pediu o aceite de termos novos ("auth.terms_updated").</param>
+        public async Task<ApiResult<LoginResponse>> LoginAsync(string account, string password, string acceptTerms = "")
         {
-            var result = await SendAsync<LoginResponse>(HttpMethod.Post, "/login", new Credentials { Account = account, Password = password });
+            var result = await SendAsync<LoginResponse>(HttpMethod.Post, "/login",
+                new Credentials { Account = account, Password = password, AcceptTerms = acceptTerms });
             if (result.Ok) Token = result.Value.Token;
             return result;
         }
@@ -72,7 +79,8 @@ namespace Game.Client.Net
                 if (response.IsSuccessStatusCode) return new ApiResult<T>(true, JsonUtility.FromJson<T>(text), "");
 
                 var error = string.IsNullOrEmpty(text) ? null : JsonUtility.FromJson<ApiError>(text);
-                return new ApiResult<T>(false, default, error == null || (string.IsNullOrEmpty(error.Error) && string.IsNullOrEmpty(error.Key)) ? Loc.T("net.http_error", (int)response.StatusCode) : error.Display);
+                return new ApiResult<T>(false, default, error == null || (string.IsNullOrEmpty(error.Error) && string.IsNullOrEmpty(error.Key)) ? Loc.T("net.http_error", (int)response.StatusCode) : error.Display,
+                    error?.Key);
             }
             catch (TaskCanceledException)
             {
