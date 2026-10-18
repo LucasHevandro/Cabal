@@ -63,11 +63,11 @@ namespace Game.Client.Player
 
         private bool _leftFoot;
 
-        /// <summary>Move o jogador na hora, sem colisão (correção do servidor, renascer).</summary>
+        /// <summary>Move o jogador na hora, sem colisão (correção do servidor, renascer), já em cima do chão.</summary>
         public void Teleport(Vector3 position)
         {
             _controller.enabled = false;
-            transform.position = new Vector3(position.x, transform.position.y, position.z);
+            transform.position = Game.Client.World.Ground.Snap(position) + Vector3.up * 0.05f;
             _controller.enabled = true;
             _verticalVelocity = 0;
         }

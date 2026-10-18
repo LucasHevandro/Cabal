@@ -103,7 +103,7 @@ namespace Game.Client.Net
             foreach (var npc in NpcCatalog.All)
             {
                 var root = new GameObject($"NPC: {npc.Name}");
-                root.transform.position = new Vector3(npc.X, 0, npc.Z);
+                root.transform.position = Game.Client.World.Ground.Point(npc.X, npc.Z);
                 var color = npc.Role switch
                 {
                     NpcRole.Smith => new Color(0.85f, 0.45f, 0.2f),
@@ -177,7 +177,7 @@ namespace Game.Client.Net
                 case Welcome welcome:
                     PlayerId = welcome.PlayerId;
                     Clock.Seed(welcome.ServerTime, LocalNow);
-                    if (_motor != null) _motor.Teleport(new Vector3(welcome.SpawnX, 0, welcome.SpawnZ));
+                    if (_motor != null) _motor.Teleport(Game.Client.World.Ground.Point(welcome.SpawnX, welcome.SpawnZ));
                     _client.Send(new Ping { ClientTime = LocalNow });
                     break;
                 case Reject reject:
@@ -205,7 +205,7 @@ namespace Game.Client.Net
                     MessageReceived?.Invoke(snapshot);
                     break;
                 case PositionCorrection correction:
-                    if (_motor != null) _motor.Teleport(new Vector3(correction.X, 0, correction.Z));
+                    if (_motor != null) _motor.Teleport(Game.Client.World.Ground.Point(correction.X, correction.Z));
                     break;
                 case Notice notice:
                     if (notice.Announcement) CombatHud.Announce(notice.Text.ToString());
@@ -222,7 +222,7 @@ namespace Game.Client.Net
             if (_views.ContainsKey(spawned.Id)) return;
 
             var root = new GameObject(spawned.Kind == EntityKind.Player ? $"Jogador: {spawned.Name}" : Loc.T("ui.name_level", spawned.Name, spawned.Level));
-            root.transform.position = new Vector3(spawned.X, 0, spawned.Z);
+            root.transform.position = Game.Client.World.Ground.Point(spawned.X, spawned.Z);
 
             MonsterParts parts;
             MonsterData data = null;

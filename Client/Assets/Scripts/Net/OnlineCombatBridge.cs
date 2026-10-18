@@ -125,7 +125,7 @@ namespace Game.Client.Net
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Aviso de área";
             Destroy(disc.GetComponent<Collider>());
-            disc.transform.position = new Vector3(area.X, 0.04f, area.Z);
+            disc.transform.position = Game.Client.World.Ground.Point(area.X, area.Z) + Vector3.up * 0.06f;
             if (warningMaterial != null) disc.GetComponent<Renderer>().sharedMaterial = warningMaterial;
             disc.AddComponent<AreaWarningView>().Initialize(area.Radius, area.Seconds);
         }

@@ -99,7 +99,7 @@ namespace Game.Client.World
             Clear();
             _builtFor = $"{state.OriginX},{state.OriginZ}";
             _root = new GameObject("Arena");
-            _root.transform.position = new Vector3(state.OriginX, 0, state.OriginZ);
+            _root.transform.position = Ground.Point(state.OriginX, state.OriginZ);
             var width = ArenaRules.HalfWidth * 2;
             var length = ArenaRules.HalfLength * 2;
             var wall = _session.Material("arena_muro", new Color(0.42f, 0.38f, 0.34f));

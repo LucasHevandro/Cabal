@@ -5,9 +5,12 @@ using Game.Client.Loot;
 using Game.Client.Net;
 using Game.Client.Player;
 using Game.Client.UI;
+using Game.Client.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Game.Client.Editor
 {
@@ -32,7 +35,7 @@ namespace Game.Client.Editor
             var dummy = MaterialFor("Boneco", new Color(0.85f, 0.35f, 0.3f));
             var ring = MaterialFor("AnelSelecao", new Color(1f, 0.85f, 0.2f));
 
-            CreateLight();
+            var sun = CreateLight();
             var telegraph = MaterialFor("AvisoGolpe", new Color(0.9f, 0.15f, 0.1f), "Universal Render Pipeline/Unlit");
             WorldBuilder.Build(ring, telegraph);
             CreatePillar(new Vector3(-7, 0, 3), pillar);
@@ -40,6 +43,7 @@ namespace Game.Client.Editor
 
             var playerObject = CreatePlayer(player);
             var cameraObject = CreateCamera(playerObject.transform);
+            CreateAtmosphere(sun);
             playerObject.GetComponent<PlayerMotor>().SetCamera(cameraObject.transform);
             playerObject.GetComponent<TargetSelector>().SetCamera(cameraObject.GetComponent<Camera>());
 
@@ -69,13 +73,77 @@ namespace Game.Client.Editor
             Debug.Log($"[Protótipo] Cena criada em {ScenePath}");
         }
 
-        private static void CreateLight()
+        private static Light CreateLight()
         {
             var light = new GameObject("Luz do sol").AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.2f;
+            light.intensity = 1.25f;
+            light.color = new Color(1f, 0.95f, 0.85f);
             light.shadows = LightShadows.Soft;
-            light.transform.rotation = Quaternion.Euler(50, -30, 0);
+            light.shadowStrength = 0.8f;
+            // Sol mais baixo que o meio-dia: sombras longas dão volume ao relevo.
+            light.transform.rotation = Quaternion.Euler(38, -35, 0);
+            return light;
+        }
+
+        /// <summary>
+        /// Céu (procedural), névoa e luz ambiente por zona (<see cref="Atmosphere"/>) e o pós-processamento global:
+        /// bloom suave, tonemapping, contraste e vinheta leves.
+        /// </summary>
+        private static void CreateAtmosphere(Light sun)
+        {
+            var sky = MaterialFor("Ceu", Color.white, "Skybox/Procedural");
+            sky.SetFloat("_SunSize", 0.035f);
+            sky.SetFloat("_SunSizeConvergence", 6f);
+            sky.SetFloat("_AtmosphereThickness", 0.85f);
+            sky.SetColor("_SkyTint", new Color(0.48f, 0.56f, 0.7f));
+            sky.SetColor("_GroundColor", new Color(0.42f, 0.44f, 0.4f));
+            sky.SetFloat("_Exposure", 1.25f);
+            RenderSettings.skybox = sky;
+            RenderSettings.sun = sun;
+            RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+
+            var profilePath = $"{MaterialsFolder}/PosProcessamento.asset";
+            AssetDatabase.DeleteAsset(profilePath);
+            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, profilePath);
+            var bloom = profile.Add<Bloom>(true);
+            bloom.threshold.Override(1.05f);
+            bloom.intensity.Override(0.45f);
+            bloom.scatter.Override(0.65f);
+            var tonemapping = profile.Add<Tonemapping>(true);
+            tonemapping.mode.Override(TonemappingMode.Neutral);
+            var color = profile.Add<ColorAdjustments>(true);
+            color.contrast.Override(14f);
+            color.saturation.Override(8f);
+            color.postExposure.Override(0f);
+            color.colorFilter.Override(Color.white);
+            var vignette = profile.Add<Vignette>(true);
+            vignette.intensity.Override(0.22f);
+            vignette.smoothness.Override(0.45f);
+            var lift = profile.Add<LiftGammaGain>(true);
+            lift.lift.Override(new Vector4(1f, 1f, 1.04f, 0f)); // sombras levemente azuladas
+            lift.gain.Override(new Vector4(1.03f, 1f, 0.97f, 0f)); // luzes levemente quentes
+            foreach (var component in profile.components) AssetDatabase.AddObjectToAsset(component, profile);
+            EditorUtility.SetDirty(profile);
+
+            var atmosphere = new GameObject("Atmosfera");
+            var volume = atmosphere.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.priority = 1;
+            volume.sharedProfile = profile;
+            atmosphere.AddComponent<Atmosphere>().Configure(sun, volume);
+
+            // A cena já abre com o clima da vila (sem esperar o primeiro quadro).
+            var look = Atmosphere.At(Vector3.zero);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogColor = look.Fog;
+            RenderSettings.fogDensity = look.FogDensity;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = look.Sky;
+            RenderSettings.ambientEquatorColor = look.Equator;
+            RenderSettings.ambientGroundColor = look.GroundLight;
         }
 
         private static void CreatePillar(Vector3 position, Material material)
@@ -118,6 +186,11 @@ namespace Game.Client.Editor
             var camera = cameraObject.AddComponent<Camera>();
             camera.fieldOfView = 55;
             camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = 700f;
+            var data = cameraObject.AddComponent<UniversalAdditionalCameraData>();
+            data.renderPostProcessing = true;
+            data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            data.antialiasingQuality = AntialiasingQuality.Medium;
             cameraObject.AddComponent<AudioListener>();
             cameraObject.AddComponent<OrbitCamera>().SetTarget(target);
             cameraObject.transform.position = target.position + new Vector3(0, 4, -7);
@@ -175,7 +248,10 @@ namespace Game.Client.Editor
             {
                 material.shader = shader;
             }
-            material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            // Fosco: brilho de plástico some (o padrão do URP é 0,5).
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.12f);
+            material.enableInstancing = true;
             EditorUtility.SetDirty(material);
             return material;
         }

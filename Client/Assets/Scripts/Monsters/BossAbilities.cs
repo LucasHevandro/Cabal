@@ -89,7 +89,7 @@ namespace Game.Client.Monsters
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Aviso de área do chefe";
             Destroy(disc.GetComponent<Collider>());
-            disc.transform.position = new Vector3(player.transform.position.x, 0.04f, player.transform.position.z);
+            disc.transform.position = Game.Client.World.Ground.Snap(player.transform.position) + Vector3.up * 0.06f;
             if (warningMaterial != null) disc.GetComponent<Renderer>().sharedMaterial = warningMaterial;
             _warning = disc.transform;
             _warningStartedAt = Time.time;

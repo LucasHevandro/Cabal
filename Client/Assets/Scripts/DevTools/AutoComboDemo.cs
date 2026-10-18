@@ -238,7 +238,7 @@ namespace Game.Client.DevTools
         {
             var controller = player.GetComponent<CharacterController>();
             if (controller != null) controller.enabled = false;
-            player.position = new Vector3(position.x, player.position.y, position.z);
+            player.position = Game.Client.World.Ground.Snap(position) + Vector3.up * 0.05f;
             if (controller != null) controller.enabled = true;
         }
 

@@ -3,7 +3,9 @@
     "rootNamespace": "Game.Client",
     "references": [
         "Game.Shared",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

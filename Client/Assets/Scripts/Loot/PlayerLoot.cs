@@ -120,7 +120,7 @@ namespace Game.Client.Loot
         {
             if (_netPickups.ContainsKey(message.LootId)) return;
             var drop = new ItemDrop(message.ItemId, message.Name, (ItemRarity)message.Rarity, message.Quantity);
-            var pickup = SpawnPickup(drop, new Vector3(message.X, 0, message.Z));
+            var pickup = SpawnPickup(drop, Game.Client.World.Ground.Point(message.X, message.Z));
             pickup.NetworkId = message.LootId;
             _netPickups.Add(message.LootId, pickup);
         }
@@ -151,7 +151,7 @@ namespace Game.Client.Loot
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cube.name = $"Drop: {drop.Name}";
             Destroy(cube.GetComponent<Collider>());
-            cube.transform.position = new Vector3(position.x, 0, position.z);
+            cube.transform.position = Game.Client.World.Ground.Snap(position);
             cube.transform.localScale = Vector3.one * (drop.Rarity >= ItemRarity.Rare ? 0.4f : 0.3f);
 
             var renderer = cube.GetComponent<Renderer>();

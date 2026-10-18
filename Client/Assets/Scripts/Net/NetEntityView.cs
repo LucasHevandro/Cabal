@@ -54,14 +54,14 @@ namespace Game.Client.Net
             _telegraph = telegraph;
             Target = target;
             MonsterData = monsterData;
-            transform.position = new Vector3(spawned.X, 0, spawned.Z);
+            transform.position = Game.Client.World.Ground.Point(spawned.X, spawned.Z);
         }
 
         /// <summary>Recebe o estado do snapshot.</summary>
         public void AddSample(double serverTime, in EntityState state)
         {
             if (_samples.Count > 0 && serverTime <= _samples[_samples.Count - 1].ServerTime) return;
-            _samples.Add(new Sample { ServerTime = serverTime, Position = new Vector3(state.X, 0, state.Z), Yaw = state.Yaw });
+            _samples.Add(new Sample { ServerTime = serverTime, Position = Game.Client.World.Ground.Point(state.X, state.Z), Yaw = state.Yaw });
             if (_samples.Count > MaxSamples) _samples.RemoveAt(0);
 
             if (Target != null) Target.SetHealth(state.Hp, Target.Hp.Max);
@@ -88,7 +88,7 @@ namespace Game.Client.Net
         public void SnapTo(Vector3 position)
         {
             _samples.Clear();
-            transform.position = position;
+            transform.position = Game.Client.World.Ground.Snap(position);
         }
 
         private void Update()
