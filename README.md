@@ -152,6 +152,8 @@ limite por IP, teste de fuzz provando que o cliente não decide nada, detecção
 Infraestrutura: imagem Docker do servidor, compose de produção com HTTPS (Caddy), backup diário com cópia fora da
 VPS e script de restauração, `/api/health` e `/metrics` para o monitoramento, GitHub Actions (testes, imagem e
 build do cliente) e `servidor.txt` no cliente. Veja `Docs/deploy.md`.
+Teste fechado: termos de uso e política de privacidade (aceite no cadastro e de novo quando mudam, exclusão de conta
+a pedido), métricas de sessão, tutorial, FPS e erros, e o relatório `--report`. Veja `Docs/metricas.md`.
 
 Fase 7 — Interface, áudio e polimento (em andamento): todos os textos do jogo no arquivo de tradução
 `Shared/Game.Shared/Resources/Locales/pt-BR.txt` (pronto para outros idiomas; veja `Docs/decisoes.md`).

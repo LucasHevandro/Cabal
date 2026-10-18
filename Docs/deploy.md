@@ -73,6 +73,8 @@ Comandos do dia a dia (dentro de `deploy/`, com `C="docker compose -f docker-com
 | Métricas | `curl -s http://127.0.0.1:7778/metrics` |
 | Tornar uma conta GM (vale no próximo login) | `$C run --rm --no-deps game --set-gm nomedaconta` |
 | Tirar o GM | `$C run --rm --no-deps game --unset-gm nomedaconta` |
+| Relatório de métricas (últimos 7 dias) | `$C run --rm --no-deps game --report 7` |
+| Apagar uma conta a pedido do jogador (LGPD) | `$C run --rm --no-deps game --delete-account nomedaconta` |
 
 ## 4. Backup
 
@@ -201,4 +203,5 @@ curl -sk https://localhost/api/health
 ## Limites conhecidos
 
 - **Criação de contas sem limite por IP.** A API ainda não limita quantas contas o mesmo IP cria; o login já trava a conta após 5 senhas erradas. Para o teste fechado com convite, isso basta. Antes de abrir para o público, vale um limite por IP, usando o `X-Forwarded-For` que o Caddy envia.
+- **Termos e privacidade:** preencha os campos `<<preencher>>` dos textos antes de abrir o teste (veja `Docs/metricas.md`).
 - **Uma VPS só:** se ela cair, o jogo cai. O monitoramento avisa, e o backup fora da VPS garante que nada se perde.
