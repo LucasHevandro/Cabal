@@ -64,7 +64,7 @@ A cena `Treino.unity` é gerada por código. Depois de mudar o mapa, gere de nov
 | Parte | Onde | O que faz |
 |---|---|---|
 | Altura do chão | `Scripts/World/Ground.cs` | Fórmula única do relevo. O construtor do terreno usa a fórmula, e o jogo a usa para pôr no chão o que o servidor manda só em X e Z (jogadores, monstros, NPCs, itens e avisos de golpe). |
-| Terreno | `Scripts/Editor/TerrainBuilder.cs` | Relevo, chão pintado por zona (grama, folhas da mata, pedra das ruínas, cascalho da arena, terra nas estradas, rocha nas encostas) e grama com flores. As texturas são geradas e ficam em `Assets/Art/Mundo`. |
+| Terreno | `Scripts/Editor/TerrainBuilder.cs` | Relevo, chão pintado por zona (grama, folhas da mata, pedra das ruínas, cascalho da arena, terra nas estradas, rocha nas encostas) e tufos de grama e flores low-poly (malhas paradas, só até 45 m da câmera). As texturas são geradas e ficam em `Assets/Art/Mundo`. |
 | Cenário | `Scripts/Editor/PropBuilder.cs` + `MeshKit.cs` | Árvores, pinheiros, arbustos, pedras, colunas, muros, casas, cercas, poço e braseiros em low-poly, gerados por código. As malhas ficam em `Assets/Art/Mundo/Malhas`. |
 | Clima | `Scripts/World/Atmosphere.cs` | Névoa, luz ambiente, cor do sol e filtro de cor por zona, misturados aos poucos. A dungeon e a arena PvP têm o próprio clima. |
 | Pós-processamento | `Assets/Materials/Prototipo/PosProcessamento.asset` | Bloom suave, tonemapping neutro, contraste, vinheta e sombras levemente azuladas. Na qualidade **Baixa** ele é desligado. |
