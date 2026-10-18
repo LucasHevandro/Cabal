@@ -18,8 +18,7 @@ Crie um **prefab** com o nome exato do id dentro de `Client/Assets/Resources/Vis
 Os ids de todos os monstros, NPCs e itens estão no arquivo de textos `Shared/Game.Shared/Resources/Locales/pt-BR.txt`
 (linhas `monster.<id>`, `npc.<id>`, `item.<id>`).
 
-Já existe um exemplo: `Visuals/monster/coelho_saltador.prefab`, montado com formas simples pelo menu
-**Jogo > Visuais > Criar coelho de exemplo**. Pode apagar quando chegar o coelho de verdade.
+Hoje todas as classes, NPCs e monstros já têm modelo (veja as seções Personagens e Monstros abaixo).
 
 ## Regras do prefab
 
@@ -112,3 +111,15 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 - **Golpes dos outros:** o golpe de outro jogador também anima o modelo dele, pela skill que veio no evento de combate.
 
 **Conferir as animações no jogo:** `Prototipo.exe -posetest pasta`. Ele põe as classes e os NPCs lado a lado e captura cada estado. Faço a conferência no jogo porque, no Editor em modo batch, a malha não é deformada pelos ossos.
+
+# Monstros
+
+| Monstro | Modelo | Como anima |
+|---|---|---|
+| Coelho Saltador, Lobo Cinzento, Javali Furioso, Aranha da Mata, Golem de Pedra | low-poly em partes, gerado por `Scripts/Editor/CreatureBuilder.cs` (menu **Jogo > Visuais > Montar bichos**) | por código (`Fx/ProceduralRig.cs`): patas pela velocidade, pulo do coelho, bote no ataque, recuo ao apanhar e tombo na morte |
+| Esqueleto Guerreiro, Esqueleto Arqueiro, Cavaleiro Ossudo, Servo da Cripta, Senhor da Cripta (chefe) | KayKit Skeletons, com as armas do pacote | Animator `Esqueleto.controller` (parado, andar e morte próprios de esqueleto e os golpes do personagem) |
+| Cavaleiro Caído, Espectro (translúcido), Guardião das Ruínas (chefe) | KayKit Skeletons; o Espectro com material roxo transparente e o Guardião com olhos vermelhos | o mesmo Animator |
+
+- **Golpe de cada monstro:** sai de `AttackStyle.ForMonster` (arqueiro dispara, espectro e Senhor da Cripta lançam magia, os chefes guerreiros dão o golpe de duas mãos).
+- **Tamanhos:** os modelos são escalados para a altura definida em `KayKitBuilder.MonsterLooks`. A colisão e o alcance continuam sendo os do servidor.
+- **Conferir no jogo:** `Prototipo.exe -posetest pasta -posemonsters`.
