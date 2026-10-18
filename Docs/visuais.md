@@ -55,3 +55,25 @@ Humanoid, as mesmas animações servem para as duas classes.
 
 Rode o jogo (ou o teste automático com `-onlinetest pasta -onlinefight`) e veja nas capturas se o modelo apareceu no
 tamanho certo, com o nome em cima da cabeça e o anel de seleção nos pés.
+
+# Mundo: terreno, céu, névoa, luz e pós-processamento
+
+A cena `Treino.unity` é gerada por código. Depois de mudar o mapa, gere de novo:
+**Protótipo > Criar cena de treino**, ou em linha de comando com `-executeMethod Game.Client.Editor.TrainingSceneBuilder.Build`.
+
+| Parte | Onde | O que faz |
+|---|---|---|
+| Altura do chão | `Scripts/World/Ground.cs` | Fórmula única do relevo. O construtor do terreno usa a fórmula, e o jogo a usa para pôr no chão o que o servidor manda só em X e Z (jogadores, monstros, NPCs, itens e avisos de golpe). |
+| Terreno | `Scripts/Editor/TerrainBuilder.cs` | Relevo, chão pintado por zona (grama, folhas da mata, pedra das ruínas, cascalho da arena, terra nas estradas, rocha nas encostas) e grama com flores. As texturas são geradas e ficam em `Assets/Art/Mundo`. |
+| Cenário | `Scripts/Editor/PropBuilder.cs` + `MeshKit.cs` | Árvores, pinheiros, arbustos, pedras, colunas, muros, casas, cercas, poço e braseiros em low-poly, gerados por código. As malhas ficam em `Assets/Art/Mundo/Malhas`. |
+| Clima | `Scripts/World/Atmosphere.cs` | Névoa, luz ambiente, cor do sol e filtro de cor por zona, misturados aos poucos. A dungeon e a arena PvP têm o próprio clima. |
+| Pós-processamento | `Assets/Materials/Prototipo/PosProcessamento.asset` | Bloom suave, tonemapping neutro, contraste, vinheta e sombras levemente azuladas. Na qualidade **Baixa** ele é desligado. |
+| Céu | `Assets/Materials/Prototipo/Ceu.mat` | Céu procedural do Unity, com o sol da cena. |
+
+**Regras do relevo**
+- **Planos:** a praça da vila, as estradas, os grupos de monstros (o raio deles + 3 m), os NPCs e a arena do chefe. Assim os avisos de golpe no chão ficam retos.
+- **Morros suaves:** ficam entre esses lugares. São mais altos na mata e nas ruínas.
+- **Montanhas:** sobem a partir da borda da área jogável do servidor (x de −130 a 130, z de −70 a 230) e fecham o horizonte. O que fica nelas é só enfeite, sem colisão.
+- **Servidor:** não muda nada. Ele continua só com X e Z.
+
+**Trocar pelo KayKit (ou outro pacote).** O `PropBuilder` escolhe uma lista de malhas por tipo (`arvore`, `pinheiro`, `pedra`, `coluna`, `muro`, `casa`...). Para usar os modelos do pacote, troque a variante gerada pelo modelo importado no tipo correspondente. Os mesmos lugares, colisões e escalas continuam valendo. Os modelos dos pacotes também têm a frente para +Z e o pivô no chão.
