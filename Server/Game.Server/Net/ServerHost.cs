@@ -71,6 +71,28 @@ public sealed class ServerHost : IOutbox, IDisposable
     private int _nextConnectionId;
     private readonly ConcurrentDictionary<int, ClientConnection> _connections = new();
     private double _nextSweepAt;
+
+    // Saúde (para o monitoramento): ticks do último segundo, erros desde que ligou e a última foto.
+    private int _healthTicks;
+    private double _healthTickMs;
+    private double _healthTickMax;
+    private double _lastTickAt;
+    private long _errors;
+    private volatile HealthSnapshot _health = new(false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Protocol.Version.ToString());
+
+    /// <summary>Foto mais recente da saúde do servidor (segura de qualquer thread).</summary>
+    public HealthSnapshot Health
+    {
+        get
+        {
+            var h = _health;
+            // Loop travado: a foto envelhece e o monitoramento percebe.
+            return h with { SecondsSinceTick = h.Running ? Now - _lastTickAt : h.SecondsSinceTick };
+        }
+    }
+
+    /// <summary>Erros pegos no loop do jogo desde que o servidor ligou.</summary>
+    public long Errors => Interlocked.Read(ref _errors);
     private Thread? _loopThread;
 
     // Simulador de latência: trabalho e envios esperando a hora certa (só usados pela thread do loop).
@@ -354,6 +376,36 @@ public sealed class ServerHost : IOutbox, IDisposable
         }
     }
 
+    /// <summary>
+    /// Roda um trabalho do loop sem deixar um erro derrubar o servidor inteiro: registra, conta (aparece na saúde e no
+    /// monitoramento) e segue. Um erro aqui é sempre defeito a corrigir; o log guarda o detalhe.
+    /// </summary>
+    private void Safely(Action work, string what)
+    {
+        try
+        {
+            work();
+        }
+        catch (Exception ex)
+        {
+            var count = Interlocked.Increment(ref _errors);
+            if (count <= 50 || count % 100 == 0) _log($"[erro] {what}: {ex}");
+        }
+    }
+
+    private void UpdateHealth(double now)
+    {
+        var monsters = World.Monsters.Count;
+        _health = new HealthSnapshot(
+            Running: true, Players: World.Players.Count, Monsters: monsters, Connections: _connections.Count,
+            UptimeSeconds: now, TicksPerSecond: _healthTicks, TickAverageMs: _healthTicks == 0 ? 0 : _healthTickMs / _healthTicks,
+            TickMaxMs: _healthTickMax, Errors: Errors, MemoryMb: GC.GetTotalMemory(false) / (1024.0 * 1024.0),
+            SecondsSinceTick: 0, Version: Protocol.Version.ToString());
+        _healthTicks = 0;
+        _healthTickMs = 0;
+        _healthTickMax = 0;
+    }
+
     private void GameLoop()
     {
         var tickSeconds = 1.0 / GameWorld.TickRate;
@@ -365,7 +417,7 @@ public sealed class ServerHost : IOutbox, IDisposable
             var now = Now;
             while (_inbox.TryDequeue(out var item))
             {
-                if (!SimulatingLatency) item.Work(now);
+                if (!SimulatingLatency) Safely(() => item.Work(now), "mensagem");
                 else _delayedIn.Add((DelayedTime(_lastInAt, item.Connection.ConnectionId), item.Work));
             }
             if (SimulatingLatency) RunDelayed(now);
@@ -373,8 +425,13 @@ public sealed class ServerHost : IOutbox, IDisposable
             if (now >= nextTick)
             {
                 var started = Stopwatch.GetTimestamp();
-                World.Tick(now);
-                Metrics.CountTick(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                Safely(() => World.Tick(now), "tick");
+                var tickMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                Metrics.CountTick(tickMs);
+                _healthTicks++;
+                _healthTickMs += tickMs;
+                _healthTickMax = Math.Max(_healthTickMax, tickMs);
+                _lastTickAt = now;
                 nextTick += tickSeconds;
                 if (now - nextTick > 1) nextTick = now; // atrasou demais: não tenta compensar todos os ticks
             }
@@ -382,7 +439,8 @@ public sealed class ServerHost : IOutbox, IDisposable
             if (now >= _nextSweepAt)
             {
                 _nextSweepAt = now + 1;
-                SweepConnections();
+                Safely(SweepConnections, "varredura");
+                UpdateHealth(now);
             }
 
             if (_options.SaveIntervalSeconds > 0 && now >= nextSaveAt)
@@ -439,6 +497,14 @@ public sealed class ServerHost : IOutbox, IDisposable
         return at;
     }
 }
+
+/// <summary>
+/// Como o servidor está agora (atualizado uma vez por segundo pelo loop do jogo): para o monitoramento
+/// (<c>/api/health</c> e <c>/metrics</c>).
+/// </summary>
+public sealed record HealthSnapshot(
+    bool Running, int Players, int Monsters, int Connections, double UptimeSeconds, double TicksPerSecond, double TickAverageMs,
+    double TickMaxMs, long Errors, double MemoryMb, double SecondsSinceTick, string Version);
 
 /// <summary>Contadores de desempenho do servidor, zerados a cada relatório.</summary>
 public sealed class ServerMetrics

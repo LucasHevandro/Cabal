@@ -222,35 +222,39 @@ public sealed class Bot
     }
 
     /// <summary>
-    /// Conecta. Sem <paramref name="password"/> entra como convidado; com ela, usa a API de login (porta do jogo + 1):
+    /// <summary>URL da API de login no lugar da regra padrão (<see cref="ServerAddress.ApiUrl"/>), pelo <c>--api</c>.</summary>
+    public static string ApiOverride { get; set; } = "";
+
+    /// <summary>
+    /// Conecta. Sem <paramref name="password"/> entra como convidado; com ela, usa a API de login (porta do jogo + 1, ou HTTPS num domínio):
     /// cria a conta e um personagem com o nome do bot se faltarem, e entra com o token, como um jogador de verdade.
     /// </summary>
     public async Task StartAsync(string host, int port, string? account = null, string? password = null)
     {
         var hello = new Hello { Name = _name };
         if (!string.IsNullOrEmpty(account) && !string.IsNullOrEmpty(password))
-            (hello.Token, hello.CharacterId) = await LoginAsync(host, port + 1, account, password);
+            (hello.Token, hello.CharacterId) = await LoginAsync(ApiOverride.Length > 0 ? ApiOverride : ServerAddress.ApiUrl(host, port), account, password);
         await Connection.ConnectAsync(host, port);
         Connection.Send(hello);
     }
 
     private static readonly JsonSerializerOptions Json = new() { IncludeFields = true, PropertyNamingPolicy = null };
 
-    private async Task<(string Token, int CharacterId)> LoginAsync(string host, int apiPort, string account, string password)
+    private async Task<(string Token, int CharacterId)> LoginAsync(string apiUrl, string account, string password)
     {
-        using var http = new HttpClient { BaseAddress = new Uri($"http://{host}:{apiPort}") };
+        using var http = new HttpClient { BaseAddress = new Uri(apiUrl.TrimEnd('/') + "/") };
         var credentials = new Credentials { Account = account, Password = password };
-        await http.PostAsJsonAsync("/api/register", credentials, Json); // já existir não tem problema
-        var login = await http.PostAsJsonAsync("/api/login", credentials, Json);
+        await http.PostAsJsonAsync("register", credentials, Json); // já existir não tem problema
+        var login = await http.PostAsJsonAsync("login", credentials, Json);
         login.EnsureSuccessStatusCode();
         var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(Json))!.Token;
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var list = (await http.GetFromJsonAsync<CharacterList>("/api/characters", Json))!;
+        var list = (await http.GetFromJsonAsync<CharacterList>("characters", Json))!;
         var character = list.Characters.FirstOrDefault();
         if (character == null)
         {
-            var created = await http.PostAsJsonAsync("/api/characters", new CreateCharacterRequest { Name = _name, ClassId = 0 }, Json);
+            var created = await http.PostAsJsonAsync("characters", new CreateCharacterRequest { Name = _name, ClassId = 0 }, Json);
             created.EnsureSuccessStatusCode();
             character = (await created.Content.ReadFromJsonAsync<CharacterSummary>(Json))!;
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Game.Server.Accounts;
 using Game.Shared.Accounts;
@@ -35,6 +36,7 @@ public sealed class LoginApi : IAsyncDisposable
         builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
         builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 16 * 1024);
         _app = builder.Build();
+        MapMonitoring();
 
         _app.MapPost("/api/register", async (HttpRequest request) =>
         {
@@ -66,6 +68,61 @@ public sealed class LoginApi : IAsyncDisposable
             var result = await auth.CreateCharacterAsync(BearerToken(request), body);
             if (result.Ok) log?.Invoke($"Personagem criado: {result.Value!.Name} (id {result.Value.Id})");
             return result.Ok ? Ok(result.Value!) : Error(result.Error, result.StatusCode);
+        });
+    }
+
+    /// <summary>
+    /// Saúde do servidor do jogo, para o monitoramento. Fica nula até o servidor ligar (a API sobe antes); enquanto for
+    /// nula, <c>/api/health</c> responde 503.
+    /// </summary>
+    public Func<HealthSnapshot>? Health { get; set; }
+
+    /// <summary>Saudável: o loop do jogo rodou um tick há menos de 5 s.</summary>
+    public static bool IsHealthy(HealthSnapshot h) => h.Running && h.SecondsSinceTick < 5;
+
+    private void MapMonitoring()
+    {
+        // JSON simples para quem vigia o servidor (UptimeRobot, healthcheck do Docker): 200 se está tudo bem, 503 se não.
+        _app.MapGet("/api/health", () =>
+        {
+            var health = Health?.Invoke();
+            if (health == null) return Results.Json(new { status = "iniciando" }, statusCode: 503);
+            return Results.Json(new
+            {
+                status = IsHealthy(health) ? "ok" : "travado",
+                players = health.Players,
+                monsters = health.Monsters,
+                connections = health.Connections,
+                uptimeSeconds = Math.Round(health.UptimeSeconds),
+                ticksPerSecond = health.TicksPerSecond,
+                tickAverageMs = Math.Round(health.TickAverageMs, 2),
+                tickMaxMs = Math.Round(health.TickMaxMs, 2),
+                errors = health.Errors,
+                memoryMb = Math.Round(health.MemoryMb, 1),
+                protocol = health.Version,
+                build = Environment.GetEnvironmentVariable("GAME_VERSION") ?? "local",
+            }, statusCode: IsHealthy(health) ? 200 : 503);
+        });
+
+        // Formato de texto do Prometheus (Grafana, etc.), se um dia quiser gráficos.
+        _app.MapGet("/metrics", () =>
+        {
+            var h = Health?.Invoke();
+            if (h == null) return Results.Text("", "text/plain", statusCode: 503);
+            var text = string.Join("\n", new[]
+            {
+                $"game_up {(IsHealthy(h) ? 1 : 0)}",
+                $"game_players {h.Players}",
+                $"game_monsters {h.Monsters}",
+                $"game_connections {h.Connections}",
+                $"game_uptime_seconds {h.UptimeSeconds.ToString("0", CultureInfo.InvariantCulture)}",
+                $"game_ticks_per_second {h.TicksPerSecond.ToString("0.0", CultureInfo.InvariantCulture)}",
+                $"game_tick_average_ms {h.TickAverageMs.ToString("0.000", CultureInfo.InvariantCulture)}",
+                $"game_tick_max_ms {h.TickMaxMs.ToString("0.000", CultureInfo.InvariantCulture)}",
+                $"game_errors_total {h.Errors}",
+                $"game_memory_mb {h.MemoryMb.ToString("0.0", CultureInfo.InvariantCulture)}",
+            }) + "\n";
+            return Results.Text(text, "text/plain; version=0.0.4");
         });
     }
 

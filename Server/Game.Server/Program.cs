@@ -18,12 +18,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --gm a,b       contas tratadas como GM nesta execução (testes locais; em produção use --set-gm)
 //   --set-gm conta / --unset-gm conta  marca ou desmarca a conta como GM no banco e sai
 //   --max-per-ip N conexões ao mesmo tempo do mesmo IP (padrão 8; 0 = sem limite; o próprio PC não conta)
+//   --check-health pergunta ao servidor já ligado (/api/health) se está tudo bem; sai com 0 ou 1 (healthcheck do Docker)
 //   --latency N    (testes) atrasa cada mensagem N ms em cada sentido; --jitter N soma até N ms aleatórios
 var options = new ServerOptions();
 var apiPort = -1;
 var database = "postgres";
 var gmAccounts = new List<string>();
 string? setGm = null;
+var checkHealth = false;
 var setGmValue = true;
 for (var i = 0; i < args.Length; i++)
 {
@@ -58,6 +60,9 @@ for (var i = 0; i < args.Length; i++)
             setGm = value;
             setGmValue = false;
             break;
+        case "--check-health":
+            checkHealth = true;
+            break;
         case "--max-per-ip" when int.TryParse(value, out var perIp):
             options = options with { MaxConnectionsPerIp = perIp };
             break;
@@ -76,6 +81,22 @@ for (var i = 0; i < args.Length; i++)
     }
 }
 if (apiPort < 0) apiPort = options.Port + 1;
+
+if (checkHealth)
+{
+    try
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+        var response = await http.GetAsync($"http://127.0.0.1:{apiPort}/api/health");
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
+        return response.IsSuccessStatusCode ? 0 : 1;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex.GetBaseException().Message);
+        return 1;
+    }
+}
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 void Log(string message) => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
@@ -121,6 +142,7 @@ if (!await TryStartAsync(() => api.StartAsync(), apiPort, "da API de login")) re
 Log($"API de login em http://localhost:{apiPort}/api (em produção, use HTTPS na frente)");
 
 using var host = new ServerHost(options, Log, auth, saver);
+api.Health = () => host.Health;
 
 // Ranking da dungeon: carrega os melhores tempos e grava cada vitória (fora do loop do jogo).
 host.World.SeedRanking(await store.TopDungeonRunsAsync(Game.Shared.Dungeon.DungeonCatalog.CryptId));
@@ -167,6 +189,12 @@ Console.CancelKeyPress += (_, e) =>
     e.Cancel = true;
     stop.Set();
 };
+// "docker stop" (e o systemd) mandam SIGTERM: desliga do mesmo jeito, salvando antes.
+using var sigterm = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, context =>
+{
+    context.Cancel = true;
+    stop.Set();
+});
 
 if (!await TryStartAsync(() => { host.Start(); return Task.CompletedTask; }, options.Port, "do jogo")) return 1;
 if (options.AllowGuests) Log("ATENÇÃO: aceitando convidados sem conta (--guests).");

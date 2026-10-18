@@ -15,6 +15,7 @@ using Game.Shared.Social;
 //     muitos jogadores na tela (cliente com -onlineperf).
 //   --accounts: cada bot entra com conta (bot01, bot02... senha senha12345), como jogador de verdade (amigos,
 //     bloqueio e denúncia só funcionam com conta); sem isso entram como convidados.
+//   --api URL: API de login em outro lugar (padrão: http://host:porta+1/api para IP, https://host/api para domínio).
 var host = "127.0.0.1";
 var port = Protocol.DefaultPort;
 var count = 20;
@@ -33,6 +34,7 @@ for (var i = 0; i < args.Length - 1; i++)
     {
         case "--invite": inviteName = args[i + 1]; break;
         case "--host": host = args[i + 1]; break;
+        case "--api": Bot.ApiOverride = args[i + 1]; break;
         case "--port": int.TryParse(args[i + 1], out port); break;
         case "--count": int.TryParse(args[i + 1], out count); break;
         case "--seconds": double.TryParse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture, out seconds); break;
