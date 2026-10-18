@@ -197,7 +197,8 @@ namespace Game.Client.UI
 
         private void OnGUI()
         {
-            if (Player == null || ConnectMenu.IsOpen) return;
+            // Com as opções abertas, nada do jogo é desenhado por cima ou através da janela (o GUI.depth não basta).
+            if (Player == null || ConnectMenu.IsOpen || OptionsWindow.IsOpen) return;
             GUI.depth = -10; // por cima do HUD (plaquinhas dos monstros e barras)
             EnsureStyles();
             Fx.UiSounds.ClickIn(OpenRects, _scale, _offset); // janelas do quadro anterior, antes de limpar a lista

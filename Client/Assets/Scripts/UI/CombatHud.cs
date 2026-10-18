@@ -71,7 +71,8 @@ namespace Game.Client.UI
             // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
             if (KeyBindings.Pressed(GameAction.Inventory) && !GameMode.IsOnline) _showInventory = !_showInventory;
             if (KeyBindings.Pressed(GameAction.Map)) Minimap.Toggle();
-            if (KeyBindings.Pressed(GameAction.Help)) HelpVisible = !HelpVisible;
+            // F1: os controles ficam na aba Controles das opções (fora da tela, para não poluir).
+            if (KeyBindings.Pressed(GameAction.Help)) OptionsWindow.ToggleControls();
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Minimap.BigOpen = false;
         }
 
@@ -84,7 +85,7 @@ namespace Game.Client.UI
             EnsureStyles();
 
             // Plaquinhas dos monstros ficam em coordenadas de tela, antes da escala do resto do HUD.
-            DrawNameplates();
+            if (!OptionsWindow.IsOpen) DrawNameplates();
 
             var scale = Mathf.Min(Screen.width / VirtualWidth, Screen.height / VirtualHeight);
             GUI.matrix = Matrix4x4.TRS(
@@ -96,7 +97,6 @@ namespace Game.Client.UI
             PanelRects.Add(new Rect(40, VirtualHeight - 150, 380, 96)); // quadro do jogador
             if (!Minimap.BigOpen && !_showInventory && !GameWindows.RightPanelOpen)
                 PanelRects.Add(new Rect(VirtualWidth - Minimap.Size - 20, Minimap.Top, Minimap.Size, Minimap.Size));
-            DrawHelp();
             DrawTargetFrame();
             DrawComboBar();
             DrawSpBar();
@@ -132,65 +132,8 @@ namespace Game.Client.UI
             return index < _skillKeys.Length ? _skillKeys[index] : "";
         }
 
-        private string _helpText;
-        private (int Language, int Keys, bool Online, int BestChain) _helpKey;
-
-        private const string HelpPref = "ajuda.visivel";
-        private static bool? _helpVisible;
-
-        /// <summary>Painel de controles aberto (F1 alterna; a escolha fica salva).</summary>
-        public static bool HelpVisible
-        {
-            get
-            {
-                if (_helpVisible == null)
-                {
-                    try { _helpVisible = PlayerPrefs.GetInt(HelpPref, 1) == 1; }
-                    catch (System.Exception) { _helpVisible = true; }
-                }
-                return _helpVisible.Value;
-            }
-            set
-            {
-                _helpVisible = value;
-                try { PlayerPrefs.SetInt(HelpPref, value ? 1 : 0); }
-                catch (System.Exception) { /* fica só nesta sessão */ }
-            }
-        }
-
         /// <summary>Retângulos do HUD no quadro atual (tela virtual): os nomes dos NPCs não são escritos por cima deles.</summary>
         public static readonly List<Rect> PanelRects = new List<Rect>();
-
-        private void DrawHelp()
-        {
-            var online = GameMode.IsOnline;
-            if (!HelpVisible)
-            {
-                GUI.Label(new Rect(24, 20, 300, 24), Loc.T("help.show_hint", KeyBindings.Label(GameAction.Help)), _small);
-                return;
-            }
-            PanelRects.Add(new Rect(20, 20, 470, online ? 346 : 270));
-            // O texto só muda com o idioma, os atalhos, o modo ou a melhor corrente: montado de novo só nessa hora.
-            var key = (Loc.Version, KeyBindings.Version, online, combat.BestChain);
-            if (_helpText == null || key != _helpKey)
-            {
-                _helpKey = key;
-                _helpText =
-                    Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
-                        KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map),
-                        KeyBindings.Label(GameAction.Help)) + "\n" +
-                    (online
-                        ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
-                            KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
-                            KeyBindings.Label(GameAction.QuestLog), KeyBindings.Label(GameAction.Awakening), KeyBindings.Label(GameAction.Friends))
-                        : Loc.T("help.keys_offline", KeyBindings.SkillsLabel(4), KeyBindings.Label(GameAction.Pickup),
-                            KeyBindings.Label(GameAction.Inventory))) + "\n" +
-                    Loc.T("help.combo", KeyBindings.Label(GameAction.StartCombo), KeyBindings.Label(GameAction.Finisher)) + "\n\n" +
-                    Loc.T("help.best_chain", combat.BestChain);
-            }
-            Box(new Rect(20, 20, 470, online ? 346 : 270), Panel);
-            GUI.Label(new Rect(36, 30, 450, online ? 336 : 260), _helpText, _small);
-        }
 
         private void DrawTargetFrame()
         {

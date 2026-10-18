@@ -30,7 +30,6 @@ namespace Game.Client.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var pillar = MaterialFor("Pilar", new Color(0.55f, 0.52f, 0.48f));
             var player = MaterialFor("Jogador", new Color(0.25f, 0.5f, 0.95f));
             var dummy = MaterialFor("Boneco", new Color(0.85f, 0.35f, 0.3f));
             var ring = MaterialFor("AnelSelecao", new Color(1f, 0.85f, 0.2f));
@@ -38,8 +37,6 @@ namespace Game.Client.Editor
             var sun = CreateLight();
             var telegraph = MaterialFor("AvisoGolpe", new Color(0.9f, 0.15f, 0.1f), "Universal Render Pipeline/Unlit");
             WorldBuilder.Build(ring, telegraph);
-            CreatePillar(new Vector3(-7, 0, 3), pillar);
-            CreatePillar(new Vector3(7, 0, 5), pillar);
 
             var playerObject = CreatePlayer(player);
             var cameraObject = CreateCamera(playerObject.transform);
@@ -144,15 +141,6 @@ namespace Game.Client.Editor
             RenderSettings.ambientSkyColor = look.Sky;
             RenderSettings.ambientEquatorColor = look.Equator;
             RenderSettings.ambientGroundColor = look.GroundLight;
-        }
-
-        private static void CreatePillar(Vector3 position, Material material)
-        {
-            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube.name = "Pilar";
-            cube.transform.position = position + Vector3.up * 2;
-            cube.transform.localScale = new Vector3(1.5f, 4, 1.5f);
-            cube.GetComponent<Renderer>().sharedMaterial = material;
         }
 
         private static GameObject CreatePlayer(Material material)

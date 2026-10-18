@@ -56,7 +56,7 @@ namespace Game.Client.Editor
             terrain.drawInstanced = true;
             terrain.heightmapPixelError = 4;
             terrain.basemapDistance = 160;
-            terrain.detailObjectDistance = 65;
+            terrain.detailObjectDistance = 45;
             terrain.detailObjectDensity = 1f;
             terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
             return terrain;
@@ -127,23 +127,16 @@ namespace Game.Client.Editor
             data.SetAlphamaps(0, 0, maps);
         }
 
-        /// <summary>Grama (e algumas flores) nos campos e na mata; nada nas estradas, na praça e nas rochas.</summary>
+        /// <summary>
+        /// Tufos de grama e flores low-poly (malhas paradas, no estilo das árvores) nos campos e na mata; nada nas
+        /// estradas, na praça e nas rochas. Esparsos e só perto da câmera: de longe quem dá o verde é o chão.
+        /// </summary>
         private static void GrassDetails(TerrainData data)
         {
             data.detailPrototypes = new[]
             {
-                new DetailPrototype
-                {
-                    prototypeTexture = GrassTexture("tufo_grama", false), renderMode = DetailRenderMode.Grass,
-                    healthyColor = new Color(0.55f, 0.75f, 0.35f), dryColor = new Color(0.7f, 0.68f, 0.38f),
-                    minWidth = 0.3f, maxWidth = 0.55f, minHeight = 0.22f, maxHeight = 0.45f, noiseSpread = 0.4f, useInstancing = false,
-                },
-                new DetailPrototype
-                {
-                    prototypeTexture = GrassTexture("flores", true), renderMode = DetailRenderMode.Grass,
-                    healthyColor = Color.white, dryColor = new Color(0.95f, 0.9f, 0.8f),
-                    minWidth = 0.25f, maxWidth = 0.4f, minHeight = 0.2f, maxHeight = 0.35f, noiseSpread = 0.5f, useInstancing = false,
-                },
+                MeshDetail("tufo_grama", GrassTuft, TrainingSceneBuilder.MaterialFor("Cenario_grama_tufo", new Color(0.36f, 0.53f, 0.24f))),
+                MeshDetail("flores", FlowerPatch, TrainingSceneBuilder.MaterialFor("Cenario_flores", new Color(0.95f, 0.85f, 0.4f))),
             };
             var res = data.detailResolution;
             var grass = new int[res, res];
@@ -162,7 +155,7 @@ namespace Game.Client.Editor
                     var z = Ground.MinZ + v * Ground.SizeZ;
                     var noise = Ground.Fbm(x * 0.09f + 3f, z * 0.09f + 77f, 2);
                     var amount = green * (0.4f + noise);
-                    grass[zi, xi] = amount > 0.6f ? (amount > 1f ? 3 : 2) : amount > 0.4f ? 1 : 0;
+                    grass[zi, xi] = amount > 0.95f ? 2 : amount > 0.62f ? 1 : 0;
                     flowers[zi, xi] = maps[aj, ai, Grass] > 0.7f && noise > 0.66f && ((xi * 7 + zi * 13) % 5 == 0) ? 1 : 0;
                 }
             }
@@ -224,58 +217,55 @@ namespace Game.Client.Editor
             return SaveTexture($"Textura_{name}", size, size, pixels, TextureWrapMode.Repeat, alpha: false);
         }
 
-        /// <summary>Tufo de grama (ou flores) com fundo transparente, para os detalhes do terreno.</summary>
-        private static Texture2D GrassTexture(string name, bool flowers)
+        private static DetailPrototype MeshDetail(string name, System.Func<System.Random, Mesh> make, Material material)
         {
-            const int width = 128, height = 128;
-            var pixels = new Color32[width * height];
-            var random = new System.Random(flowers ? 71 : 70);
-            var blades = flowers ? 7 : 22;
-            for (var b = 0; b < blades; b++)
+            var folder = $"{Folder}/Detalhes";
+            Directory.CreateDirectory(folder);
+            var mesh = make(new System.Random(name.GetHashCode()));
+            mesh.name = name;
+            var meshPath = $"{folder}/{name}_malha.asset";
+            AssetDatabase.DeleteAsset(meshPath);
+            AssetDatabase.CreateAsset(mesh, meshPath);
+            var temp = new GameObject(name);
+            temp.AddComponent<MeshFilter>().sharedMesh = mesh;
+            temp.AddComponent<MeshRenderer>().sharedMaterial = material;
+            var prefab = PrefabUtility.SaveAsPrefabAsset(temp, $"{folder}/{name}.prefab");
+            Object.DestroyImmediate(temp);
+            return new DetailPrototype
             {
-                var baseX = 10 + random.Next(width - 20);
-                var tall = flowers ? 50 + random.Next(40) : 60 + random.Next(66);
-                var lean = (float)(random.NextDouble() - 0.5) * 30f;
-                var bladeWidth = flowers ? 2.5f : 3.5f + (float)random.NextDouble() * 3f;
-                for (var y = 0; y < tall; y++)
-                {
-                    var t = y / (float)tall;
-                    var cx = baseX + lean * t * t;
-                    var half = bladeWidth * (1f - t);
-                    var shade = Color.Lerp(new Color(0.18f, 0.32f, 0.1f), new Color(0.62f, 0.85f, 0.36f), t);
-                    if (flowers) shade = Color.Lerp(new Color(0.2f, 0.4f, 0.15f), new Color(0.35f, 0.6f, 0.25f), t);
-                    for (var x = Mathf.FloorToInt(cx - half - 1); x <= Mathf.CeilToInt(cx + half + 1); x++)
-                    {
-                        if (x < 0 || x >= width) continue;
-                        var coverage = Mathf.Clamp01(half + 0.5f - Mathf.Abs(x - cx));
-                        if (coverage <= 0) continue;
-                        Blend(pixels, width, x, y, shade, coverage);
-                    }
-                }
-                if (!flowers) continue;
-                // Cabeça da flor: amarela, branca ou lilás.
-                var petal = new[] { new Color(1f, 0.85f, 0.25f), new Color(0.97f, 0.97f, 0.95f), new Color(0.8f, 0.6f, 0.95f) }[random.Next(3)];
-                var top = tall;
-                var topX = baseX + lean;
-                for (var y = top - 6; y <= top + 6; y++)
-                for (var x = (int)topX - 6; x <= (int)topX + 6; x++)
-                {
-                    if (x < 0 || x >= width || y < 0 || y >= height) continue;
-                    var d = Mathf.Sqrt((x - topX) * (x - topX) + (y - top) * (y - top));
-                    if (d < 6f) Blend(pixels, width, x, y, petal, Mathf.Clamp01(6f - d));
-                }
-            }
-            return SaveTexture($"Textura_{name}", width, height, pixels, TextureWrapMode.Clamp, alpha: true);
+                usePrototypeMesh = true, prototype = prefab, renderMode = DetailRenderMode.VertexLit, useInstancing = true,
+                healthyColor = Color.white, dryColor = new Color(0.92f, 0.9f, 0.8f),
+                minWidth = 0.8f, maxWidth = 1.3f, minHeight = 0.75f, maxHeight = 1.25f, noiseSpread = 0.4f,
+            };
         }
 
-        private static void Blend(Color32[] pixels, int width, int x, int y, Color color, float coverage)
+        /// <summary>Tufo de 5 a 7 folhas pontudas, abertas para fora.</summary>
+        private static Mesh GrassTuft(System.Random r)
         {
-            var index = y * width + x;
-            Color old = pixels[index];
-            var alpha = Mathf.Max(old.a, coverage);
-            var mixed = Color.Lerp(old.a > 0 ? old : color, color, coverage);
-            mixed.a = alpha;
-            pixels[index] = mixed;
+            var kit = new MeshKit(1);
+            var blades = 6;
+            for (var i = 0; i < blades; i++)
+            {
+                var angle = i * 360f / blades + (float)r.NextDouble() * 30f;
+                var lean = 12f + (float)r.NextDouble() * 22f;
+                var offset = Quaternion.Euler(0, angle, 0) * new Vector3(0.05f + (float)r.NextDouble() * 0.06f, 0, 0);
+                var rotation = Quaternion.Euler(0, angle, 0) * Quaternion.Euler(0, 0, -lean);
+                kit.Frustum(0, offset, rotation, 0.035f + (float)r.NextDouble() * 0.02f, 0f, 0.26f + (float)r.NextDouble() * 0.2f, 3, r, 0f);
+            }
+            return kit.Build("tufo_grama");
+        }
+
+        /// <summary>Florzinhas rentes ao chão: três ou quatro bolinhas.</summary>
+        private static Mesh FlowerPatch(System.Random r)
+        {
+            var kit = new MeshKit(1);
+            for (var i = 0; i < 4; i++)
+            {
+                var size = 0.05f + (float)r.NextDouble() * 0.03f;
+                kit.Blob(0, new Vector3((float)r.NextDouble() * 0.3f - 0.15f, 0.06f + (float)r.NextDouble() * 0.06f, (float)r.NextDouble() * 0.3f - 0.15f),
+                    new Vector3(size, size * 0.7f, size), r, 0.15f);
+            }
+            return kit.Build("flores");
         }
 
         private static Texture2D SaveTexture(string name, int width, int height, Color32[] pixels, TextureWrapMode wrap, bool alpha)

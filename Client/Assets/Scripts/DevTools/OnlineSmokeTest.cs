@@ -445,9 +445,13 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.4f);
             Capture("9-opcoes");
             yield return new WaitForEndOfFrame();
-            OptionsWindow.Open(keysTab: true);
+            OptionsWindow.Open(OptionsWindow.Page.Keys);
             yield return new WaitForSecondsRealtime(0.4f);
             Capture("9b-atalhos");
+            yield return new WaitForEndOfFrame();
+            OptionsWindow.Open(OptionsWindow.Page.Controls);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("9c-controles");
             yield return new WaitForEndOfFrame();
             OptionsWindow.Close();
 

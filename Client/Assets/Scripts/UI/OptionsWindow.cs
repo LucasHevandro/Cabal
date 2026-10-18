@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using Game.Client.Combat;
 using Game.Client.Fx;
+using Game.Client.Net;
 using Game.Shared.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -33,7 +35,17 @@ namespace Game.Client.UI
         private IReadOnlyList<string> _languages = new List<string>();
         private readonly Dictionary<string, string> _languageNames = new Dictionary<string, string>();
         private Rect _rect;
-        private bool _keysTab;
+        /// <summary>Abas da janela.</summary>
+        public enum Page
+        {
+            General,
+            Keys,
+            Controls,
+        }
+
+        private Page _page;
+        private string _controlsText;
+        private (int Language, int Keys, bool Online, int BestChain) _controlsKey;
         private GameAction? _waitingFor;
         private string _keysMessage = "";
         private float _scale = 1f;
@@ -50,11 +62,11 @@ namespace Game.Client.UI
             return _instance._rect.Contains(point);
         }
 
-        public static void Open(bool keysTab = false)
+        public static void Open(Page page = Page.General)
         {
             if (_instance == null) return;
             _instance.Refresh();
-            _instance._keysTab = keysTab;
+            _instance._page = page;
             if (!IsOpen) UiSounds.Toggle(true);
             IsOpen = true;
         }
@@ -72,6 +84,13 @@ namespace Game.Client.UI
         {
             if (IsOpen) Close();
             else Open();
+        }
+
+        /// <summary>F1: abre direto na aba Controles (ou fecha, se já estava nela).</summary>
+        public static void ToggleControls()
+        {
+            if (IsOpen && _instance != null && _instance._page == Page.Controls) Close();
+            else Open(Page.Controls);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -143,11 +162,13 @@ namespace Game.Client.UI
             var width = _rect.width - 56;
             GUI.Label(new Rect(x, y, width, 34), Loc.T("options.title"), _title);
             y += 48;
-            if (Tab(new Rect(x, y, 150, 34), Loc.T("options.tab_general"), !_keysTab)) _keysTab = false;
-            if (Tab(new Rect(x + 156, y, 150, 34), Loc.T("options.tab_keys"), _keysTab)) _keysTab = true;
+            if (Tab(new Rect(x, y, 150, 34), Loc.T("options.tab_general"), _page == Page.General)) _page = Page.General;
+            if (Tab(new Rect(x + 156, y, 150, 34), Loc.T("options.tab_keys"), _page == Page.Keys)) _page = Page.Keys;
+            if (Tab(new Rect(x + 312, y, 150, 34), Loc.T("options.tab_controls"), _page == Page.Controls)) _page = Page.Controls;
             y += 50;
 
-            if (_keysTab) DrawKeys(x, y, width);
+            if (_page == Page.Keys) DrawKeys(x, y, width);
+            else if (_page == Page.Controls) DrawControls(x, y, width);
             else DrawGeneral(x, y, width);
 
             var buttonsY = _rect.yMax - 60;
@@ -245,6 +266,35 @@ namespace Game.Client.UI
                 Tutorial.Restart();
                 Close();
             }
+        }
+
+        /// <summary>
+        /// Como jogar: andar, câmera, alvo, skills, janelas, chat e as rotas de combo, com as teclas escolhidas.
+        /// Antes ficava sempre na tela (canto de cima); agora só aqui, pelo F1 ou pela aba.
+        /// </summary>
+        private void DrawControls(float x, float y, float width)
+        {
+            var online = GameMode.IsOnline;
+            var best = PlayerCombat.Local != null ? PlayerCombat.Local.BestChain : 0;
+            // O texto só muda com o idioma, os atalhos, o modo ou a melhor corrente: montado de novo só nessa hora.
+            var key = (Loc.Version, KeyBindings.Version, online, best);
+            if (_controlsText == null || key != _controlsKey)
+            {
+                _controlsKey = key;
+                _controlsText =
+                    Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
+                        KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map),
+                        KeyBindings.Label(GameAction.Help)) + "\n\n" +
+                    (online
+                        ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
+                            KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),
+                            KeyBindings.Label(GameAction.QuestLog), KeyBindings.Label(GameAction.Awakening), KeyBindings.Label(GameAction.Friends))
+                        : Loc.T("help.keys_offline", KeyBindings.SkillsLabel(4), KeyBindings.Label(GameAction.Pickup),
+                            KeyBindings.Label(GameAction.Inventory))) + "\n\n" +
+                    Loc.T("help.combo", KeyBindings.Label(GameAction.StartCombo), KeyBindings.Label(GameAction.Finisher)) + "\n\n" +
+                    Loc.T("help.best_chain", best);
+            }
+            GUI.Label(new Rect(x, y, width, _rect.yMax - 110 - y), _controlsText, _label);
         }
 
         /// <summary>Lista dos atalhos em duas colunas; clicar na tecla espera a nova.</summary>
