@@ -40,11 +40,17 @@ public sealed class AuthService
     public ItemUidAllocator Uids { get; }
 
     private readonly HashSet<string> _gmAccounts;
+    private readonly string? _termsVersion;
 
     /// <param name="gmAccounts">Contas tratadas como GM mesmo sem a marca no banco (opção --gm, para testes locais).</param>
+    /// <param name="termsVersion">
+    /// Versão dos termos que o cadastro exige e que o login pede de novo quando muda (o servidor passa
+    /// <see cref="Legal.Version"/>); nula não confere (testes das outras regras).
+    /// </param>
     public AuthService(IGameStore store, PasswordHasher hasher, SessionTokens tokens, Func<DateTimeOffset>? now = null,
-        ItemUidAllocator? uids = null, IEnumerable<string>? gmAccounts = null)
+        ItemUidAllocator? uids = null, IEnumerable<string>? gmAccounts = null, string? termsVersion = null)
     {
+        _termsVersion = termsVersion;
         _gmAccounts = new HashSet<string>((gmAccounts ?? Array.Empty<string>()).Select(AccountRules.NormalizeAccount));
         Uids = uids ?? new ItemUidAllocator();
         _store = store;
@@ -62,10 +68,11 @@ public sealed class AuthService
         var account = AccountRules.NormalizeAccount(credentials.Account);
         var error = AccountRules.ValidateAccount(account) ?? AccountRules.ValidatePassword(credentials.Password);
         if (error != null) return AuthResult<string>.Fail(error);
+        if (_termsVersion != null && credentials.AcceptTerms != _termsVersion) return AuthResult<string>.Fail(new LocalText("auth.terms_required"));
 
         try
         {
-            await _store.CreateAccountAsync(account, _hasher.Hash(credentials.Password));
+            await _store.CreateAccountAsync(account, _hasher.Hash(credentials.Password), _termsVersion ?? credentials.AcceptTerms ?? "");
             return AuthResult<string>.Success(account);
         }
         catch (StoreConflictException ex)
@@ -94,6 +101,12 @@ public sealed class AuthService
         if (account!.IsBanned(now)) return AuthResult<LoginResponse>.Fail(Banned(account), 403);
 
         _throttle.TryRemove(name, out _);
+        // Termos novos desde o último aceite: o cliente mostra e manda de novo com o aceite.
+        if (_termsVersion != null && account.TermsVersion != _termsVersion)
+        {
+            if (credentials.AcceptTerms != _termsVersion) return AuthResult<LoginResponse>.Fail(new LocalText("auth.terms_updated", _termsVersion), 403);
+            await _store.AcceptTermsAsync(account.Id, _termsVersion);
+        }
         var rehash = _hasher.NeedsRehash(account!.PasswordHash) ? _hasher.Hash(credentials.Password!) : null;
         await _store.UpdateLoginAsync(account.Id, rehash);
         return AuthResult<LoginResponse>.Success(new LoginResponse

@@ -80,8 +80,20 @@ public sealed class LoginApi : IAsyncDisposable
     /// <summary>Saudável: o loop do jogo rodou um tick há menos de 5 s.</summary>
     public static bool IsHealthy(HealthSnapshot h) => h.Running && h.SecondsSinceTick < 5;
 
+    /// <summary>Texto dos termos ou da política (pasta Legal/ ao lado do programa, copiada do Shared).</summary>
+    public static string? LegalText(string name)
+    {
+        if (name != Legal.TermsName && name != Legal.PrivacyName) return null;
+        var path = Path.Combine(AppContext.BaseDirectory, "Legal", name + ".txt");
+        return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
     private void MapMonitoring()
     {
+        // Termos e política, para o link no Discord e na página do jogo (https://dominio/api/legal/termos).
+        _app.MapGet("/api/legal/{name}", (string name) =>
+            LegalText(name) is { } text ? Results.Text(text, "text/plain; charset=utf-8") : Results.NotFound());
+
         // JSON simples para quem vigia o servidor (UptimeRobot, healthcheck do Docker): 200 se está tudo bem, 503 se não.
         _app.MapGet("/api/health", () =>
         {

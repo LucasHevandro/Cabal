@@ -287,6 +287,7 @@ public sealed partial class GameWorld
                 if (reason == null)
                 {
                     player.Alz += reward.Alz;
+                    player.Session.Quests++;
                     player.InventoryDirty = true;
                     player.SheetDirty = true; // pode ter liberado skills ou o combo
                     Log(player, "missao", null, 0, reward.Alz, $"{quest.Id}: +{reward.Xp} XP, itens {string.Join(", ", quest.RewardItems.Select(i => $"{i.ItemId} x{i.Quantity}"))}");

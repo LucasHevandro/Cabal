@@ -367,6 +367,7 @@ public sealed partial class GameWorld
                 }
             }
             player.Alz += alz;
+            player.Session.Dungeons++;
             player.StatsDirty = true;
             Log(player, "bau_dungeon", null, 0, alz, $"{definition.Id} medalha {instance.Medal}, {rolls} sorteios");
             Notify(player, LT(rolls > 1 ? "dungeon.victory" : "dungeon.victory_one", DungeonRules.FormatTime(instance.Elapsed),

@@ -18,6 +18,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --gm a,b       contas tratadas como GM nesta execução (testes locais; em produção use --set-gm)
 //   --set-gm conta / --unset-gm conta  marca ou desmarca a conta como GM no banco e sai
 //   --max-per-ip N conexões ao mesmo tempo do mesmo IP (padrão 8; 0 = sem limite; o próprio PC não conta)
+//   --delete-account conta  apaga a conta e tudo dela (pedido do jogador, LGPD) e sai
+//   --report [dias] resumo das métricas do teste fechado (padrão: desde o início) e sai
 //   --check-health pergunta ao servidor já ligado (/api/health) se está tudo bem; sai com 0 ou 1 (healthcheck do Docker)
 //   --latency N    (testes) atrasa cada mensagem N ms em cada sentido; --jitter N soma até N ms aleatórios
 var options = new ServerOptions();
@@ -26,6 +28,8 @@ var database = "postgres";
 var gmAccounts = new List<string>();
 string? setGm = null;
 var checkHealth = false;
+string? deleteAccount = null;
+double? reportDays = null;
 var setGmValue = true;
 for (var i = 0; i < args.Length; i++)
 {
@@ -62,6 +66,12 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--check-health":
             checkHealth = true;
+            break;
+        case "--delete-account" when value.Length > 0:
+            deleteAccount = value;
+            break;
+        case "--report":
+            reportDays = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var days) ? days : 0;
             break;
         case "--max-per-ip" when int.TryParse(value, out var perIp):
             options = options with { MaxConnectionsPerIp = perIp };
@@ -133,8 +143,23 @@ if (setGm != null)
     return changed ? 0 : 1;
 }
 
+if (deleteAccount != null)
+{
+    var deleted = await store.DeleteAccountAsync(Game.Shared.Accounts.AccountRules.NormalizeAccount(deleteAccount));
+    Log(deleted ? $"Conta {deleteAccount} apagada, com personagens, itens, registros e métricas." : $"Conta {deleteAccount} não encontrada.");
+    return deleted ? 0 : 1;
+}
+
+if (reportDays != null)
+{
+    var now = DateTimeOffset.UtcNow;
+    var since = reportDays > 0 ? now.AddDays(-reportDays.Value) : DateTimeOffset.MinValue;
+    Console.Write(MetricsReport.Build(await store.MetricsAsync(since), since, now));
+    return 0;
+}
+
 var auth = new AuthService(store, new PasswordHasher(), new SessionTokens(), uids: new ItemUidAllocator(await store.MaxItemUidAsync()),
-    gmAccounts: gmAccounts);
+    gmAccounts: gmAccounts, termsVersion: Game.Shared.Accounts.Legal.Version);
 if (gmAccounts.Count > 0) Log($"ATENÇÃO: GM nesta execução: {string.Join(", ", gmAccounts)} (--gm).");
 await using var saver = new CharacterSaver(store, Log);
 await using var api = new LoginApi(auth, apiPort, Log);

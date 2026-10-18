@@ -31,6 +31,7 @@ public sealed class EfGameStore : IGameStore
     private static AccountRecord ToRecord(AccountEntity a) => new(a.Id, a.Name, a.PasswordHash)
     {
         IsGm = a.IsGm, BannedUntil = a.BannedUntil, BanReason = a.BanReason ?? "", MutedUntil = a.MutedUntil,
+        TermsVersion = a.TermsVersion ?? "",
     };
 
     public async Task<AccountRecord?> FindAccountByIdAsync(int accountId)
@@ -95,10 +96,14 @@ public sealed class EfGameStore : IGameStore
             .Select(a => new GmActionRecord(a.GmName, a.Action, a.Target, a.Details, a.At)).ToListAsync();
     }
 
-    public async Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash)
+    public async Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash, string termsVersion)
     {
         await using var db = await _factory.CreateDbContextAsync();
-        var account = new AccountEntity { Name = normalizedAccount, PasswordHash = passwordHash, CreatedAt = DateTimeOffset.UtcNow };
+        var now = DateTimeOffset.UtcNow;
+        var account = new AccountEntity
+        {
+            Name = normalizedAccount, PasswordHash = passwordHash, CreatedAt = now, TermsVersion = termsVersion, TermsAcceptedAt = now,
+        };
         db.Accounts.Add(account);
         try
         {
@@ -109,6 +114,42 @@ public sealed class EfGameStore : IGameStore
             throw new StoreConflictException(new LocalText("auth.account_exists"));
         }
         return ToRecord(account);
+    }
+
+    public async Task AcceptTermsAsync(int accountId, string termsVersion)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var account = await db.Accounts.FindAsync(accountId);
+        if (account == null) return;
+        account.TermsVersion = termsVersion;
+        account.TermsAcceptedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<bool> DeleteAccountAsync(string normalizedAccount)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var account = await db.Accounts.FirstOrDefaultAsync(a => a.Name == normalizedAccount);
+        if (account == null) return false;
+        var characters = await db.Characters.Where(c => c.AccountId == account.Id).Select(c => c.Id).ToListAsync();
+        await db.ItemLog.Where(l => characters.Contains(l.CharacterId)).ExecuteDeleteAsync();
+        await db.MetricEvents.Where(m => m.AccountId == account.Id).ExecuteDeleteAsync();
+        // Personagens, itens, missões e amigos vão junto (cascata).
+        db.Accounts.Remove(account);
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return true;
+    }
+
+    public async Task<MetricsData> MetricsAsync(DateTimeOffset since)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var accounts = (await db.Accounts.AsNoTracking().Select(a => new { a.Id, a.CreatedAt }).ToListAsync())
+            .Select(a => (a.Id, a.CreatedAt)).ToList();
+        var events = await db.MetricEvents.AsNoTracking().Where(m => m.At >= since).OrderBy(m => m.Id)
+            .Select(m => new MetricRecord(m.AccountId, m.CharacterId, m.Kind, m.Value, m.Details, m.At)).ToListAsync();
+        return new MetricsData(accounts, events);
     }
 
     public async Task UpdateLoginAsync(int accountId, string? newPasswordHash)
@@ -237,6 +278,15 @@ public sealed class EfGameStore : IGameStore
             });
         }
 
+        foreach (var metric in snapshot.Metrics)
+        {
+            db.MetricEvents.Add(new MetricEventEntity
+            {
+                At = metric.At, AccountId = metric.AccountId, CharacterId = metric.CharacterId, Kind = metric.Kind,
+                Value = metric.Value, Details = metric.Details.Length > 400 ? metric.Details[..400] : metric.Details,
+            });
+        }
+
         foreach (var log in logs)
         {
             db.ItemLog.Add(new ItemLogEntity
@@ -348,6 +398,8 @@ public sealed class InMemoryGameStore : IGameStore
     private readonly List<ItemLogEntry> _log = new();
     private readonly List<ReportRecord> _reports = new();
     private readonly List<DungeonRunRecord> _runs = new();
+    private readonly List<MetricRecord> _metrics = new();
+    private readonly Dictionary<int, DateTimeOffset> _accountCreated = new();
     private int _nextAccountId = 1;
     private int _nextCharacterId = 1;
 
@@ -414,14 +466,49 @@ public sealed class InMemoryGameStore : IGameStore
             return Task.FromResult<IReadOnlyList<GmActionRecord>>(_gmActions.AsEnumerable().Reverse().Take(max).ToList());
     }
 
-    public Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash)
+    public Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash, string termsVersion)
     {
         lock (_lock)
         {
             if (_accounts.Values.Any(a => a.Name == normalizedAccount)) throw new StoreConflictException(new LocalText("auth.account_exists"));
-            var account = new AccountRecord(_nextAccountId++, normalizedAccount, passwordHash);
+            var account = new AccountRecord(_nextAccountId++, normalizedAccount, passwordHash) { TermsVersion = termsVersion };
             _accounts.Add(account.Id, account);
+            _accountCreated[account.Id] = DateTimeOffset.UtcNow;
             return Task.FromResult(account);
+        }
+    }
+
+    public Task AcceptTermsAsync(int accountId, string termsVersion)
+    {
+        lock (_lock)
+        {
+            if (_accounts.TryGetValue(accountId, out var account)) _accounts[accountId] = account with { TermsVersion = termsVersion };
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> DeleteAccountAsync(string normalizedAccount)
+    {
+        lock (_lock)
+        {
+            var account = _accounts.Values.FirstOrDefault(a => a.Name == normalizedAccount);
+            if (account == null) return Task.FromResult(false);
+            var characters = _characters.Values.Where(c => c.AccountId == account.Id).Select(c => c.Id).ToHashSet();
+            foreach (var id in characters) _characters.Remove(id);
+            _log.RemoveAll(l => characters.Contains(l.CharacterId));
+            _metrics.RemoveAll(m => m.AccountId == account.Id);
+            _accounts.Remove(account.Id);
+            _accountCreated.Remove(account.Id);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<MetricsData> MetricsAsync(DateTimeOffset since)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(new MetricsData(
+                _accountCreated.Select(a => (a.Key, a.Value)).ToList(), _metrics.Where(m => m.At >= since).ToList()));
         }
     }
 
@@ -478,6 +565,7 @@ public sealed class InMemoryGameStore : IGameStore
             };
             _log.AddRange(logs);
             _reports.AddRange(s.Reports);
+            _metrics.AddRange(s.Metrics);
             SaveCount++;
         }
         return Task.CompletedTask;

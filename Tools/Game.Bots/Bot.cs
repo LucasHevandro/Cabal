@@ -243,7 +243,7 @@ public sealed class Bot
     private async Task<(string Token, int CharacterId)> LoginAsync(string apiUrl, string account, string password)
     {
         using var http = new HttpClient { BaseAddress = new Uri(apiUrl.TrimEnd('/') + "/") };
-        var credentials = new Credentials { Account = account, Password = password };
+        var credentials = new Credentials { Account = account, Password = password, AcceptTerms = Legal.Version };
         await http.PostAsJsonAsync("register", credentials, Json); // já existir não tem problema
         var login = await http.PostAsJsonAsync("login", credentials, Json);
         login.EnsureSuccessStatusCode();

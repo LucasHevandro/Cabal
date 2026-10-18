@@ -156,7 +156,9 @@ public sealed class ServerHost : IOutbox, IDisposable
         _listener.Stop();
         _loopThread?.Join(TimeSpan.FromSeconds(2));
 
-        // Com o loop parado, é seguro ler o mundo daqui: salva todo mundo antes de fechar as conexões.
+        // Com o loop parado, é seguro ler o mundo daqui: fecha as sessões (métricas) e salva todo mundo antes de fechar
+        // as conexões.
+        foreach (var player in World.Players) World.EndSession(player, Now);
         SaveAll();
         if (_saver != null)
         {
@@ -242,6 +244,7 @@ public sealed class ServerHost : IOutbox, IDisposable
             var leaving = World.FindPlayer(connection.PlayerId);
             if (leaving != null && leaving.CharacterId != 0 && _saver != null)
             {
+                World.EndSession(leaving, closedAt);
                 var (snapshot, logs) = World.CaptureForSave(leaving);
                 _saver.Enqueue(snapshot, logs);
             }

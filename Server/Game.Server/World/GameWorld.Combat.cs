@@ -274,6 +274,7 @@ public sealed partial class GameWorld
 
         if (player.Hp.Current > 0) return;
         player.IsDead = true;
+        player.Session.Deaths++;
         player.RespawnAt = now + PlayerRules.RespawnSeconds;
         if (player.Combo.State == ComboPhase.Active)
         {
@@ -400,6 +401,7 @@ public sealed partial class GameWorld
                 ? XpRules.Adjusted(monster.Data.XpReward, member.Progress.Level, monster.Data.Level)
                 : PartyRules.SharedXp(monster.Data.XpReward, monster.Data.Level, member.Progress.Level, sharing.Count);
             GrantXp(member, xp);
+            member.Session.Kills++;
             if (member.Quests.OnKill(monster.Data.Id).Count > 0) member.QuestsDirty = true;
             member.Alz += alzParts[i];
             member.StatsDirty = true;

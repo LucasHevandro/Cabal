@@ -230,7 +230,10 @@ public class SaveAndLogTests
         }
 
         public Task<AccountRecord?> FindAccountAsync(string a) => _inner.FindAccountAsync(a);
-        public Task<AccountRecord> CreateAccountAsync(string a, string h) => _inner.CreateAccountAsync(a, h);
+        public Task<AccountRecord> CreateAccountAsync(string a, string h, string t) => _inner.CreateAccountAsync(a, h, t);
+        public Task AcceptTermsAsync(int id, string t) => _inner.AcceptTermsAsync(id, t);
+        public Task<bool> DeleteAccountAsync(string a) => _inner.DeleteAccountAsync(a);
+        public Task<MetricsData> MetricsAsync(DateTimeOffset since) => _inner.MetricsAsync(since);
         public Task UpdateLoginAsync(int id, string? h) => _inner.UpdateLoginAsync(id, h);
         public Task<IReadOnlyList<CharacterSummaryRecord>> ListCharactersAsync(int id) => _inner.ListCharactersAsync(id);
         public Task<CharacterRecord> CreateCharacterAsync(int id, string n, CharacterClass c, CharacterRecord i) => _inner.CreateCharacterAsync(id, n, c, i);

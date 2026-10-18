@@ -26,6 +26,7 @@ public sealed partial class GameWorld
 
     internal void TrackComboGrade(ServerPlayer player, ComboGrade grade, double now)
     {
+        CountGrade(player, grade);
         player.ExcellentStreak = grade == ComboGrade.Excellent ? player.ExcellentStreak + 1 : 0;
         if (player.ExcellentStreak >= SuspiciousExcellentStreak) Suspect(player, "suspect.perfect_combo", now);
     }

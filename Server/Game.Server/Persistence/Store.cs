@@ -19,7 +19,19 @@ public sealed record AccountRecord(int Id, string Name, string PasswordHash)
     public DateTimeOffset? MutedUntil { get; init; }
 
     public bool IsBanned(DateTimeOffset now) => BannedUntil is { } until && until > now;
+
+    /// <summary>Versão dos termos e da política que a conta aceitou por último (vazia = nunca).</summary>
+    public string TermsVersion { get; init; } = "";
 }
+
+/// <summary>
+/// Um evento das métricas do teste fechado: sessão de jogo (servidor) ou relatório do cliente (tutorial, FPS, erro).
+/// <paramref name="Details"/> é texto curto no formato "chave=valor;chave=valor".
+/// </summary>
+public sealed record MetricRecord(int AccountId, int CharacterId, string Kind, double Value, string Details, DateTimeOffset At);
+
+/// <summary>Dados para o relatório de métricas: quando cada conta foi criada e os eventos do período.</summary>
+public sealed record MetricsData(IReadOnlyList<(int AccountId, DateTimeOffset CreatedAt)> Accounts, IReadOnlyList<MetricRecord> Events);
 
 /// <summary>Uma ação de GM (banir, silenciar, teleportar, dar ou tirar item...), para auditoria.</summary>
 public sealed record GmActionRecord(string GmName, string Action, string Target, string Details, DateTimeOffset At);
@@ -78,6 +90,9 @@ public sealed record CharacterSnapshot(
 
     /// <summary>Denúncias feitas desde o último salvamento (só acrescenta).</summary>
     public IReadOnlyList<ReportRecord> Reports { get; init; } = Array.Empty<ReportRecord>();
+
+    /// <summary>Eventos de métricas desde o último salvamento (só acrescenta).</summary>
+    public IReadOnlyList<MetricRecord> Metrics { get; init; } = Array.Empty<MetricRecord>();
 }
 
 /// <summary>Movimento de item ou Alz, para auditoria e suporte (quem ganhou o quê, quando).</summary>
@@ -100,8 +115,23 @@ public interface IGameStore
 {
     Task<AccountRecord?> FindAccountAsync(string normalizedAccount);
 
-    /// <summary>Cria a conta. <see cref="StoreConflictException"/> se o nome já existe.</summary>
-    Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash);
+    /// <summary>
+    /// Cria a conta, já com os termos aceitos na versão <paramref name="termsVersion"/>.
+    /// <see cref="StoreConflictException"/> se o nome já existe.
+    /// </summary>
+    Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash, string termsVersion);
+
+    /// <summary>Grava que a conta aceitou os termos e a política nesta versão (agora).</summary>
+    Task AcceptTermsAsync(int accountId, string termsVersion);
+
+    /// <summary>
+    /// Apaga a conta e tudo dela (personagens, itens, missões, amigos, registros de itens e métricas), a pedido do
+    /// jogador (LGPD). Denúncias e ações de GM ficam (segurança do jogo). Falso se a conta não existe.
+    /// </summary>
+    Task<bool> DeleteAccountAsync(string normalizedAccount);
+
+    /// <summary>Contas e eventos de métricas desde <paramref name="since"/> (relatório do teste fechado).</summary>
+    Task<MetricsData> MetricsAsync(DateTimeOffset since);
 
     Task UpdateLoginAsync(int accountId, string? newPasswordHash);
 

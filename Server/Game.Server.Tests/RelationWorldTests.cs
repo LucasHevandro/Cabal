@@ -170,7 +170,7 @@ public class RelationWorldTests
 
     private async Task RoundTrip(IGameStore store)
     {
-        var account = await store.CreateAccountAsync("lucas", "hash");
+        var account = await store.CreateAccountAsync("lucas", "hash", "");
         var ana = await store.CreateCharacterAsync(account.Id, "Ana", CharacterClass.Blade, AuthService.InitialCharacter(CharacterClass.Blade, NewUid));
         var bia = await store.CreateCharacterAsync(account.Id, "Bia", CharacterClass.Blade, AuthService.InitialCharacter(CharacterClass.Blade, NewUid));
         var caio = await store.CreateCharacterAsync(account.Id, "Caio", CharacterClass.Blade, AuthService.InitialCharacter(CharacterClass.Blade, NewUid));

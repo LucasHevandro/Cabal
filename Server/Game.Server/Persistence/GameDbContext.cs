@@ -14,7 +14,21 @@ public sealed class AccountEntity
     public DateTimeOffset? BannedUntil { get; set; }
     public string BanReason { get; set; } = "";
     public DateTimeOffset? MutedUntil { get; set; }
+    public string TermsVersion { get; set; } = "";
+    public DateTimeOffset? TermsAcceptedAt { get; set; }
     public List<CharacterEntity> Characters { get; set; } = new();
+}
+
+/// <summary>Evento das métricas do teste fechado (sessões e relatórios do cliente).</summary>
+public sealed class MetricEventEntity
+{
+    public long Id { get; set; }
+    public DateTimeOffset At { get; set; }
+    public int AccountId { get; set; }
+    public int CharacterId { get; set; }
+    public string Kind { get; set; } = "";
+    public double Value { get; set; }
+    public string Details { get; set; } = "";
 }
 
 public sealed class GmActionEntity
@@ -143,6 +157,7 @@ public sealed class GameDbContext : DbContext
     public DbSet<PlayerReportEntity> Reports => Set<PlayerReportEntity>();
     public DbSet<DungeonRunEntity> DungeonRuns => Set<DungeonRunEntity>();
     public DbSet<GmActionEntity> GmActions => Set<GmActionEntity>();
+    public DbSet<MetricEventEntity> MetricEvents => Set<MetricEventEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -153,6 +168,17 @@ public sealed class GameDbContext : DbContext
             e.HasIndex(a => a.Name).IsUnique();
             e.Property(a => a.PasswordHash).HasMaxLength(200).IsRequired();
             e.Property(a => a.BanReason).HasMaxLength(200).HasDefaultValue("");
+            e.Property(a => a.TermsVersion).HasMaxLength(20).HasDefaultValue("");
+        });
+
+        model.Entity<MetricEventEntity>(e =>
+        {
+            e.ToTable("metric_events");
+            e.HasIndex(m => m.At);
+            e.HasIndex(m => new { m.Kind, m.At });
+            e.HasIndex(m => m.AccountId);
+            e.Property(m => m.Kind).HasMaxLength(32);
+            e.Property(m => m.Details).HasMaxLength(400);
         });
 
         model.Entity<GmActionEntity>(e =>

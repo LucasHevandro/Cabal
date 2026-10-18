@@ -38,8 +38,8 @@ public class PostgresStoreTests
         var store = await FreshStoreAsync();
         if (store == null) return;
 
-        var account = await store.CreateAccountAsync("lucas", "hash");
-        await Assert.ThrowsAsync<StoreConflictException>(() => store.CreateAccountAsync("lucas", "outro"));
+        var account = await store.CreateAccountAsync("lucas", "hash", "");
+        await Assert.ThrowsAsync<StoreConflictException>(() => store.CreateAccountAsync("lucas", "outro", ""));
 
         await store.CreateCharacterAsync(account.Id, "Ação", CharacterClass.Blade, AuthService.InitialCharacter());
         await Assert.ThrowsAsync<StoreConflictException>(() =>
@@ -47,11 +47,44 @@ public class PostgresStoreTests
     }
 
     [Fact]
+    public async Task Termos_metricas_e_exclusao_de_conta_no_banco_real()
+    {
+        var store = await FreshStoreAsync();
+        if (store == null) return;
+        var account = await store.CreateAccountAsync("lucas", "hash", "v1");
+        var other = await store.CreateAccountAsync("bruna", "hash", "v1");
+        Assert.Equal("v1", (await store.FindAccountAsync("lucas"))!.TermsVersion);
+        await store.AcceptTermsAsync(account.Id, "v2");
+        Assert.Equal("v2", (await store.FindAccountAsync("lucas"))!.TermsVersion);
+
+        var ana = await store.CreateCharacterAsync(account.Id, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        var bia = await store.CreateCharacterAsync(other.Id, "Bia", CharacterClass.Blade, AuthService.InitialCharacter());
+        foreach (var (who, owner) in new[] { (ana, account), (bia, other) })
+        {
+            await store.SaveCharacterAsync(new CharacterSnapshot(who.Id, 2, 0, 10, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>())
+            {
+                Metrics = new[] { new MetricRecord(owner.Id, who.Id, "session", 60, "nivel=1>2", DateTimeOffset.UtcNow) },
+            }, new[] { new ItemLogEntry(who.Id, DateTimeOffset.UtcNow, "alz_monstro", null, 0, 10, "") });
+        }
+        var before = await store.MetricsAsync(DateTimeOffset.UtcNow.AddHours(-1));
+        Assert.Equal((2, 2), (before.Accounts.Count, before.Events.Count));
+
+        Assert.True(await store.DeleteAccountAsync("lucas"));
+        Assert.Null(await store.FindAccountAsync("lucas"));
+        Assert.Null(await store.LoadCharacterAsync(ana.Id));
+        Assert.Empty(await store.ItemLogAsync(ana.Id));
+        var after = await store.MetricsAsync(DateTimeOffset.MinValue);
+        Assert.Equal(other.Id, Assert.Single(after.Events).AccountId);
+        Assert.NotNull(await store.LoadCharacterAsync(bia.Id));
+        Assert.Single(await store.ItemLogAsync(bia.Id));
+    }
+
+    [Fact]
     public async Task Limite_de_tres_personagens_no_banco_real()
     {
         var store = await FreshStoreAsync();
         if (store == null) return;
-        var account = await store.CreateAccountAsync("lucas", "hash");
+        var account = await store.CreateAccountAsync("lucas", "hash", "");
 
         foreach (var name in new[] { "Ana", "Bia", "Caio" })
             await store.CreateCharacterAsync(account.Id, name, CharacterClass.Blade, AuthService.InitialCharacter());
@@ -66,7 +99,7 @@ public class PostgresStoreTests
     {
         var store = await FreshStoreAsync();
         if (store == null) return;
-        var account = await store.CreateAccountAsync("lucas", "hash");
+        var account = await store.CreateAccountAsync("lucas", "hash", "");
         var character = await store.CreateCharacterAsync(account.Id, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
         var uid = await store.MaxItemUidAsync() + 1;
 

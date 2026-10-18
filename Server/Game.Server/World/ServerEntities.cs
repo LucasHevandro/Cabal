@@ -148,6 +148,11 @@ public sealed class ServerPlayer
     /// <summary>Denúncias desde o último salvamento (vão junto no próximo).</summary>
     public List<ReportRecord> PendingReports { get; } = new();
 
+    // Métricas do teste fechado (GameWorld.Metrics): contadores da sessão, eventos a gravar e relatórios do cliente.
+    public SessionStats Session { get; } = new();
+    public List<MetricRecord> PendingMetrics { get; } = new();
+    public int ClientReports { get; set; }
+
     public bool HasRelation(RelationKind kind, int characterId) =>
         characterId != 0 && Relations.Any(r => r.Kind == kind && r.OtherId == characterId);
 

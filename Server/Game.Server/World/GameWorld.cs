@@ -104,6 +104,7 @@ public sealed partial class GameWorld
         }
         else GiveGuestKit(player);
         player.JoinedAt = now;
+        player.Session.StartLevel = player.Progress.Level;
         player.NextRouteSampleAt = now + RouteSampleSeconds;
         onIdAssigned?.Invoke(player.Id);
 
@@ -143,8 +144,10 @@ public sealed partial class GameWorld
         {
             Relations = player.Relations.ToList(),
             Reports = player.PendingReports.ToList(),
+            Metrics = player.PendingMetrics.ToList(),
         };
         player.PendingReports.Clear();
+        player.PendingMetrics.Clear();
         var logs = player.PendingLogs.ToList();
         player.PendingLogs.Clear();
         return (snapshot, logs);
@@ -245,6 +248,9 @@ public sealed partial class GameWorld
                 break;
             case GmCommand gm:
                 HandleGm(player, gm, now);
+                break;
+            case ClientReport report:
+                HandleClientReport(player, report);
                 break;
         }
     }
