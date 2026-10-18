@@ -186,6 +186,8 @@ namespace Game.Client.UI
             var player = PlayerCombat.Local;
             if (!_loaded || player == null || ConnectMenu.IsOpen || OptionsWindow.IsOpen || Minimap.BigOpen || player.IsDead) return;
             if (CharacterState.Pvp != null && CharacterState.Pvp.Mode != PvpMode.None) return;
+            // Conversa com NPC ou janela do lado direito aberta (ferreira, loja, troca): o tutorial sai da frente.
+            if (CharacterState.Dialog != null || GameWindows.RightPanelOpen) return;
             var done = _step == Step.Done;
             if (done && Time.unscaledTime - _stepStartedAt > DoneSeconds) return;
 
