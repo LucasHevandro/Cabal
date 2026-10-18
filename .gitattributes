@@ -17,6 +17,8 @@
 *.mat      text merge=unityyamlmerge eol=lf
 *.anim     text merge=unityyamlmerge eol=lf
 *.controller text merge=unityyamlmerge eol=lf
+# O Unity grava o TerrainData em binário mesmo no modo texto: nada de converter fim de linha.
+Client/Assets/Art/Mundo/Terreno.asset binary
 *.meta     text eol=lf
 
 # ===== Git LFS: arquivos binários grandes =====
