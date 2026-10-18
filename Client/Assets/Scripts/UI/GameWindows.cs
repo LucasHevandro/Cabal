@@ -955,6 +955,14 @@ namespace Game.Client.UI
                 _label.WithCenter());
         }
 
+        /// <summary>O ponto (tela virtual) está sob um painel do HUD ou sob uma janela aberta no quadro anterior.</summary>
+        private static bool CoveredByPanel(Vector2 point)
+        {
+            foreach (var rect in CombatHud.PanelRects) if (rect.Contains(point)) return true;
+            foreach (var rect in OpenRects) if (rect.Contains(point)) return true;
+            return false;
+        }
+
         /// <summary>O que o NPC faz, no aviso "falar com" (ex.: melhoria).</summary>
         private static string RoleHintKey(NpcRole role) => role switch
         {
@@ -982,7 +990,8 @@ namespace Game.Client.UI
                 var screen = cam.WorldToScreenPoint(view.position + Vector3.up * 2.6f);
                 if (screen.z <= 0) continue;
                 // Não escreve por cima das janelas do chat e de amigos (coordenadas virtuais do quadro anterior).
-                if (SocialWindows.Contains(new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale))) continue;
+                var point = new Vector2((screen.x - _offset.x) / _scale, (Screen.height - screen.y - _offset.y) / _scale);
+                if (SocialWindows.Contains(point) || CoveredByPanel(point)) continue;
                 var role = Loc.T(RoleLabelKey(npc.Role));
                 var rect = new Rect(screen.x - 150, Screen.height - screen.y - 20, 300, 40);
                 GUI.color = new Color(0, 0, 0, 0.8f);

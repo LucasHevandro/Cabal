@@ -965,11 +965,11 @@ namespace Game.Client.DevTools
             // Onde está a alocação: mede 4 s com cada grupo de componentes da interface desligado.
             var groups = new (string Name, Behaviour[] Parts)[]
             {
-                ("sem HUD", FindObjectsByType<CombatHud>(FindObjectsSortMode.None)),
-                ("sem janelas", FindObjectsByType<GameWindows>(FindObjectsSortMode.None)),
-                ("sem chat/grupo", FindObjectsByType<SocialWindows>(FindObjectsSortMode.None)),
-                ("sem números de dano", FindObjectsByType<DamageNumbers>(FindObjectsSortMode.None)),
-                ("sem tutorial", FindObjectsByType<Tutorial>(FindObjectsSortMode.None)),
+                ("sem HUD", FindObjectsByType<CombatHud>()),
+                ("sem janelas", FindObjectsByType<GameWindows>()),
+                ("sem chat/grupo", FindObjectsByType<SocialWindows>()),
+                ("sem números de dano", FindObjectsByType<DamageNumbers>()),
+                ("sem tutorial", FindObjectsByType<Tutorial>()),
             };
             foreach (var (name, parts) in groups)
             {
