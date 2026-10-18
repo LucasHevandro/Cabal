@@ -241,6 +241,7 @@ namespace Game.Client.Combat
             var chain = Combo.HitCount;
             Combo.TryFinish(out var multiplier);
             if (_motor != null) _motor.FacePoint(target.transform.position);
+            VisualAnimator.Attack(this, AttackStyle.Finisher);
             BestChain = Mathf.Max(BestChain, chain);
             if (Online)
             {
@@ -325,7 +326,7 @@ namespace Game.Client.Combat
 
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
-            VisualAnimator.Trigger(this, "Attack");
+            VisualAnimator.Attack(this, AttackStyle.For(skill));
             if (skill.Kind == SkillKind.Physical) SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f);
             SkillFx.OnCast(skill, transform);
             if (_motor != null) _motor.FacePoint(target.transform.position);
@@ -479,12 +480,15 @@ namespace Game.Client.Combat
             _selector.Select(null);
             SoundPlayer.Play(SoundId.Miss, 1f, 0f);
             ShowMessage(Loc.T("player.died"));
-            transform.localScale = new Vector3(1f, 0.25f, 1f);
+            // Com modelo animado, ele cai (animação de morte); sem modelo, a cápsula achata.
+            if (_classModel != null) VisualAnimator.SetDead(this, true);
+            else transform.localScale = new Vector3(1f, 0.25f, 1f);
         }
 
         private void LeaveDeath(string message)
         {
             transform.localScale = Vector3.one;
+            VisualAnimator.SetDead(this, false);
             IsDead = false;
             ShowMessage(message);
         }

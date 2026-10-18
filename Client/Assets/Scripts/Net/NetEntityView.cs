@@ -27,6 +27,9 @@ namespace Game.Client.Net
 
         private readonly List<Sample> _samples = new List<Sample>();
         private GameObject _body;
+
+        // Modelo animado: ao morrer faz a queda e o corpo some depois (monstros); jogadores ficam caídos até renascer.
+        private float _hideBodyAt = float.PositiveInfinity;
         private GameObject _ring;
         private Transform _telegraph;
         private float _telegraphStartedAt;
@@ -70,7 +73,14 @@ namespace Game.Client.Net
             if (dead != IsDead)
             {
                 IsDead = dead;
-                if (_body != null) _body.SetActive(!dead);
+                var animated = _body != null ? _body.GetComponentInChildren<Fx.VisualAnimator>(true) : null;
+                if (animated != null)
+                {
+                    _body.SetActive(true);
+                    animated.Dead = dead;
+                    _hideBodyAt = dead && Kind != EntityKind.Player ? Time.time + 2.2f : float.PositiveInfinity;
+                }
+                else if (_body != null) _body.SetActive(!dead);
                 if (dead && _ring != null) _ring.SetActive(false);
             }
 
@@ -93,6 +103,7 @@ namespace Game.Client.Net
 
         private void Update()
         {
+            if (IsDead && Time.time >= _hideBodyAt && _body != null && _body.activeSelf) _body.SetActive(false);
             var session = NetworkSession.Instance;
             if (session == null || _samples.Count == 0) return;
 

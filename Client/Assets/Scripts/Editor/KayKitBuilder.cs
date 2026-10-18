@@ -1,0 +1,317 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Game.Client.Fx;
+using UnityEditor;
+using UnityEditor.Animations;
+using UnityEngine;
+
+namespace Game.Client.Editor
+{
+    /// <summary>
+    /// Personagens do KayKit (Kay Lousberg, CC0) no jogo: configura a importação, cria os materiais, o Animator
+    /// Controller (andar/correr, 10 estilos de golpe, dano, esquiva e morte) e os prefabs que o
+    /// <see cref="VisualCatalog"/> procura: <c>Visuals/class/blade|arcanist</c> e <c>Visuals/npc/&lt;id&gt;</c>.
+    /// Menu: Jogo &gt; Visuais &gt; Montar personagens KayKit (ou -executeMethod ...KayKitBuilder.Build).
+    /// Os arquivos originais ficam em Assets/Art/KayKit (licenças junto).
+    /// </summary>
+    internal static class KayKitBuilder
+    {
+        private const string Root = "Assets/Art/KayKit";
+        private const string Characters = Root + "/Personagens";
+        private const string Animations = Root + "/Animacoes";
+        private const string Weapons = Root + "/Armas";
+        private const string Generated = Root + "/Gerado";
+        private const string Visuals = "Assets/Resources/Visuals";
+
+        /// <summary>Altura de um personagem no jogo (a cápsula de colisão tem 2 m).</summary>
+        private const float CharacterHeight = 1.9f;
+
+        private sealed class Look
+        {
+            public string Model = "";
+            public string RightHand = "";
+            public string LeftHand = "";
+            public string[] Hide = System.Array.Empty<string>();
+        }
+
+        private static readonly Dictionary<string, Look> ClassLooks = new Dictionary<string, Look>
+        {
+            ["blade"] = new Look { Model = "Knight", RightHand = "sword_1handed", LeftHand = "shield_badge_color" },
+            ["arcanist"] = new Look { Model = "Mage", RightHand = "staff" },
+        };
+
+        private static readonly Dictionary<string, Look> NpcLooks = new Dictionary<string, Look>
+        {
+            ["anciao_doran"] = new Look { Model = "Rogue_Hooded", LeftHand = "spellbook_open" },
+            ["ferreira_ilsa"] = new Look { Model = "Barbarian", RightHand = "axe_1handed" },
+            ["guarda_volumes_bento"] = new Look { Model = "Ranger", RightHand = "mug_full" },
+            ["mercadora_lia"] = new Look { Model = "Rogue", RightHand = "dagger" },
+            ["guardia_selene"] = new Look { Model = "Knight", RightHand = "sword_2handed", Hide = new[] { "Knight_HelmetVisor" } },
+        };
+
+        [MenuItem("Jogo/Visuais/Montar personagens KayKit")]
+        public static void Build()
+        {
+            Directory.CreateDirectory(Generated);
+            ConfigureImports();
+            var materials = Materials();
+            var controller = CharacterController();
+            foreach (var (id, look) in ClassLooks) MakePrefab($"{Visuals}/class/{id}.prefab", look, materials, controller);
+            foreach (var (id, look) in NpcLooks) MakePrefab($"{Visuals}/npc/{id}.prefab", look, materials, controller);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[KayKit] {ClassLooks.Count} classes e {NpcLooks.Count} NPCs montados.");
+        }
+
+        // ===== Importação =====
+
+        private static readonly string[] Looping = { "Idle", "Walking", "Running", "Blocking", "Skeletons_Walking" };
+
+        private static void ConfigureImports()
+        {
+            foreach (var path in Directory.GetFiles(Root, "*.fbx", SearchOption.AllDirectories).Select(p => p.Replace('\\', '/')))
+            {
+                var importer = (ModelImporter)AssetImporter.GetAtPath(path);
+                var changed = false;
+                if (importer.animationType != ModelImporterAnimationType.Generic)
+                {
+                    importer.animationType = ModelImporterAnimationType.Generic;
+                    changed = true;
+                }
+                var isAnimation = path.StartsWith(Animations);
+                importer.importAnimation = isAnimation;
+                if (isAnimation)
+                {
+                    var clips = importer.clipAnimations.Length > 0 ? importer.clipAnimations : importer.defaultClipAnimations;
+                    foreach (var clip in clips)
+                    {
+                        var loop = Looping.Any(prefix => clip.name.StartsWith(prefix) || clip.name.Contains("_Idle"));
+                        if (clip.loopTime != loop) changed = true;
+                        clip.loopTime = loop;
+                        clip.lockRootPositionXZ = true;
+                        clip.keepOriginalPositionXZ = true;
+                    }
+                    importer.clipAnimations = clips;
+                    changed = true;
+                }
+                if (changed) importer.SaveAndReimport();
+            }
+        }
+
+        private static Dictionary<string, Material> Materials()
+        {
+            var result = new Dictionary<string, Material>();
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            foreach (var texturePath in Directory.GetFiles(Characters, "*_texture.png"))
+            {
+                var name = Path.GetFileNameWithoutExtension(texturePath).Replace("_texture", "");
+                var path = $"{Generated}/{name}.mat";
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null)
+                {
+                    material = new Material(shader);
+                    AssetDatabase.CreateAsset(material, path);
+                }
+                material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath.Replace('\\', '/')));
+                material.SetColor("_BaseColor", Color.white);
+                material.SetFloat("_Smoothness", 0.15f);
+                material.enableInstancing = true;
+                EditorUtility.SetDirty(material);
+                result[name] = material;
+            }
+            // Olhos dos esqueletos.
+            var glowPath = $"{Generated}/glow.mat";
+            var glow = AssetDatabase.LoadAssetAtPath<Material>(glowPath);
+            if (glow == null)
+            {
+                glow = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(glow, glowPath);
+            }
+            glow.SetColor("_BaseColor", new Color(0.45f, 0.95f, 1f) * 2f);
+            result["glow"] = glow;
+            return result;
+        }
+
+        // ===== Animator =====
+
+        private static AnimationClip Clip(string file, string name)
+        {
+            var clip = AssetDatabase.LoadAllAssetsAtPath($"{Animations}/Rig_Medium_{file}.fbx").OfType<AnimationClip>()
+                .FirstOrDefault(c => c.name == name);
+            if (clip == null) throw new System.InvalidOperationException($"Animação {name} não encontrada em Rig_Medium_{file}.");
+            return clip;
+        }
+
+        private static AnimatorController CharacterController()
+        {
+            var path = $"{Generated}/Personagem.controller";
+            AssetDatabase.DeleteAsset(path);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
+            controller.AddParameter("Attack", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("AttackKind", AnimatorControllerParameterType.Int);
+            controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Dead", AnimatorControllerParameterType.Bool);
+            var machine = controller.layers[0].stateMachine;
+
+            // Parado → andar → correr pela velocidade (m/s) que o jogo passa.
+            var locomotion = controller.CreateBlendTreeInController("Locomoção", out var tree, 0);
+            tree.blendParameter = "Speed";
+            tree.useAutomaticThresholds = false;
+            tree.AddChild(Clip("General", "Idle_A"), 0f);
+            tree.AddChild(Clip("MovementBasic", "Walking_A"), 2.2f);
+            tree.AddChild(Clip("MovementBasic", "Running_A"), 6f);
+            machine.defaultState = locomotion;
+
+            // Golpes: um estado por estilo (AttackStyle), todos bem rápidos (o combo pede resposta imediata).
+            var attacks = new (int Style, string File, string Clip, float Seconds)[]
+            {
+                (AttackStyle.Slice, "CombatMelee", "Melee_1H_Attack_Slice_Horizontal", 0.55f),
+                (AttackStyle.Chop, "CombatMelee", "Melee_1H_Attack_Chop", 0.55f),
+                (AttackStyle.Stab, "CombatMelee", "Melee_1H_Attack_Stab", 0.6f),
+                (AttackStyle.Spin, "CombatMelee", "Melee_2H_Attack_Spinning", 0.6f),
+                (AttackStyle.JumpChop, "CombatMelee", "Melee_1H_Attack_Jump_Chop", 0.8f),
+                (AttackStyle.Diagonal, "CombatMelee", "Melee_1H_Attack_Slice_Diagonal", 0.55f),
+                (AttackStyle.MagicShoot, "CombatRanged", "Ranged_Magic_Shoot", 0.55f),
+                (AttackStyle.MagicCast, "CombatRanged", "Ranged_Magic_Spellcasting", 0.6f),
+                (AttackStyle.MagicRaise, "CombatRanged", "Ranged_Magic_Raise", 0.9f),
+                (AttackStyle.Finisher, "CombatMelee", "Melee_2H_Attack_Chop", 0.75f),
+            };
+            foreach (var attack in attacks)
+            {
+                var clip = Clip(attack.File, attack.Clip);
+                var state = machine.AddState($"Golpe {attack.Style}: {attack.Clip}");
+                state.motion = clip;
+                state.speed = clip.length / attack.Seconds;
+                var enter = machine.AddAnyStateTransition(state);
+                enter.AddCondition(AnimatorConditionMode.If, 0, "Attack");
+                enter.AddCondition(AnimatorConditionMode.Equals, attack.Style, "AttackKind");
+                enter.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+                Quick(enter, 0.06f);
+                enter.canTransitionToSelf = true;
+                Leave(state, locomotion, 0.85f);
+            }
+
+            var hit = machine.AddState("Dano");
+            hit.motion = Clip("General", "Hit_A");
+            hit.speed = 1.3f;
+            var toHit = machine.AddAnyStateTransition(hit);
+            toHit.AddCondition(AnimatorConditionMode.If, 0, "Hit");
+            toHit.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+            Quick(toHit, 0.05f);
+            Leave(hit, locomotion, 0.8f);
+
+            var dodge = machine.AddState("Esquiva");
+            dodge.motion = Clip("MovementAdvanced", "Dodge_Forward");
+            var toDodge = machine.AddAnyStateTransition(dodge);
+            toDodge.AddCondition(AnimatorConditionMode.If, 0, "Dodge");
+            toDodge.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+            Quick(toDodge, 0.04f);
+            Leave(dodge, locomotion, 0.9f);
+
+            var death = machine.AddState("Morte");
+            death.motion = Clip("General", "Death_A");
+            var toDeath = machine.AddAnyStateTransition(death);
+            toDeath.AddCondition(AnimatorConditionMode.If, 0, "Dead");
+            toDeath.canTransitionToSelf = false;
+            Quick(toDeath, 0.1f);
+            var revive = death.AddTransition(locomotion);
+            revive.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+            Quick(revive, 0.2f);
+
+            EditorUtility.SetDirty(controller);
+            return controller;
+        }
+
+        private static void Quick(AnimatorStateTransition transition, float duration)
+        {
+            transition.hasExitTime = false;
+            transition.duration = duration;
+            transition.hasFixedDuration = true;
+        }
+
+        private static void Leave(AnimatorState state, AnimatorState locomotion, float exitTime)
+        {
+            var back = state.AddTransition(locomotion);
+            back.hasExitTime = true;
+            back.exitTime = exitTime;
+            back.duration = 0.15f;
+            back.hasFixedDuration = true;
+        }
+
+        // ===== Prefabs =====
+
+        private static void MakePrefab(string path, Look look, Dictionary<string, Material> materials, AnimatorController controller)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>($"{Characters}/{look.Model}.fbx");
+            var root = new GameObject(Path.GetFileNameWithoutExtension(path));
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(modelAsset, root.transform);
+            model.name = look.Model;
+            if (!model.TryGetComponent<Animator>(out var animator)) animator = model.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            foreach (var name in look.Hide)
+            {
+                var part = model.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name);
+                if (part != null) part.gameObject.SetActive(false);
+            }
+
+            Attach(model, "handslot.r", look.RightHand);
+            Attach(model, "handslot.l", look.LeftHand);
+            foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                var shared = renderer.sharedMaterials;
+                for (var i = 0; i < shared.Length; i++) shared[i] = MaterialFor(renderer, look.Model, materials);
+                renderer.sharedMaterials = shared;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                if (renderer is SkinnedMeshRenderer skinned) skinned.updateWhenOffscreen = false;
+            }
+
+            // Escala pela altura (pivô nos pés), igual para todos.
+            var bounds = Bounds(model);
+            var scale = bounds.size.y > 0.1f ? CharacterHeight / bounds.size.y : 1f;
+            model.transform.localScale = Vector3.one * scale;
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+
+            AssetDatabase.DeleteAsset(path);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+        }
+
+        private static void Attach(GameObject model, string slot, string weapon)
+        {
+            if (string.IsNullOrEmpty(weapon)) return;
+            var hand = model.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == slot);
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{Weapons}/{weapon}.fbx");
+            if (hand == null || asset == null) throw new System.InvalidOperationException($"Sem {slot} ou {weapon}.");
+            var item = (GameObject)PrefabUtility.InstantiatePrefab(asset, hand);
+            item.name = weapon;
+            item.transform.localPosition = Vector3.zero;
+            item.transform.localRotation = Quaternion.identity;
+            item.transform.localScale = Vector3.one;
+        }
+
+        /// <summary>O material do atlas certo: a arma usa a textura que o FBX dela pede; o corpo, a do personagem.</summary>
+        private static Material MaterialFor(Renderer renderer, string model, Dictionary<string, Material> materials)
+        {
+            var original = renderer.sharedMaterial != null ? renderer.sharedMaterial.name.ToLowerInvariant() : "";
+            if (original.Contains("glow")) return materials["glow"];
+            foreach (var (name, material) in materials)
+                if (original.StartsWith(name)) return material;
+            var key = model.ToLowerInvariant().Split('_')[0];
+            return materials.TryGetValue(key, out var own) ? own : materials.Values.First();
+        }
+
+        private static Bounds Bounds(GameObject model)
+        {
+            var renderers = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var bounds = new Bounds(model.transform.position, Vector3.zero);
+            foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+            return bounds;
+        }
+    }
+}

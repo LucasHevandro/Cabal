@@ -109,13 +109,18 @@ namespace Game.Client.Net
 
         private void OnCombatEvent(CombatEvent hit)
         {
+            // Golpe de outro jogador: o modelo dele faz a animação da skill (a minha já saiu ao apertar).
+            var attacker = hit.AttackerId != _session.PlayerId ? _session.FindView(hit.AttackerId) : null;
+            if (attacker != null && attacker.Kind == EntityKind.Player) VisualAnimator.Attack(attacker, AttackStyle.ForRemote(attacker.TypeId, hit.Source));
             if (hit.TargetId == _session.PlayerId)
             {
+                if (!hit.Dodged && hit.Damage > 0) VisualAnimator.Trigger(_combat, "Hit");
                 _combat.ShowIncomingHit(hit);
                 return;
             }
             // Monstros e, no PvP, outros jogadores.
             var view = _session.FindView(hit.TargetId);
+            if (view != null && !hit.Dodged && hit.Damage > 0) VisualAnimator.Trigger(view, "Hit");
             if (view != null && view.Target != null && (view.Kind == EntityKind.Monster || hit.AttackerId == _session.PlayerId))
                 _combat.ShowServerHit(hit, view.Target, hit.AttackerId == _session.PlayerId);
         }

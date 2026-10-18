@@ -12,6 +12,8 @@ namespace Game.Client.Fx
     {
         private static readonly int SpeedId = Animator.StringToHash("Speed");
         private static readonly int DeadId = Animator.StringToHash("Dead");
+        private static readonly int AttackId = Animator.StringToHash("Attack");
+        private static readonly int AttackKindId = Animator.StringToHash("AttackKind");
 
         private readonly HashSet<int> _parameters = new HashSet<int>();
         private Animator _animator;
@@ -27,6 +29,16 @@ namespace Game.Client.Fx
             if (owner == null) return;
             var visual = owner.GetComponentInChildren<VisualAnimator>();
             if (visual != null) visual.Fire(trigger);
+        }
+
+        /// <summary>Golpe com estilo (<see cref="AttackStyle"/>): escolhe a animação e dispara o Attack.</summary>
+        public static void Attack(Component owner, int style)
+        {
+            if (owner == null) return;
+            var visual = owner.GetComponentInChildren<VisualAnimator>();
+            if (visual == null || visual._animator == null) return;
+            if (visual._parameters.Contains(AttackKindId)) visual._animator.SetInteger(AttackKindId, style);
+            if (visual._parameters.Contains(AttackId)) visual._animator.SetTrigger(AttackId);
         }
 
         /// <summary>Marca morto ou vivo no modelo filho de <paramref name="owner"/>.</summary>
