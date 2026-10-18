@@ -63,6 +63,27 @@ namespace Game.Shared.Net
         public static GmCommand Read(PacketReader r) => new GmCommand { Text = r.ReadString() };
     }
 
+    /// <summary>
+    /// Métrica do cliente para o teste fechado (passo do tutorial, FPS, erro). Tipos e limites em
+    /// <see cref="Accounts.ClientReportRules"/>; o servidor confere e só grava para quem tem conta.
+    /// </summary>
+    public sealed class ClientReport : INetMessage
+    {
+        public MessageType Type => MessageType.ClientReport;
+        public string Kind = "";
+        public float Value;
+        public string Text = "";
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteString(Kind.Length > 24 ? Kind.Substring(0, 24) : Kind);
+            w.WriteFloat(Value);
+            w.WriteString(Text.Length > Accounts.ClientReportRules.MaxTextLength ? Text.Substring(0, Accounts.ClientReportRules.MaxTextLength) : Text);
+        }
+
+        public static ClientReport Read(PacketReader r) => new ClientReport { Kind = r.ReadString(), Value = r.ReadFloat(), Text = r.ReadString() };
+    }
+
     public sealed class ArenaCommand : INetMessage
     {
         public MessageType Type => MessageType.ArenaCommand;

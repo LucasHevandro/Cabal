@@ -20,6 +20,7 @@
   <!-- Arquivos de idioma: o Unity lê pela pasta Resources; no .NET vão para Locales/ ao lado do programa. -->
   <ItemGroup>
     <None Include="Resources/Locales/*.txt" Link="Locales/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Resources/Legal/*.txt" Link="Legal/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

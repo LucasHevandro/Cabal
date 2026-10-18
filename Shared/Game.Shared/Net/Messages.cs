@@ -30,6 +30,7 @@ namespace Game.Shared.Net
         DuelCommand = 21,
         ArenaCommand = 22,
         GmCommand = 23,
+        ClientReport = 24,
 
         // Servidor → cliente
         Welcome = 100,
@@ -73,7 +74,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 11;
+        public const int Version = 12;
         public const int DefaultPort = 7777;
     }
 
@@ -728,6 +729,7 @@ namespace Game.Shared.Net
                 MessageType.DuelCommand => DuelCommand.Read(reader),
                 MessageType.ArenaCommand => ArenaCommand.Read(reader),
                 MessageType.GmCommand => GmCommand.Read(reader),
+                MessageType.ClientReport => ClientReport.Read(reader),
                 MessageType.DuelInvite => DuelInvite.Read(reader),
                 MessageType.PvpState => PvpState.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),

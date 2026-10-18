@@ -1,0 +1,46 @@
+POLÍTICA DE PRIVACIDADE — TESTE FECHADO
+Versão 2026-10-17
+
+Esta política explica quais dados o jogo guarda, para quê, por quanto tempo e como você pode pedir acesso ou exclusão, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018, LGPD).
+
+Responsável pelos dados (controlador): <<preencher: nome do responsável>>
+Contato para assuntos de privacidade: <<preencher: e-mail de contato>>
+
+1. O QUE GUARDAMOS
+Não pedimos nome real, e-mail, telefone, documento nem dados de pagamento.
+- Conta: o nome da conta, a senha (só um resumo criptográfico, nunca a senha em si), quando foi criada, o último login e a versão dos termos que você aceitou.
+- Jogo: personagens, nível, atributos, itens, Alz, missões, amigos e bloqueados, e os tempos de dungeon (ranking).
+- Registros de itens e Alz: quem ganhou, gastou, trocou ou vendeu o quê, e quando (para suporte e contra fraudes).
+- Moderação: denúncias feitas e recebidas, com as últimas mensagens de chat da pessoa denunciada; silenciamentos, banimentos e outras ações de GM; suspeitas da detecção de bot.
+- Métricas de jogo: cada sessão (quando começou, duração, nível no início e no fim, mortes, monstros derrotados, combos, missões e dungeons concluídas).
+- Métricas do cliente (opcional): passos do tutorial concluídos, FPS médio e erros técnicos do jogo. Podem ser desligadas em Opções > Geral.
+- Conexão: o endereço IP é usado durante a conexão (por exemplo, para limitar conexões repetidas) e aparece nos registros técnicos (logs) do servidor, que se apagam sozinhos com o tempo. O IP não é gravado no banco de dados.
+- Chat: as mensagens não são gravadas, a não ser os trechos que vão junto de uma denúncia.
+
+2. PARA QUÊ (E COM QUAL BASE LEGAL)
+- Manter a conta e o jogo funcionando: execução do contrato (estes termos).
+- Segurança, combate a trapaças e moderação: legítimo interesse e cumprimento das regras do jogo.
+- Métricas de jogo, para entender onde os jogadores travam, se o tutorial funciona e como equilibrar o jogo: legítimo interesse. São usadas em números agregados (por exemplo, "70% concluíram o tutorial"), nunca para identificar pessoas fora do jogo.
+- Métricas do cliente: consentimento, que você dá ao deixar a opção ligada e pode retirar a qualquer momento.
+
+3. COM QUEM COMPARTILHAMOS
+Não vendemos nem alugamos dados. Os dados ficam num servidor alugado (<<preencher: empresa e país da VPS>>) e as cópias de segurança podem ficar num serviço de armazenamento (<<preencher: serviço de backup, se houver>>). Só entregamos dados a autoridades quando a lei obrigar.
+
+4. POR QUANTO TEMPO
+- Conta, personagens e registros: enquanto a conta existir ou até o fim do teste fechado.
+- Métricas: até 12 meses.
+- Cópias de segurança: as 14 mais recentes (cerca de duas semanas).
+- Logs técnicos: até se apagarem sozinhos, normalmente em poucas semanas.
+Ao fim do teste, os dados podem ser apagados (o que também apaga o progresso).
+
+5. SEUS DIREITOS
+Você pode pedir, pelo contato acima: confirmação de que temos dados seus, acesso a eles, correção, exclusão da conta e dos dados ligados a ela, informação sobre com quem foram compartilhados, e retirada do consentimento. Responderemos em até 15 dias. Registros de moderação ligados a punições podem ser mantidos pelo tempo necessário para a segurança do jogo.
+
+6. SEGURANÇA
+A senha é guardada com um resumo criptográfico forte (PBKDF2). O login usa conexão criptografada (HTTPS). O banco de dados não fica acessível pela internet. Nenhum sistema é perfeito: se houver um incidente que afete seus dados, avisaremos os jogadores e a autoridade (ANPD), como pede a lei.
+
+7. MENORES DE IDADE
+O teste é para maiores de 18 anos. Menores só podem participar com autorização dos pais ou responsáveis, que podem pedir acesso ou exclusão dos dados a qualquer momento.
+
+8. MUDANÇAS
+Se esta política mudar de forma importante, a versão muda e o jogo pede um novo aceite no próximo login.

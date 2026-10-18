@@ -102,6 +102,12 @@ namespace Game.Shared.Accounts
     {
         public string Account = "";
         public string Password = "";
+
+        /// <summary>
+        /// Versão dos termos e da política que o jogador aceitou agora (<see cref="Legal.Version"/>). Obrigatória para
+        /// criar conta; no login, só quando a versão mudou desde o último aceite.
+        /// </summary>
+        public string AcceptTerms = "";
     }
 
     [Serializable]

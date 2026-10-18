@@ -235,6 +235,14 @@ login.class_arcanist = Arcanista — à distância
 login.create = Criar
 login.auto_failed = Login automático falhou: {0}
 login.auto_create_failed = Não consegui criar o personagem: {0}
+login.accept_terms = Li e aceito os Termos de Uso e a Política de Privacidade
+login.view_terms = Termos de uso
+login.view_privacy = Privacidade
+login.terms_title = {0} (versão {1})
+login.terms_updated_title = Os termos mudaram
+login.accept_and_enter = Aceitar e entrar
+login.close = Fechar
+login.terms_missing = Texto não encontrado. Peça à equipe o link dos termos.
 
 # ===== Cliente: conexão =====
 net.lost_sending = conexão perdida ao enviar
@@ -499,6 +507,8 @@ dummy.c = Boneco de treino C
 # ===== Contas: login e personagens =====
 auth.banned_until = Esta conta está banida até {0}. Motivo: {1}
 auth.banned_forever = Esta conta foi banida. Motivo: {0}
+auth.terms_required = Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.
+auth.terms_updated = Os Termos de Uso ou a Política de Privacidade mudaram (versão {0}). Leia e aceite para entrar.
 auth.wrong_credentials = Conta ou senha incorreta.
 auth.locked = Muitas tentativas erradas. Tente de novo em {0:0} min.
 auth.session_expired = Sessão expirada. Entre de novo.
@@ -808,6 +818,7 @@ options.volume_effects = Efeitos
 options.volume_music = Música
 options.language = Idioma
 options.language_label = Idioma do jogo
+options.client_metrics = Enviar dados do tutorial, FPS e erros (ajuda a melhorar o jogo)
 options.defaults = Restaurar padrão
 options.hint = {0} abre e fecha · Esc fecha · as opções ficam salvas
 
