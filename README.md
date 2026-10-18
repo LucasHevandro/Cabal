@@ -149,6 +149,9 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 Fase 8 — Infra, segurança e teste fechado (em andamento): limite de mensagens por conexão, prazos de conexão e
 limite por IP, teste de fuzz provando que o cliente não decide nada, detecção básica de bot e ferramentas de GM
 (banir, silenciar, teleportar, dar e tirar itens) com auditoria. Veja `Docs/seguranca.md`.
+Infraestrutura: imagem Docker do servidor, compose de produção com HTTPS (Caddy), backup diário com cópia fora da
+VPS e script de restauração, `/api/health` e `/metrics` para o monitoramento, GitHub Actions (testes, imagem e
+build do cliente) e `servidor.txt` no cliente. Veja `Docs/deploy.md`.
 
 Fase 7 — Interface, áudio e polimento (em andamento): todos os textos do jogo no arquivo de tradução
 `Shared/Game.Shared/Resources/Locales/pt-BR.txt` (pronto para outros idiomas; veja `Docs/decisoes.md`).

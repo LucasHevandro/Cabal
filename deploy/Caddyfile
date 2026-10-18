@@ -1,0 +1,13 @@
+# HTTPS automático (Let's Encrypt) para a API de login. O domínio vem do .env (GAME_DOMAIN).
+# Só /api/* passa para o servidor; /metrics fica de fora (é só para dentro da VPS).
+{$GAME_DOMAIN} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy game:7778
+	}
+
+	handle {
+		respond "Servidor do jogo." 200
+	}
+}

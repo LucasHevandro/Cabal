@@ -58,3 +58,8 @@ appsettings.Development.json
 
 # ===== Backups do banco (Tools/backup-db.ps1) =====
 backups/
+
+# Deploy: segredos e dados da VPS
+deploy/.env
+deploy/rclone/
+Client/servidor.txt

@@ -1,0 +1,8 @@
+# A imagem do servidor só precisa de Shared/Game.Shared, Server/Game.Server e Directory.Build.props.
+**
+!Directory.Build.props
+!Shared/Game.Shared/**
+!Server/Game.Server/**
+**/bin/
+**/obj/
+**/*.meta

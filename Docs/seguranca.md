@@ -46,6 +46,8 @@ dotnet run --project Server/Game.Server -- --set-gm nomedaconta
 dotnet run --project Server/Game.Server -- --unset-gm nomedaconta
 ```
 
+Na VPS (Docker), veja `Docs/deploy.md`: `docker compose -f docker-compose.prod.yml run --rm --no-deps game --set-gm conta`.
+
 Para testes locais, `--gm conta1,conta2` trata as contas como GM só naquela execução.
 
 No jogo, pelo chat (para quem não é GM o comando não existe):

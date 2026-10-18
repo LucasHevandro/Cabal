@@ -1,0 +1,119 @@
+# Testes em todo push e pull request; na main (e em tags v*), publica a imagem do servidor no GitHub (GHCR).
+# O build do cliente (Unity) e o envio ao itch.io são opcionais: veja Docs/deploy.md ("GitHub Actions").
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: Testes (Shared e servidor)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: game_tests
+          POSTGRES_USER: game
+          POSTGRES_PASSWORD: game_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U game -d game_tests"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      # Com a variável, os testes do PostgreSQL de verdade também rodam.
+      GAME_DB_TEST: Host=localhost;Port=5432;Database=game_tests;Username=game;Password=game_ci
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Testes
+        run: dotnet test Game.slnx -c Release --logger "console;verbosity=minimal"
+
+  imagem:
+    name: Imagem do servidor (GHCR)
+    needs: testes
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/lucashevandro/cabal-server
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=tag
+            type=sha,prefix=
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/server.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: GAME_VERSION=${{ github.ref_name }}-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  cliente:
+    name: Cliente Windows (Unity)
+    needs: testes
+    # Ligue com a variável do repositório BUILD_CLIENT = true (e os segredos da licença do Unity).
+    if: github.event_name != 'pull_request' && vars.BUILD_CLIENT == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: Client/Library
+          key: unity-library-${{ hashFiles('Client/Packages/packages-lock.json', 'Client/ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          # Vira o servidor.txt do build (ex.: jogo.exemplo.com.br:7777).
+          GAME_SERVER: ${{ vars.GAME_SERVER }}
+        with:
+          projectPath: Client
+          targetPlatform: StandaloneWindows64
+          buildMethod: Game.Client.Editor.PrototypeBuild.BuildWindows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cliente-windows-${{ github.sha }}
+          path: Client/Builds/Windows
+          retention-days: 14
+      # itch.io: só em tags v* e com o segredo BUTLER_API_KEY e a variável ITCH_TARGET (ex.: usuario/jogo).
+      - name: Enviar ao itch.io
+        if: startsWith(github.ref, 'refs/tags/v') && vars.ITCH_TARGET != ''
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          curl -sSL -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler && chmod +x butler/butler
+          sudo chmod -R a+r Client/Builds/Windows
+          ./butler/butler push Client/Builds/Windows "${{ vars.ITCH_TARGET }}:windows" --userversion "${{ github.ref_name }}"

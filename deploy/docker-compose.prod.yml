@@ -1,0 +1,109 @@
+# Servidor do jogo em produção (VPS Linux). Passo a passo em Docs/deploy.md.
+#   Primeira vez:  cp .env.example .env   (e preencha)
+#   Subir:         docker compose -f docker-compose.prod.yml up -d
+#   Atualizar:     docker compose -f docker-compose.prod.yml pull game && docker compose -f docker-compose.prod.yml up -d game
+#   Logs:          docker compose -f docker-compose.prod.yml logs -f game
+#
+# O que fica aberto para a internet: 7777 (jogo) e 80/443 (Caddy: HTTPS da API de login).
+# O banco só existe dentro da rede do Docker; a porta 7778 (API e /metrics) só no 127.0.0.1 da VPS.
+name: game
+
+x-logs: &logs
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: ${GAME_DB_PASSWORD:?defina GAME_DB_PASSWORD no .env}
+    volumes:
+      - game-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U game -d game"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    <<: *logs
+
+  game:
+    image: ${GAME_IMAGE:-ghcr.io/lucashevandro/cabal-server:latest}
+    # Sem imagem publicada, dá para construir aqui mesmo: docker compose -f docker-compose.prod.yml build game
+    build:
+      context: ..
+      dockerfile: deploy/server.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GAME_DB: "Host=postgres;Port=5432;Database=game;Username=game;Password=${GAME_DB_PASSWORD}"
+    command: ["--max-per-ip", "${GAME_MAX_PER_IP:-8}"]
+    ports:
+      - "7777:7777"
+      # API e /metrics só para dentro da VPS (curl http://127.0.0.1:7778/metrics); de fora, só pelo Caddy.
+      - "127.0.0.1:7778:7778"
+    # Tempo para salvar todos os personagens ao desligar (docker stop manda SIGTERM).
+    stop_grace_period: 30s
+    <<: *logs
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - game
+    environment:
+      GAME_DOMAIN: ${GAME_DOMAIN:?defina GAME_DOMAIN no .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    <<: *logs
+
+  # Backup todo dia no horário BACKUP_HOUR (pg_dump compactado), guardando os BACKUP_KEEP mais novos em ./backups.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: game
+      PGPASSWORD: ${GAME_DB_PASSWORD}
+      PGDATABASE: game
+      BACKUP_HOUR: ${BACKUP_HOUR:-4}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+    entrypoint: ["sh", "/scripts/backup-loop.sh"]
+    <<: *logs
+
+  # Cópia dos backups para fora da VPS (opcional): configure o rclone (Docs/deploy.md) e suba com --profile offsite.
+  offsite:
+    image: rclone/rclone:1.68
+    profiles: ["offsite"]
+    restart: unless-stopped
+    environment:
+      RCLONE_TARGET: ${RCLONE_TARGET:-}
+    volumes:
+      - ./backups:/backups:ro
+      - ./rclone:/config/rclone
+    entrypoint: ["sh", "-c", "while true; do rclone copy /backups \"$$RCLONE_TARGET\" --include 'game-*.dump' && echo \"[offsite] copiado $$(date)\"; sleep 21600; done"]
+    <<: *logs
+
+volumes:
+  game-db:
+  caddy-data:
+  caddy-config:
