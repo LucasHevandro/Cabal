@@ -504,6 +504,9 @@ namespace Game.Client.UI
                 case ChatInputKind.Help:
                     AddLine(ChatChannel.System, ChatParser.HelpText);
                     break;
+                case ChatInputKind.Gm:
+                    _session.Send(new GmCommand { Text = input.Text });
+                    break;
                 case ChatInputKind.Invalid:
                     AddLine(ChatChannel.System, input.Error);
                     break;

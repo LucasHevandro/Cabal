@@ -146,6 +146,10 @@ A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCES
 
 ## Status
 
+Fase 8 — Infra, segurança e teste fechado (em andamento): limite de mensagens por conexão, prazos de conexão e
+limite por IP, teste de fuzz provando que o cliente não decide nada, detecção básica de bot e ferramentas de GM
+(banir, silenciar, teleportar, dar e tirar itens) com auditoria. Veja `Docs/seguranca.md`.
+
 Fase 7 — Interface, áudio e polimento (em andamento): todos os textos do jogo no arquivo de tradução
 `Shared/Game.Shared/Resources/Locales/pt-BR.txt` (pronto para outros idiomas; veja `Docs/decisoes.md`).
 Janela de opções (F10 ou botão no menu de entrada): resolução, tela cheia, qualidade, limite de FPS, VSync,
