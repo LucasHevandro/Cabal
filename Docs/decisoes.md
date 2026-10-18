@@ -156,3 +156,19 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   nome. Assim um texto novo sem tradução não passa.
 - Ficaram em português: os comandos do chat (`/convidar`, `/duelo`...), o menu do editor e as ferramentas de teste.
 
+## 2026-10-17 — Sensação de cada skill (game feel)
+
+- Antes todas as skills físicas soltavam as mesmas faíscas e todas as mágicas a mesma esfera. Agora cada uma das 16
+  tem cor, jeito de sair e peso próprios (`SkillFx`, só no cliente: dano, alcance e área continuam no Shared e no
+  servidor).
+- **Lâmina:** corte no ar na frente do personagem em toda skill física; Giro de Lâmina abre um anel em volta dele;
+  Golpe Rúnico é azul; Estocada Dupla e Tempestade de Aço batem duas vezes; Lâmina Flamejante é fogo; Fenda Sísmica
+  e Execução são pesadas (mais hit stop, mais tremida, som grave).
+- **Arcanista:** Faísca e Lança de Força saem como lança (menores e mais rápidas); Corrente Gélida é gelo; Raio Duplo
+  são dois projéteis; Meteoro e Cataclismo caem do céu e são os golpes mais pesados do jogo.
+- **Áreas:** toda skill de área desenha no chão um anel do tamanho real da área, uma vez por uso (mesmo acertando
+  vários monstros), para o jogador aprender o alcance.
+- **Peso:** o peso da skill soma no hit stop (até +0,07 s), multiplica a tremida da câmera e escolhe o som de impacto.
+  Excellent e crítico continuam somando por cima.
+- **Revisar com gente:** se o hit stop das skills pesadas não atrapalha o timing do combo em sequência rápida.
+

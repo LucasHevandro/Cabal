@@ -327,6 +327,7 @@ namespace Game.Client.Combat
             _unlockMovementAt = Time.time + skill.LockSeconds;
             VisualAnimator.Trigger(this, "Attack");
             if (skill.Kind == SkillKind.Physical) SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f);
+            SkillFx.OnCast(skill, transform);
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
             if (Online)
@@ -336,8 +337,7 @@ namespace Game.Client.Combat
                 if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
                 {
                     SoundPlayer.Play(SoundId.Cast, 0.6f);
-                    var from = transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
-                    CombatFx.Instance.LaunchProjectile(from, target.transform, Vector3.up * 1.1f, ProjectileColor(grade), null);
+                    SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, null);
                 }
                 return;
             }
@@ -346,8 +346,7 @@ namespace Game.Client.Combat
             if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
             {
                 SoundPlayer.Play(SoundId.Cast, 0.6f);
-                var origin = transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
-                CombatFx.Instance.LaunchProjectile(origin, target.transform, Vector3.up * 1.1f, ProjectileColor(grade), () =>
+                SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, () =>
                 {
                     if (target != null) LandSkill(skill, target, multiplier, inCombo, grade);
                 });
@@ -363,15 +362,27 @@ namespace Game.Client.Combat
         {
             var totalHits = DealSkillDamage(skill, target, multiplier, grade);
             if (!inCombo && totalHits > 0) Sp.Add(spPerHit);
+            ImpactFeedback(skill, grade == ComboGrade.Excellent, _lastImpactWeight);
+        }
 
-            var excellent = grade == ComboGrade.Excellent;
-            SoundPlayer.Play(excellent ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
-            HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f));
-            if (_camera != null) _camera.Shake(shakeAmplitude * (excellent ? 2f : 1f), 0.12f);
+        private float _lastImpactWeight;
+
+        /// <summary>
+        /// Som, hit stop e tremida de um golpe que acertou, pelo peso da skill (<see cref="SkillFx"/>): golpes grandes
+        /// (Execução, Meteoro, Cataclismo, Fenda Sísmica) param mais o quadro, tremem mais a câmera e soam mais graves.
+        /// </summary>
+        private void ImpactFeedback(SkillData skill, bool excellent, float weight)
+        {
+            var heavy = excellent || weight >= 1f;
+            SoundPlayer.Play(heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
+            if (skill != null && skill.Kind == SkillKind.Magical) SoundPlayer.Play(SoundId.MagicImpact, 0.35f + 0.25f * Mathf.Min(1f, weight));
+            HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f) + weight * 0.04f);
+            if (_camera != null) _camera.Shake(shakeAmplitude * ((excellent ? 2f : 1f) + weight * 1.5f), 0.12f + weight * 0.1f);
         }
 
         private int DealSkillDamage(SkillData skill, Targetable mainTarget, double multiplier, ComboGrade? grade)
         {
+            _lastImpactWeight = 0f;
             _hitBuffer.Clear();
             if (skill.AreaRadius > 0)
             {
@@ -394,8 +405,7 @@ namespace Game.Client.Combat
                 var color = DamageColor(grade, hit.Critical);
                 DamageNumbers.Spawn(target.HeadPosition, hit.Critical ? $"{dealt}!" : dealt.ToString(),
                     color, hit.Critical ? 32f : 26f);
-                if (CombatFx.Instance != null)
-                    CombatFx.Instance.Sparks(target.CenterPosition, color, grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
+                _lastImpactWeight = Mathf.Max(_lastImpactWeight, SkillFx.OnImpact(skill, target.CenterPosition, grade, hit.Critical));
             }
             return _hitBuffer.Count;
         }
@@ -407,9 +417,6 @@ namespace Game.Client.Combat
             if (grade == ComboGrade.Good) return new Color(0.6f, 0.9f, 1f);
             return Color.white;
         }
-
-        private static Color ProjectileColor(ComboGrade? grade) =>
-            grade == ComboGrade.Excellent ? new Color(1f, 0.85f, 0.3f) : new Color(0.45f, 0.65f, 1f);
 
         private DamageResult RollDamage(int skillBaseDamage, double multiplier, Targetable target) =>
             DamageFormula.Calculate(
@@ -609,7 +616,10 @@ namespace Game.Client.Combat
 
             var text = finisher ? Loc.T("fx.final", hit.Damage) : hit.Critical ? $"{hit.Damage}!" : hit.Damage.ToString();
             DamageNumbers.Spawn(target.HeadPosition, text, color, finisher ? 38f : mine ? (hit.Critical ? 32f : 26f) : 20f);
-            if (CombatFx.Instance != null)
+            var skill = mine && !finisher && hit.Source < skills.Count ? skills[hit.Source] : null;
+            var weight = 0f;
+            if (skill != null) weight = SkillFx.OnImpact(skill, target.CenterPosition, grade, hit.Critical);
+            else if (CombatFx.Instance != null)
                 CombatFx.Instance.Sparks(target.CenterPosition, color, finisher ? 45 : grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
             if (!mine) return;
 
@@ -618,10 +628,14 @@ namespace Game.Client.Combat
                 // A rota já foi prevista localmente; só mostra se a previsão não mostrou.
                 ShowMessage(Loc.T("combo.route", Loc.T("route." + hit.RouteId)));
             }
-            var heavy = finisher || grade == ComboGrade.Excellent;
-            SoundPlayer.Play(finisher ? SoundId.Finisher : heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
-            HitStop.Trigger(finisher ? 0.12f : hitStopSeconds + (heavy ? excellentHitStopBonus : 0f));
-            if (_camera != null) _camera.Shake(shakeAmplitude * (finisher ? 4f : heavy ? 2f : 1f), finisher ? 0.3f : 0.12f);
+            if (finisher)
+            {
+                SoundPlayer.Play(SoundId.Finisher, 0.9f);
+                HitStop.Trigger(0.12f);
+                if (_camera != null) _camera.Shake(shakeAmplitude * 4f, 0.3f);
+                return;
+            }
+            ImpactFeedback(skill, grade == ComboGrade.Excellent, weight);
         }
 
         /// <summary>Golpe de monstro em mim, decidido pelo servidor (a vida chega em PlayerStats).</summary>

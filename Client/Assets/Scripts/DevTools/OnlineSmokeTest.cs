@@ -481,6 +481,28 @@ namespace Game.Client.DevTools
             Capture("9f-melhoria");
             yield return new WaitForSecondsRealtime(0.3f);
             foreach (var preview in previews) if (preview != null) Destroy(preview.gameObject);
+
+            // Sensação das skills: cada skill das duas classes dispara o efeito dela num alvo de mentira à frente
+            // (só na tela). As fotos pegam o meio das skills pesadas de cada classe.
+            var dummy = new GameObject("Alvo de teste").transform;
+            dummy.position = me.transform.position + me.transform.forward * 7f;
+            foreach (var characterClass in new[] { Game.Shared.Accounts.CharacterClass.Blade, Game.Shared.Accounts.CharacterClass.Arcanist })
+            {
+                foreach (var classSkill in ClassCatalog.SkillsFor(characterClass))
+                {
+                    var skill = classSkill.Skill;
+                    Game.Client.Fx.SkillFx.OnCast(skill, me.transform);
+                    var landed = skill.Kind != Game.Shared.Combat.SkillKind.Magical;
+                    if (!landed) Game.Client.Fx.SkillFx.Launch(skill, me.transform, dummy, Vector3.up, null, () => landed = true);
+                    yield return WaitFor(() => landed, 2f);
+                    Game.Client.Fx.SkillFx.OnImpact(skill, dummy.position + Vector3.up, Game.Shared.Combat.ComboGrade.Excellent, false);
+                    if (skill.Id == "execucao") Capture("9g-skill-execucao");
+                    if (skill.Id == "fenda_sismica") Capture("9h-skill-fenda");
+                    if (skill.Id == "cataclismo") Capture("9i-skill-cataclismo");
+                    yield return new WaitForSecondsRealtime(0.45f);
+                }
+            }
+            Destroy(dummy.gameObject);
             outcome.Ok = true;
             outcome.Message = $"missão \"{QuestCatalog.Get(quest).Name}\" concluída, Nv {me.Level}, {CharacterState.Bag.Count("pocao_hp_p")} poções";
         }

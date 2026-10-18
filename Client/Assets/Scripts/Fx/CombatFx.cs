@@ -70,17 +70,28 @@ namespace Game.Client.Fx
             }
         }
 
+        /// <summary>Uma partícula solta (para anéis, arcos e outros desenhos de efeito).</summary>
+        public void Emit(Vector3 position, Vector3 velocity, Color color, float size, float lifetime)
+        {
+            _sparks.Emit(new ParticleSystem.EmitParams
+            {
+                position = position, velocity = velocity, startColor = color, startSize = size, startLifetime = lifetime,
+                applyShapeToPosition = false,
+            }, 1);
+        }
+
         /// <summary>
         /// Lança um projétil de <paramref name="from"/> até <paramref name="target"/> (seguindo o alvo)
         /// e chama <paramref name="onArrive"/> quando chegar.
         /// </summary>
-        public void LaunchProjectile(Vector3 from, Transform target, Vector3 targetOffset, Color color, Action onArrive)
+        public void LaunchProjectile(Vector3 from, Transform target, Vector3 targetOffset, Color color, Action onArrive,
+            float sizeMultiplier = 1f, float speedMultiplier = 1f)
         {
             var orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             orb.name = "Projétil";
             Destroy(orb.GetComponent<Collider>());
             orb.transform.position = from;
-            orb.transform.localScale = Vector3.one * projectileSize;
+            orb.transform.localScale = Vector3.one * (projectileSize * sizeMultiplier);
             var renderer = orb.GetComponent<Renderer>();
             if (projectileMaterial != null)
             {
@@ -92,7 +103,7 @@ namespace Game.Client.Fx
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var projectile = orb.AddComponent<Projectile>();
-            projectile.Launch(target, targetOffset, projectileSpeed, () =>
+            projectile.Launch(target, targetOffset, projectileSpeed * speedMultiplier, () =>
             {
                 Sparks(orb.transform.position, color, 10);
                 onArrive?.Invoke();
