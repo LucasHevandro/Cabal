@@ -89,7 +89,7 @@ else
 var auth = new AuthService(store, new PasswordHasher(), new SessionTokens(), uids: new ItemUidAllocator(await store.MaxItemUidAsync()));
 await using var saver = new CharacterSaver(store, Log);
 await using var api = new LoginApi(auth, apiPort, Log);
-await api.StartAsync();
+if (!await TryStartAsync(() => api.StartAsync(), apiPort, "da API de login")) return 1;
 Log($"API de login em http://localhost:{apiPort}/api (em produção, use HTTPS na frente)");
 
 using var host = new ServerHost(options, Log, auth, saver);
@@ -106,7 +106,7 @@ Console.CancelKeyPress += (_, e) =>
     stop.Set();
 };
 
-host.Start();
+if (!await TryStartAsync(() => { host.Start(); return Task.CompletedTask; }, options.Port, "do jogo")) return 1;
 if (options.AllowGuests) Log("ATENÇÃO: aceitando convidados sem conta (--guests).");
 Log("Ctrl+C para desligar (os personagens são salvos antes).");
 stop.Wait();
@@ -114,3 +114,20 @@ Log("Desligando...");
 host.Stop();
 Log($"Salvamentos concluídos: {saver.Saved}, falhas: {saver.Failures}.");
 return 0;
+
+// Porta ocupada (outro servidor aberto, ou outro programa): explica em vez de fechar com o erro técnico.
+async Task<bool> TryStartAsync(Func<Task> start, int port, string what)
+{
+    try
+    {
+        await start();
+        return true;
+    }
+    catch (Exception ex) when (ex.GetBaseException() is System.Net.Sockets.SocketException
+                               { SocketErrorCode: System.Net.Sockets.SocketError.AddressAlreadyInUse })
+    {
+        Log($"A porta {port} {what} já está em uso. Feche o outro servidor (ou o programa que usa a porta) ou escolha " +
+            $"outra com --port (a API usa a porta seguinte).");
+        return false;
+    }
+}
