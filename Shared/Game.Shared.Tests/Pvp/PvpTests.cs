@@ -56,6 +56,8 @@ public class PvpTests
         Assert.Equal((ChatInputKind.DuelRequest, "Bia"), (duel.Kind, duel.Target));
         Assert.Equal(ChatInputKind.ArenaQueue, ChatParser.Parse("/arena", ChatChannel.Map).Kind);
         Assert.Equal(ChatInputKind.Invalid, ChatParser.Parse("/duelo", ChatChannel.Map).Kind);
+        var gm = ChatParser.Parse("/gm ban Fulano 24 usou bot", ChatChannel.Map);
+        Assert.Equal((ChatInputKind.Gm, "ban Fulano 24 usou bot"), (gm.Kind, gm.Text));
     }
 
     [Fact]
@@ -69,6 +71,9 @@ public class PvpTests
             Assert.True(buffer.TryRead(out var type, out var payload));
             return Assert.IsType<T>(NetCodec.Decode(type, payload));
         }
+
+        Assert.Equal("kick Ana", RoundTrip(new GmCommand { Text = "kick Ana" }).Text);
+        Assert.Equal(300, RoundTrip(new GmCommand { Text = new string('x', 900) }).Text.Length); // texto longo é cortado
 
         var duel = RoundTrip(new DuelCommand { Action = DuelActionKind.Accept, TargetId = 4, TargetName = "Bia" });
         Assert.Equal((DuelActionKind.Accept, 4, "Bia"), (duel.Action, duel.TargetId, duel.TargetName));

@@ -193,6 +193,9 @@ namespace Game.Shared.Social
 
         Help,
 
+        /// <summary>Comando de GM: <see cref="ChatInput.Text"/> é o resto da linha (o servidor confere se é GM).</summary>
+        Gm,
+
         /// <summary>Comando errado; <see cref="ChatInput.Error"/> diz o porquê.</summary>
         Invalid,
     }
@@ -276,6 +279,8 @@ namespace Game.Shared.Social
                     return first.Length == 0 ? Invalid(Loc.T("chat.use_trade")) : Command(ChatInputKind.TradeRequest, first);
                 case "amigos":
                     return Command(ChatInputKind.FriendsWindow, "");
+                case "gm":
+                    return new ChatInput { Kind = ChatInputKind.Gm, Target = "", Text = rest };
                 case "ajuda":
                 case "?":
                     return Command(ChatInputKind.Help, "");

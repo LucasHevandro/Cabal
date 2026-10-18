@@ -52,6 +52,17 @@ namespace Game.Shared.Net
             new DuelCommand { Action = (DuelActionKind)r.ReadByte(), TargetId = r.ReadInt(), TargetName = r.ReadString() };
     }
 
+    /// <summary>Comando de GM digitado no chat (/gm ...): o texto vai inteiro e o servidor interpreta e confere.</summary>
+    public sealed class GmCommand : INetMessage
+    {
+        public MessageType Type => MessageType.GmCommand;
+        public string Text = "";
+
+        public void Write(PacketWriter w) => w.WriteString(Text.Length > 300 ? Text.Substring(0, 300) : Text);
+
+        public static GmCommand Read(PacketReader r) => new GmCommand { Text = r.ReadString() };
+    }
+
     public sealed class ArenaCommand : INetMessage
     {
         public MessageType Type => MessageType.ArenaCommand;

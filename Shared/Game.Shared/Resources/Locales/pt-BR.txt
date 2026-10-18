@@ -497,6 +497,8 @@ dummy.b = Boneco de treino B
 dummy.c = Boneco de treino C
 
 # ===== Contas: login e personagens =====
+auth.banned_until = Esta conta está banida até {0}. Motivo: {1}
+auth.banned_forever = Esta conta foi banida. Motivo: {0}
 auth.wrong_credentials = Conta ou senha incorreta.
 auth.locked = Muitas tentativas erradas. Tente de novo em {0:0} min.
 auth.session_expired = Sessão expirada. Entre de novo.
@@ -509,6 +511,7 @@ auth.bad_request = Pedido inválido.
 # ===== Servidor: conexão =====
 net.hello_first = Envie Hello primeiro.
 net.old_version = Versão do jogo incompatível (cliente v{0}, servidor v{1}). Atualize o jogo.
+net.hello_timeout = A conexão demorou demais para se identificar. Tente entrar de novo.
 net.login_required = Entre com sua conta.
 net.no_accounts = Este servidor não tem contas.
 net.db_unavailable = Servidor sem acesso ao banco. Tente de novo em instantes.
@@ -884,3 +887,35 @@ tutorial.finisher = Agora aperte <b>{0}</b> para o finalizador: ele soma todo o 
 tutorial.routes = Dica: a ordem das skills forma <b>rotas</b> com bônus extra. Por exemplo, físico → mágico dá +10%. As rotas da sua classe aparecem na ajuda à esquerda.
 tutorial.done = Pronto, você já sabe fazer combo! Dá para rever o tutorial nas opções (<b>{0}</b>).
 help.show_hint = <b>{0}</b>: mostrar os controles
+
+# ===== Servidor: GM e moderação =====
+gm.help = Comandos de GM: /gm info nome · kick nome motivo · ban nome horas motivo (0 = para sempre) · unban nome · mute nome minutos motivo · unmute nome · ir nome · trazer nome · dar nome item quantidade · tirar nome item quantidade · alz nome valor (ex.: -500) · suspeitos
+gm.usage_ban = Use /gm ban nome horas motivo (0 horas = para sempre)
+gm.usage_mute = Use /gm mute nome minutos motivo
+gm.usage_alz = Use /gm alz nome valor (ex.: 1000 ou -500)
+gm.guest = {0} é um convidado (sem conta): use /gm kick
+gm.guest_tag = convidado
+gm.info = {0} · Nv {1} {2} · {3:N0} Alz · posição {4} · conta {5} · online há {6} min
+gm.kicked = Você foi desconectado por um GM. Motivo: {0}
+gm.kicked_banned = Você foi banido por um GM. Motivo: {0}
+gm.done_kick = {0} foi desconectado
+gm.done_ban = Banimento de {0} registrado
+gm.done_unban = Banimento de {0} retirado (se existia)
+gm.done_mute = {0} está sem chat por {1} min
+gm.done_unmute = {0} pode falar no chat de novo
+gm.brought = Um GM ({0}) trouxe você até ele
+gm.unknown_item = Item desconhecido: {0}
+gm.bag_full = A bolsa de {0} está cheia
+gm.no_item = {0} não tem {1}
+gm.done_give = {0} recebeu {1} x{2}
+gm.done_take = {0} perdeu {1} x{2}
+gm.done_alz = {0}: {1:+#,0;-#,0} Alz (agora {2:N0})
+gm.no_suspects = Nenhum jogador suspeito agora
+gm.suspect = Suspeito: {0} ({1})
+chat.muted = Você está sem chat por mais {0} min (decisão de um GM)
+chat.muted_now = Um GM tirou seu chat por {0} min
+chat.unmuted = Você pode falar no chat de novo
+suspect.perfect_combo = combo perfeito demais
+suspect.hours_online = muitas horas seguidas online
+suspect.repeated_route = rota repetida
+
