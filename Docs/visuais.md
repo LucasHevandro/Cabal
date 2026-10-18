@@ -77,3 +77,38 @@ A cena `Treino.unity` é gerada por código. Depois de mudar o mapa, gere de nov
 - **Servidor:** não muda nada. Ele continua só com X e Z.
 
 **Trocar pelo KayKit (ou outro pacote).** O `PropBuilder` escolhe uma lista de malhas por tipo (`arvore`, `pinheiro`, `pedra`, `coluna`, `muro`, `casa`...). Para usar os modelos do pacote, troque a variante gerada pelo modelo importado no tipo correspondente. Os mesmos lugares, colisões e escalas continuam valendo. Os modelos dos pacotes também têm a frente para +Z e o pivô no chão.
+
+# Personagens (KayKit)
+
+As classes e os NPCs usam os pacotes grátis **KayKit** de Kay Lousberg (www.kaylousberg.com), em licença CC0: uso livre, inclusive comercial, sem crédito obrigatório. As licenças estão em `Assets/Art/KayKit/LICENSE_*.txt`.
+
+| Pacote (versão grátis) | O que usamos |
+|---|---|
+| Character Pack: Adventurers 2.0 | Knight, Mage, Barbarian, Rogue, Rogue_Hooded e Ranger, além de armas e acessórios |
+| Character Animations 1.1 | Rig_Medium: General, MovementBasic, MovementAdvanced, CombatMelee, CombatRanged e Special |
+| Character Pack: Skeletons 1.1 | Esqueletos (Warrior, Mage, Minion e Rogue) e as armas deles, para a etapa dos monstros |
+
+Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMethod Game.Client.Editor.KayKitBuilder.Build`. O construtor:
+- configura a importação (rig Generic, laço nas animações de parado, andar e correr);
+- cria os materiais URP com as texturas de cada personagem;
+- monta o Animator `Assets/Art/KayKit/Gerado/Personagem.controller`;
+- grava os prefabs que o jogo procura.
+
+| Prefab | Modelo | Na mão |
+|---|---|---|
+| `Visuals/class/blade` (Lâmina) | Knight | espada e escudo |
+| `Visuals/class/arcanist` (Arcanista) | Mage | cajado |
+| `Visuals/npc/anciao_doran` | Rogue_Hooded | livro aberto |
+| `Visuals/npc/ferreira_ilsa` | Barbarian | machado |
+| `Visuals/npc/guarda_volumes_bento` | Ranger | caneca |
+| `Visuals/npc/mercadora_lia` | Rogue | adaga |
+| `Visuals/npc/guardia_selene` | Knight sem viseira | espada de duas mãos |
+
+**Animator**
+- **Locomoção:** blend por `Speed` (parado em 0, andar em 2,2 m/s, correr em 6 m/s).
+- **Golpes:** um estado para cada `AttackKind`, definido em `Fx/AttackStyle.cs`: 0 corte, 1 golpe de cima, 2 estocada, 3 giro, 4 golpe com salto, 5 corte diagonal, 6 disparo mágico, 7 magia em área, 8 magia erguida e 9 finalizador. Cada skill escolhe o seu estilo nesse arquivo.
+- **Outros estados:** dano (`Hit`), esquiva (`Dodge`) e morte (`Dead`).
+- **Morte no jogo:** o personagem cai. Monstros animados somem 2 s depois; jogadores ficam caídos até renascer.
+- **Golpes dos outros:** o golpe de outro jogador também anima o modelo dele, pela skill que veio no evento de combate.
+
+**Conferir as animações no jogo:** `Prototipo.exe -posetest pasta`. Ele põe as classes e os NPCs lado a lado e captura cada estado. Faço a conferência no jogo porque, no Editor em modo batch, a malha não é deformada pelos ossos.

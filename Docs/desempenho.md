@@ -25,6 +25,7 @@ PC de teste: GeForce GTX 1660 Ti e Core i7-7700, 1920x1080, qualidade Alta, 30 j
 | Antes | 276 | 128 | 42 ms | 323 | — |
 | Depois | 334 | 118 | 14 ms | 69 | 15 KB |
 | Mundo novo (terreno, grama, cenário, névoa e pós-processamento; 1600x900) | 258 | 91 | 17 ms | 110 | 14 KB |
+| Personagens KayKit animados (30 jogadores com Animator e malha deformada; 1600x900) | 238 | 89 | 17 ms | 140 | 14 KB |
 
 O mundo novo custa cerca de 1 ms por quadro (terreno, grama e uns 1.200 objetos de cenário com static batching) e
 não aumentou o lixo por quadro: as coletas a mais vêm só de ter mais quadros no mesmo tempo. O 1% pior continua acima
