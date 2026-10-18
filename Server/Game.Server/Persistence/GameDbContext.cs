@@ -10,7 +10,21 @@ public sealed class AccountEntity
     public string PasswordHash { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? LastLoginAt { get; set; }
+    public bool IsGm { get; set; }
+    public DateTimeOffset? BannedUntil { get; set; }
+    public string BanReason { get; set; } = "";
+    public DateTimeOffset? MutedUntil { get; set; }
     public List<CharacterEntity> Characters { get; set; } = new();
+}
+
+public sealed class GmActionEntity
+{
+    public long Id { get; set; }
+    public string GmName { get; set; } = "";
+    public string Action { get; set; } = "";
+    public string Target { get; set; } = "";
+    public string Details { get; set; } = "";
+    public DateTimeOffset At { get; set; }
 }
 
 public sealed class CharacterEntity
@@ -128,6 +142,7 @@ public sealed class GameDbContext : DbContext
     public DbSet<CharacterRelationEntity> Relations => Set<CharacterRelationEntity>();
     public DbSet<PlayerReportEntity> Reports => Set<PlayerReportEntity>();
     public DbSet<DungeonRunEntity> DungeonRuns => Set<DungeonRunEntity>();
+    public DbSet<GmActionEntity> GmActions => Set<GmActionEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -137,6 +152,17 @@ public sealed class GameDbContext : DbContext
             e.Property(a => a.Name).HasMaxLength(32).IsRequired();
             e.HasIndex(a => a.Name).IsUnique();
             e.Property(a => a.PasswordHash).HasMaxLength(200).IsRequired();
+            e.Property(a => a.BanReason).HasMaxLength(200).HasDefaultValue("");
+        });
+
+        model.Entity<GmActionEntity>(e =>
+        {
+            e.ToTable("gm_actions");
+            e.HasIndex(a => a.At);
+            e.Property(a => a.GmName).HasMaxLength(32);
+            e.Property(a => a.Action).HasMaxLength(32);
+            e.Property(a => a.Target).HasMaxLength(32);
+            e.Property(a => a.Details).HasMaxLength(400);
         });
 
         model.Entity<CharacterEntity>(e =>

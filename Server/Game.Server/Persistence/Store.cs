@@ -5,7 +5,24 @@ using Game.Shared.Text;
 
 namespace Game.Server.Persistence;
 
-public sealed record AccountRecord(int Id, string Name, string PasswordHash);
+public sealed record AccountRecord(int Id, string Name, string PasswordHash)
+{
+    /// <summary>Game master: pode usar os comandos /gm.</summary>
+    public bool IsGm { get; init; }
+
+    /// <summary>Banida até esta data (nula = não banida).</summary>
+    public DateTimeOffset? BannedUntil { get; init; }
+
+    public string BanReason { get; init; } = "";
+
+    /// <summary>Sem poder falar no chat até esta data (nula = pode falar).</summary>
+    public DateTimeOffset? MutedUntil { get; init; }
+
+    public bool IsBanned(DateTimeOffset now) => BannedUntil is { } until && until > now;
+}
+
+/// <summary>Uma ação de GM (banir, silenciar, teleportar, dar ou tirar item...), para auditoria.</summary>
+public sealed record GmActionRecord(string GmName, string Action, string Target, string Details, DateTimeOffset At);
 
 /// <summary>Um item guardado: onde está (bolsa, vestido ou armazém), quantos e o estado da melhoria.</summary>
 public sealed record ItemRecord(
@@ -41,6 +58,11 @@ public sealed record CharacterRecord(
 {
     public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
     public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
+
+    /// <summary>Da conta (preenchidos ao entrar no jogo): GM e silêncio no chat.</summary>
+    public bool IsGm { get; init; }
+
+    public DateTimeOffset? MutedUntil { get; init; }
 }
 
 /// <summary>Estado do personagem para salvar (o que muda durante o jogo).</summary>
@@ -82,6 +104,25 @@ public interface IGameStore
     Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash);
 
     Task UpdateLoginAsync(int accountId, string? newPasswordHash);
+
+    Task<AccountRecord?> FindAccountByIdAsync(int accountId);
+
+    /// <summary>Conta dona do personagem com esse nome (sem acento/caixa), ou nula.</summary>
+    Task<(int AccountId, string CharacterName)?> FindCharacterOwnerAsync(string characterName);
+
+    /// <summary>Bane a conta até <paramref name="until"/> (nulo tira o banimento).</summary>
+    Task SetBanAsync(int accountId, DateTimeOffset? until, string reason);
+
+    /// <summary>Silencia a conta até <paramref name="until"/> (nulo tira o silêncio).</summary>
+    Task SetMuteAsync(int accountId, DateTimeOffset? until);
+
+    /// <summary>Marca ou desmarca a conta como GM. Falso se a conta não existe.</summary>
+    Task<bool> SetGmAsync(string normalizedAccount, bool isGm);
+
+    Task RecordGmActionAsync(GmActionRecord action);
+
+    /// <summary>Ações de GM, mais recentes primeiro.</summary>
+    Task<IReadOnlyList<GmActionRecord>> GmActionsAsync(int max = 100);
 
     Task<IReadOnlyList<CharacterSummaryRecord>> ListCharactersAsync(int accountId);
 

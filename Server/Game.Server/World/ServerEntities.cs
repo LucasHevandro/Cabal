@@ -31,6 +31,28 @@ public sealed class ServerPlayer
     /// </summary>
     public bool IsGuest => CharacterId == 0;
 
+    /// <summary>Conta do personagem (0 = convidado).</summary>
+    public int AccountId { get; set; }
+
+    /// <summary>Pode usar os comandos /gm.</summary>
+    public bool IsGm { get; set; }
+
+    /// <summary>Não pode falar no chat até esta data (nula = pode).</summary>
+    public DateTimeOffset? MutedUntil { get; set; }
+
+    /// <summary>Hora (do servidor) em que entrou no jogo.</summary>
+    public double JoinedAt { get; set; }
+
+    // Detecção de bot (GameWorld.Suspicion)
+    public int ExcellentStreak { get; set; }
+    public double NextRouteSampleAt { get; set; }
+    public List<(int, int)> RouteSamples { get; } = new();
+    public int LastRouteSignature { get; set; }
+    public int RepeatedRouteWindows { get; set; }
+
+    /// <summary>Motivos de suspeita (chave de texto) e quando foram marcados.</summary>
+    public Dictionary<string, double> Suspicions { get; } = new();
+
     public CharacterClass Class { get; }
 
     public required MovementValidator Movement { get; init; }

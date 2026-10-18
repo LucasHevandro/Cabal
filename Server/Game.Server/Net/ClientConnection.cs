@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading.Channels;
 using Game.Shared.Net;
@@ -26,6 +28,25 @@ public sealed class ClientConnection
 
     public bool IsClosed => _closed.IsCancellationRequested;
 
+    /// <summary>Maior mensagem que um cliente pode mandar (as dele são pequenas: chat de 120 letras, ofertas de troca).</summary>
+    public const int MaxClientPayload = 16 * 1024;
+
+    private static readonly double TicksToSeconds = 1.0 / Stopwatch.Frequency;
+    private readonly long _createdAt = Stopwatch.GetTimestamp();
+    private long _lastMessageAt = Stopwatch.GetTimestamp();
+
+    /// <summary>Anti flood desta conexão (só a thread de leitura mexe nele).</summary>
+    public InboundLimiter Limiter { get; init; } = new();
+
+    /// <summary>Endereço IP do cliente (para o limite de conexões por IP).</summary>
+    public IPAddress? Address { get; }
+
+    /// <summary>Segundos desde que a conexão abriu.</summary>
+    public double AgeSeconds => (Stopwatch.GetTimestamp() - _createdAt) * TicksToSeconds;
+
+    /// <summary>Segundos desde a última mensagem recebida.</summary>
+    public double IdleSeconds => (Stopwatch.GetTimestamp() - Interlocked.Read(ref _lastMessageAt)) * TicksToSeconds;
+
     public ClientConnection(int connectionId, TcpClient client)
     {
         ConnectionId = connectionId;
@@ -33,6 +54,7 @@ public sealed class ClientConnection
         _client.NoDelay = true; // sem Nagle: mensagens pequenas saem na hora
         _stream = client.GetStream();
         RemoteEndPoint = client.Client.RemoteEndPoint?.ToString() ?? "?";
+        Address = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
     }
 
     /// <summary>Começa a ler e enviar. <paramref name="onMessage"/> e <paramref name="onClosed"/> rodam na thread de rede.</summary>
@@ -69,7 +91,23 @@ public sealed class ClientConnection
                 if (read == 0) break;
                 frames.Append(buffer, 0, read);
                 while (frames.TryRead(out var type, out var payload))
+                {
+                    if (payload.Length > MaxClientPayload)
+                    {
+                        reason = $"mensagem grande demais ({payload.Length} bytes)";
+                        return;
+                    }
+                    var now = Stopwatch.GetTimestamp();
+                    Interlocked.Exchange(ref _lastMessageAt, now);
+                    // Acima do limite a mensagem é ignorada; insistindo muito, a conexão cai.
+                    if (!Limiter.Allow(now * TicksToSeconds))
+                    {
+                        if (!Limiter.ShouldKick) continue;
+                        reason = $"excesso de mensagens ({Limiter.Dropped} descartadas)";
+                        return;
+                    }
                     onMessage(this, NetCodec.Decode(type, payload));
+                }
             }
         }
         catch (ProtocolException ex)

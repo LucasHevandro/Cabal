@@ -39,9 +39,13 @@ public sealed class AuthService
     /// <summary>Ids únicos de item do servidor (o mundo usa o mesmo contador).</summary>
     public ItemUidAllocator Uids { get; }
 
+    private readonly HashSet<string> _gmAccounts;
+
+    /// <param name="gmAccounts">Contas tratadas como GM mesmo sem a marca no banco (opção --gm, para testes locais).</param>
     public AuthService(IGameStore store, PasswordHasher hasher, SessionTokens tokens, Func<DateTimeOffset>? now = null,
-        ItemUidAllocator? uids = null)
+        ItemUidAllocator? uids = null, IEnumerable<string>? gmAccounts = null)
     {
+        _gmAccounts = new HashSet<string>((gmAccounts ?? Array.Empty<string>()).Select(AccountRules.NormalizeAccount));
         Uids = uids ?? new ItemUidAllocator();
         _store = store;
         _hasher = hasher;
@@ -87,6 +91,7 @@ public sealed class AuthService
             RegisterFailure(name, now);
             return AuthResult<LoginResponse>.Fail(WrongCredentials, 401);
         }
+        if (account!.IsBanned(now)) return AuthResult<LoginResponse>.Fail(Banned(account), 403);
 
         _throttle.TryRemove(name, out _);
         var rehash = _hasher.NeedsRehash(account!.PasswordHash) ? _hasher.Hash(credentials.Password!) : null;
@@ -134,7 +139,23 @@ public sealed class AuthService
         if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterRecord>.Fail(new LocalText("auth.session_expired"), 401);
         var character = await _store.LoadCharacterAsync(characterId);
         if (character == null || character.AccountId != accountId) return AuthResult<CharacterRecord>.Fail(new LocalText("auth.character_not_found"), 404);
-        return AuthResult<CharacterRecord>.Success(character);
+        // O token pode ser de antes do banimento: confere a conta de novo na hora de entrar no jogo.
+        var account = await _store.FindAccountByIdAsync(accountId);
+        if (account == null) return AuthResult<CharacterRecord>.Fail(new LocalText("auth.character_not_found"), 404);
+        if (account.IsBanned(_now())) return AuthResult<CharacterRecord>.Fail(Banned(account), 403);
+        return AuthResult<CharacterRecord>.Success(character with
+        {
+            IsGm = account.IsGm || _gmAccounts.Contains(account.Name), MutedUntil = account.MutedUntil,
+        });
+    }
+
+    /// <summary>Motivo da recusa de uma conta banida (até quando e por quê; permanente se passar de 50 anos).</summary>
+    private LocalText Banned(AccountRecord account)
+    {
+        var until = account.BannedUntil!.Value;
+        return until - _now() > TimeSpan.FromDays(365 * 50)
+            ? new LocalText("auth.banned_forever", account.BanReason)
+            : new LocalText("auth.banned_until", until.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), account.BanReason);
     }
 
     /// <summary>Valores de um personagem novo: nível 1 com a vida e a mana cheias, na vila.</summary>

@@ -15,10 +15,16 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --dungeon-test dungeon fácil e sem nível mínimo (bots de nível 1 conseguem terminar)
 //   --arena-size N jogadores por time na arena (padrão 5; 1 para testar a dois)
 //   --stats N      métricas de desempenho a cada N segundos
+//   --gm a,b       contas tratadas como GM nesta execução (testes locais; em produção use --set-gm)
+//   --set-gm conta / --unset-gm conta  marca ou desmarca a conta como GM no banco e sai
+//   --max-per-ip N conexões ao mesmo tempo do mesmo IP (padrão 8; 0 = sem limite; o próprio PC não conta)
 //   --latency N    (testes) atrasa cada mensagem N ms em cada sentido; --jitter N soma até N ms aleatórios
 var options = new ServerOptions();
 var apiPort = -1;
 var database = "postgres";
+var gmAccounts = new List<string>();
+string? setGm = null;
+var setGmValue = true;
 for (var i = 0; i < args.Length; i++)
 {
     var value = i + 1 < args.Length ? args[i + 1] : "";
@@ -41,6 +47,19 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--dungeon-test":
             options = options with { DungeonTest = true };
+            break;
+        case "--gm" when value.Length > 0:
+            gmAccounts.AddRange(value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            break;
+        case "--set-gm" when value.Length > 0:
+            setGm = value;
+            break;
+        case "--unset-gm" when value.Length > 0:
+            setGm = value;
+            setGmValue = false;
+            break;
+        case "--max-per-ip" when int.TryParse(value, out var perIp):
+            options = options with { MaxConnectionsPerIp = perIp };
             break;
         case "--stats" when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var stats):
             options = options with { StatsIntervalSeconds = stats };
@@ -86,7 +105,16 @@ else
     Log("Banco PostgreSQL pronto (migrações aplicadas).");
 }
 
-var auth = new AuthService(store, new PasswordHasher(), new SessionTokens(), uids: new ItemUidAllocator(await store.MaxItemUidAsync()));
+if (setGm != null)
+{
+    var changed = await store.SetGmAsync(Game.Shared.Accounts.AccountRules.NormalizeAccount(setGm), setGmValue);
+    Log(changed ? $"Conta {setGm} {(setGmValue ? "agora é GM" : "não é mais GM")}." : $"Conta {setGm} não encontrada.");
+    return changed ? 0 : 1;
+}
+
+var auth = new AuthService(store, new PasswordHasher(), new SessionTokens(), uids: new ItemUidAllocator(await store.MaxItemUidAsync()),
+    gmAccounts: gmAccounts);
+if (gmAccounts.Count > 0) Log($"ATENÇÃO: GM nesta execução: {string.Join(", ", gmAccounts)} (--gm).");
 await using var saver = new CharacterSaver(store, Log);
 await using var api = new LoginApi(auth, apiPort, Log);
 if (!await TryStartAsync(() => api.StartAsync(), apiPort, "da API de login")) return 1;
@@ -99,6 +127,40 @@ host.World.SeedRanking(await store.TopDungeonRunsAsync(Game.Shared.Dungeon.Dunge
 host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueWith(
     t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
 if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");
+
+// Ferramentas de GM: auditoria e moderação gravadas no banco, fora do loop do jogo.
+host.World.GmActionDone += action =>
+{
+    Log($"[gm] {action.GmName}: {action.Action} {action.Target} {action.Details}".TrimEnd());
+    _ = store.RecordGmActionAsync(action).ContinueWith(
+        t => Log($"Falha ao gravar ação de GM: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
+};
+host.World.ModerationRequested += request => _ = ApplyModerationAsync(request);
+
+async Task ApplyModerationAsync(Game.Server.World.ModerationRequest request)
+{
+    try
+    {
+        var accountId = request.AccountId;
+        if (accountId == 0) accountId = (await store.FindCharacterOwnerAsync(request.CharacterName))?.AccountId ?? 0;
+        if (accountId == 0)
+        {
+            Log($"[gm] personagem {request.CharacterName} não encontrado no banco ({request.Kind})");
+            return;
+        }
+        switch (request.Kind)
+        {
+            case Game.Server.World.ModerationKind.Ban: await store.SetBanAsync(accountId, request.Until, request.Reason); break;
+            case Game.Server.World.ModerationKind.Unban: await store.SetBanAsync(accountId, null, ""); break;
+            case Game.Server.World.ModerationKind.Mute: await store.SetMuteAsync(accountId, request.Until); break;
+            case Game.Server.World.ModerationKind.Unmute: await store.SetMuteAsync(accountId, null); break;
+        }
+    }
+    catch (Exception ex)
+    {
+        Log($"Falha na moderação de {request.CharacterName}: {ex.GetBaseException().Message}");
+    }
+}
 using var stop = new ManualResetEventSlim();
 Console.CancelKeyPress += (_, e) =>
 {

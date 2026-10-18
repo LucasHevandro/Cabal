@@ -95,8 +95,16 @@ public sealed partial class GameWorld
             CharacterId = character?.Id ?? 0,
             Movement = new MovementValidator(spawnX, spawnZ, now),
         };
-        if (character != null) Restore(player, character);
+        if (character != null)
+        {
+            Restore(player, character);
+            player.AccountId = character.AccountId;
+            player.IsGm = character.IsGm;
+            player.MutedUntil = character.MutedUntil;
+        }
         else GiveGuestKit(player);
+        player.JoinedAt = now;
+        player.NextRouteSampleAt = now + RouteSampleSeconds;
         onIdAssigned?.Invoke(player.Id);
 
         _outbox.Send(player.Id, new Welcome
@@ -234,6 +242,9 @@ public sealed partial class GameWorld
                 break;
             case ArenaCommand arena:
                 HandleArena(player, arena, now);
+                break;
+            case GmCommand gm:
+                HandleGm(player, gm, now);
                 break;
         }
     }

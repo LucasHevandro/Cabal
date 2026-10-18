@@ -25,7 +25,74 @@ public sealed class EfGameStore : IGameStore
     {
         await using var db = await _factory.CreateDbContextAsync();
         var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Name == normalizedAccount);
-        return account == null ? null : new AccountRecord(account.Id, account.Name, account.PasswordHash);
+        return account == null ? null : ToRecord(account);
+    }
+
+    private static AccountRecord ToRecord(AccountEntity a) => new(a.Id, a.Name, a.PasswordHash)
+    {
+        IsGm = a.IsGm, BannedUntil = a.BannedUntil, BanReason = a.BanReason ?? "", MutedUntil = a.MutedUntil,
+    };
+
+    public async Task<AccountRecord?> FindAccountByIdAsync(int accountId)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId);
+        return account == null ? null : ToRecord(account);
+    }
+
+    public async Task<(int AccountId, string CharacterName)?> FindCharacterOwnerAsync(string characterName)
+    {
+        var key = AccountRules.NameKey(characterName);
+        await using var db = await _factory.CreateDbContextAsync();
+        var character = await db.Characters.AsNoTracking().Where(c => c.NameKey == key).Select(c => new { c.AccountId, c.Name }).FirstOrDefaultAsync();
+        return character == null ? null : (character.AccountId, character.Name);
+    }
+
+    public async Task SetBanAsync(int accountId, DateTimeOffset? until, string reason)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var account = await db.Accounts.FindAsync(accountId);
+        if (account == null) return;
+        account.BannedUntil = until;
+        account.BanReason = until == null ? "" : reason;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task SetMuteAsync(int accountId, DateTimeOffset? until)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var account = await db.Accounts.FindAsync(accountId);
+        if (account == null) return;
+        account.MutedUntil = until;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<bool> SetGmAsync(string normalizedAccount, bool isGm)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var account = await db.Accounts.FirstOrDefaultAsync(a => a.Name == normalizedAccount);
+        if (account == null) return false;
+        account.IsGm = isGm;
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task RecordGmActionAsync(GmActionRecord action)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        db.GmActions.Add(new GmActionEntity
+        {
+            GmName = action.GmName, Action = action.Action, Target = action.Target,
+            Details = action.Details.Length > 400 ? action.Details[..400] : action.Details, At = action.At,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<GmActionRecord>> GmActionsAsync(int max = 100)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.GmActions.AsNoTracking().OrderByDescending(a => a.At).ThenByDescending(a => a.Id).Take(max)
+            .Select(a => new GmActionRecord(a.GmName, a.Action, a.Target, a.Details, a.At)).ToListAsync();
     }
 
     public async Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash)
@@ -41,7 +108,7 @@ public sealed class EfGameStore : IGameStore
         {
             throw new StoreConflictException(new LocalText("auth.account_exists"));
         }
-        return new AccountRecord(account.Id, account.Name, account.PasswordHash);
+        return ToRecord(account);
     }
 
     public async Task UpdateLoginAsync(int accountId, string? newPasswordHash)
@@ -290,6 +357,61 @@ public sealed class InMemoryGameStore : IGameStore
     public Task<AccountRecord?> FindAccountAsync(string normalizedAccount)
     {
         lock (_lock) return Task.FromResult(_accounts.Values.FirstOrDefault(a => a.Name == normalizedAccount));
+    }
+
+    private readonly List<GmActionRecord> _gmActions = new();
+
+    public Task<AccountRecord?> FindAccountByIdAsync(int accountId)
+    {
+        lock (_lock) return Task.FromResult(_accounts.TryGetValue(accountId, out var account) ? account : null);
+    }
+
+    public Task<(int AccountId, string CharacterName)?> FindCharacterOwnerAsync(string characterName)
+    {
+        var key = AccountRules.NameKey(characterName);
+        lock (_lock)
+        {
+            var character = _characters.Values.FirstOrDefault(c => AccountRules.NameKey(c.Name) == key);
+            return Task.FromResult(character == null ? ((int, string)?)null : (character.AccountId, character.Name));
+        }
+    }
+
+    public Task SetBanAsync(int accountId, DateTimeOffset? until, string reason)
+    {
+        lock (_lock)
+            if (_accounts.TryGetValue(accountId, out var account))
+                _accounts[accountId] = account with { BannedUntil = until, BanReason = until == null ? "" : reason };
+        return Task.CompletedTask;
+    }
+
+    public Task SetMuteAsync(int accountId, DateTimeOffset? until)
+    {
+        lock (_lock)
+            if (_accounts.TryGetValue(accountId, out var account)) _accounts[accountId] = account with { MutedUntil = until };
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> SetGmAsync(string normalizedAccount, bool isGm)
+    {
+        lock (_lock)
+        {
+            var account = _accounts.Values.FirstOrDefault(a => a.Name == normalizedAccount);
+            if (account == null) return Task.FromResult(false);
+            _accounts[account.Id] = account with { IsGm = isGm };
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task RecordGmActionAsync(GmActionRecord action)
+    {
+        lock (_lock) _gmActions.Add(action);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<GmActionRecord>> GmActionsAsync(int max = 100)
+    {
+        lock (_lock)
+            return Task.FromResult<IReadOnlyList<GmActionRecord>>(_gmActions.AsEnumerable().Reverse().Take(max).ToList());
     }
 
     public Task<AccountRecord> CreateAccountAsync(string normalizedAccount, string passwordHash)

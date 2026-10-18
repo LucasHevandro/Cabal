@@ -4,6 +4,11 @@
     <ProjectReference Include="..\..\Shared\Game.Shared\Game.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Os testes chamam algumas regras internas direto (ex.: contagem de Excellent da detecção de bot). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Game.Server.Tests" />
+  </ItemGroup>
+
   <!-- API HTTP de login (Kestrel) no mesmo processo do servidor do jogo. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

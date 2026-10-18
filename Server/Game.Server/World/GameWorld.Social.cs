@@ -243,6 +243,11 @@ public sealed partial class GameWorld
         if (message.Channel == ChatChannel.System) return;
         var text = ChatRules.Sanitize(message.Text);
         if (text.Length == 0) return;
+        if (player.MutedUntil is { } muted && muted > DateTimeOffset.UtcNow)
+        {
+            SystemChat(player, LT("chat.muted", Math.Ceiling((muted - DateTimeOffset.UtcNow).TotalMinutes)));
+            return;
+        }
         if (!player.ChatLimiter.TryConsume(now))
         {
             SystemChat(player, LT("chat.flood"));

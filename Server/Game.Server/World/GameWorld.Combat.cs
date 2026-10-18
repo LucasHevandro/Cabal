@@ -30,6 +30,7 @@ public sealed partial class GameWorld
 
     private void TickPlayer(ServerPlayer player, double now, float dt)
     {
+        TrackSuspicion(player, now);
         if (player.IsDead)
         {
             if (now >= player.RespawnAt) Respawn(player, now);
@@ -126,6 +127,7 @@ public sealed partial class GameWorld
         {
             var result = player.Combo.Press(PressTime(message.ClientTime, now), skill.Kind);
             player.ComboDirty = true;
+            TrackComboGrade(player, result.Grade, now);
             if (result.ComboEnded)
             {
                 Notify(player, LT("combo.ended_window", result.HitCount));

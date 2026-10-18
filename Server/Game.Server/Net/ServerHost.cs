@@ -30,6 +30,20 @@ public sealed record ServerOptions
     /// <summary>Dungeon fácil (vida e dano baixos, sem nível mínimo) para os bots de nível 1 conseguirem terminar.</summary>
     public bool DungeonTest { get; init; }
 
+    /// <summary>Segundos para mandar o Hello depois de conectar (senão a conexão cai).</summary>
+    public double HelloTimeoutSeconds { get; init; } = 15;
+
+    /// <summary>Segundos sem receber nada (o cliente manda ping a cada 1 s) antes de derrubar a conexão.</summary>
+    public double IdleTimeoutSeconds { get; init; } = 30;
+
+    /// <summary>Conexões ao mesmo tempo vindas do mesmo IP (o próprio computador, 127.0.0.1, não tem limite).</summary>
+    public int MaxConnectionsPerIp { get; init; } = 8;
+
+    /// <summary>Mensagens por segundo por conexão (anti flood) e a folga para rajadas curtas.</summary>
+    public double MessagesPerSecond { get; init; } = 40;
+
+    public double MessageBurst { get; init; } = 80;
+
     /// <summary>Jogadores por time na arena (5; menos para testar com poucos jogadores).</summary>
     public int ArenaTeamSize { get; init; } = Game.Shared.Pvp.ArenaRules.TeamSize;
 
@@ -55,6 +69,8 @@ public sealed class ServerHost : IOutbox, IDisposable
     private readonly AuthService? _auth;
     private readonly CharacterSaver? _saver;
     private int _nextConnectionId;
+    private readonly ConcurrentDictionary<int, ClientConnection> _connections = new();
+    private double _nextSweepAt;
     private Thread? _loopThread;
 
     // Simulador de latência: trabalho e envios esperando a hora certa (só usados pela thread do loop).
@@ -87,6 +103,15 @@ public sealed class ServerHost : IOutbox, IDisposable
         _listener = new TcpListener(IPAddress.Any, options.Port);
         World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null,
             arenaTeamSize: options.ArenaTeamSize);
+        // Expulsão por GM (vale também para banimento): mostra o motivo e fecha a conexão.
+        World.KickRequested += (playerId, reason) =>
+        {
+            if (!_byPlayer.TryGetValue(playerId, out var connection)) return;
+            _log($"Conexão #{connection.ConnectionId} expulsa por um GM ({reason})");
+            Refuse(connection, reason);
+        };
+        World.SuspicionRaised += (player, reasonKey) =>
+            _log($"[suspeita] {player.Name} (conta {player.AccountId}): {Loc.T(reasonKey)}");
     }
 
     private bool SimulatingLatency => _options.SimulatedLatencyMs > 0 || _options.SimulatedJitterMs > 0;
@@ -161,7 +186,17 @@ public sealed class ServerHost : IOutbox, IDisposable
                 return;
             }
 
-            var connection = new ClientConnection(Interlocked.Increment(ref _nextConnectionId), client);
+            var connection = new ClientConnection(Interlocked.Increment(ref _nextConnectionId), client)
+            {
+                Limiter = new InboundLimiter(_options.MessagesPerSecond, _options.MessageBurst),
+            };
+            if (TooManyFrom(connection.Address))
+            {
+                _log($"Conexão de {connection.RemoteEndPoint} recusada: mais de {_options.MaxConnectionsPerIp} do mesmo IP");
+                connection.Close();
+                continue;
+            }
+            _connections[connection.ConnectionId] = connection;
             _log($"Conexão #{connection.ConnectionId} de {connection.RemoteEndPoint}");
             connection.Start(OnMessage, OnClosed);
         }
@@ -175,9 +210,10 @@ public sealed class ServerHost : IOutbox, IDisposable
     }
 
     private void OnClosed(ClientConnection connection, string reason) =>
-        _inbox.Enqueue((connection, _ =>
+        _inbox.Enqueue((connection, closedAt =>
         {
             _log($"Conexão #{connection.ConnectionId} encerrada ({reason})");
+            _connections.TryRemove(connection.ConnectionId, out var _);
             _lastInAt.Remove(connection.ConnectionId);
             _lastOutAt.Remove(connection.ConnectionId);
             if (connection.PlayerId == 0) return;
@@ -286,6 +322,38 @@ public sealed class ServerHost : IOutbox, IDisposable
         _ = Task.Delay(200).ContinueWith(_ => connection.Close());
     }
 
+    /// <summary>Mais conexões abertas do mesmo IP do que o permitido (127.0.0.1 e ::1 ficam de fora: testes e bots).</summary>
+    private bool TooManyFrom(System.Net.IPAddress? address)
+    {
+        if (address == null || System.Net.IPAddress.IsLoopback(address) || _options.MaxConnectionsPerIp <= 0) return false;
+        var count = 0;
+        foreach (var other in _connections.Values)
+            if (!other.IsClosed && address.Equals(other.Address)) count++;
+        return count >= _options.MaxConnectionsPerIp;
+    }
+
+    /// <summary>
+    /// Uma vez por segundo (no loop do jogo): derruba quem conectou e não mandou o Hello a tempo, e quem parou de
+    /// mandar mensagens (cliente travado ou conexão morta que o TCP ainda não percebeu).
+    /// </summary>
+    private void SweepConnections()
+    {
+        foreach (var connection in _connections.Values)
+        {
+            if (connection.IsClosed) continue;
+            if (connection.PlayerId == 0 && !connection.LoginPending && connection.AgeSeconds > _options.HelloTimeoutSeconds)
+            {
+                _connections.TryRemove(connection.ConnectionId, out _);
+                Refuse(connection, new LocalText("net.hello_timeout"));
+            }
+            else if (connection.IdleSeconds > _options.IdleTimeoutSeconds)
+            {
+                _log($"Conexão #{connection.ConnectionId} sem mensagens há {connection.IdleSeconds:0} s: fechando");
+                connection.Close();
+            }
+        }
+    }
+
     private void GameLoop()
     {
         var tickSeconds = 1.0 / GameWorld.TickRate;
@@ -309,6 +377,12 @@ public sealed class ServerHost : IOutbox, IDisposable
                 Metrics.CountTick(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
                 nextTick += tickSeconds;
                 if (now - nextTick > 1) nextTick = now; // atrasou demais: não tenta compensar todos os ticks
+            }
+
+            if (now >= _nextSweepAt)
+            {
+                _nextSweepAt = now + 1;
+                SweepConnections();
             }
 
             if (_options.SaveIntervalSeconds > 0 && now >= nextSaveAt)
