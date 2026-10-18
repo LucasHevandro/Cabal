@@ -10,7 +10,8 @@ namespace Game.Client.DevTools
     /// <summary>
     /// Conferência dos modelos animados no jogo de verdade (a deformação da malha só acontece no loop do jogo):
     /// <c>-posetest pasta</c> põe as classes e os NPCs lado a lado na vila, de frente para uma câmera própria, e tira
-    /// uma captura de cada estado do Animator (parado, andar, correr, os 10 golpes, dano, esquiva e morte). Depois fecha.
+    /// uma captura de cada estado do Animator (parado, andar, correr, os golpes, dano, esquiva e morte). Depois fecha.
+    /// Com <c>-posemonsters</c> faz o mesmo com os 13 monstros (os bichos em partes são animados por código).
     /// </summary>
     public sealed class PoseSheetTest : MonoBehaviour
     {
@@ -20,7 +21,16 @@ namespace Game.Client.DevTools
             "npc/mercadora_lia", "npc/guardia_selene",
         };
 
+        private static readonly string[] Monsters =
+        {
+            "monster/coelho_saltador", "monster/lobo_cinzento", "monster/javali_furioso", "monster/aranha_da_mata",
+            "monster/golem_de_pedra", "monster/espectro", "monster/cavaleiro_caido", "monster/guardiao_das_ruinas",
+            "monster/esqueleto_guerreiro", "monster/esqueleto_arqueiro", "monster/cavaleiro_ossudo", "monster/servo_da_cripta",
+            "monster/senhor_da_cripta",
+        };
+
         private string _folder = "";
+        private string[] _models = Models;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
@@ -30,6 +40,7 @@ namespace Game.Client.DevTools
             if (index < 0) return;
             GameMode.SetOffline();
             var test = new GameObject("Teste de poses").AddComponent<PoseSheetTest>();
+            if (Array.IndexOf(args, "-posemonsters") >= 0) test._models = Monsters;
             test._folder = index + 1 < args.Length ? args[index + 1] : Path.Combine(Application.persistentDataPath, "posetest");
             Directory.CreateDirectory(test._folder);
         }
@@ -46,26 +57,31 @@ namespace Game.Client.DevTools
             }
             if (Camera.main != null) Camera.main.gameObject.SetActive(false);
 
-            var animators = new Animator[Models.Length];
+            var models = _models;
+            var monsters = models == Monsters;
+            var spacing = monsters ? 3.3f : 2.2f;
+            var animators = new Animator[models.Length];
+            var rigs = new ProceduralRig[models.Length];
             var origin = World.Ground.Point(0, 12);
-            for (var i = 0; i < Models.Length; i++)
+            for (var i = 0; i < models.Length; i++)
             {
-                var slash = Models[i].IndexOf('/');
-                var holder = new GameObject(Models[i]);
-                holder.transform.position = World.Ground.Point(origin.x + (i - (Models.Length - 1) / 2f) * 2.2f, origin.z);
+                var slash = models[i].IndexOf('/');
+                var holder = new GameObject(models[i]);
+                holder.transform.position = World.Ground.Point(origin.x + (i - (models.Length - 1) / 2f) * spacing, origin.z);
                 holder.transform.rotation = Quaternion.Euler(0, 200, 0);
-                var model = VisualCatalog.Spawn(Models[i].Substring(0, slash), Models[i].Substring(slash + 1), holder.transform);
+                var model = VisualCatalog.Spawn(models[i].Substring(0, slash), models[i].Substring(slash + 1), holder.transform);
                 if (model == null) continue;
                 var visual = model.GetComponent<VisualAnimator>();
                 if (visual != null) visual.enabled = false; // o teste controla o Animator
                 animators[i] = model.GetComponentInChildren<Animator>();
+                rigs[i] = model.GetComponentInChildren<ProceduralRig>();
             }
 
             var camera = new GameObject("Câmera das poses").AddComponent<Camera>();
             camera.tag = "MainCamera";
             camera.fieldOfView = 32;
-            camera.transform.position = origin + new Vector3(0, 2.2f, -13f);
-            camera.transform.LookAt(origin + Vector3.up * 0.9f);
+            camera.transform.position = origin + (monsters ? new Vector3(0, 5f, -30f) : new Vector3(0, 2.2f, -13f));
+            camera.transform.LookAt(origin + Vector3.up * (monsters ? 1.6f : 0.9f));
 
             var states = new[]
             {
@@ -76,6 +92,15 @@ namespace Game.Client.DevTools
             for (var s = 0; s < states.Length; s++)
             {
                 var (name, speed) = states[s];
+                // Bichos em partes: animação por código, em tempo real (não congela).
+                foreach (var rig in rigs)
+                {
+                    if (rig == null) continue;
+                    rig.Speed = speed >= 0 ? speed : 0f;
+                    rig.Dead = name == "Morte";
+                    if (name.StartsWith("Golpe")) rig.Trigger("Attack");
+                    if (name == "Dano") rig.Trigger("Hit");
+                }
                 foreach (var animator in animators)
                 {
                     if (animator == null) continue;
@@ -86,7 +111,7 @@ namespace Game.Client.DevTools
                     animator.Update(0f);
                     animator.speed = 0f; // congela a pose
                 }
-                yield return new WaitForSeconds(0.25f);
+                yield return new WaitForSeconds(name == "Morte" ? 1f : 0.25f);
                 var file = Path.Combine(_folder, $"{s:00}-{name.Replace(' ', '_')}{(speed > 0 ? "_" + speed : "")}.png");
                 ScreenCapture.CaptureScreenshot(file);
                 yield return new WaitForSeconds(0.35f);

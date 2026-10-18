@@ -22,6 +22,7 @@ namespace Game.Client.Monsters
         private Targetable _target;
         private CharacterController _controller;
         private GameObject _body;
+        private float _hideAt = float.PositiveInfinity;
         private Transform _telegraph;
         private float _telegraphStartedAt;
         private float _verticalVelocity;
@@ -75,6 +76,7 @@ namespace Game.Client.Monsters
 
             if (IsDead)
             {
+                if (Time.time >= _hideAt && _body != null && _body.activeSelf) SetVisible(false);
                 if (Time.time >= _respawnAt) Respawn();
                 return;
             }
@@ -101,7 +103,7 @@ namespace Game.Client.Monsters
                 case MonsterActionKind.AttackStarted:
                     Face(ToWorld(action.Point) - transform.position);
                     ShowTelegraph();
-                    Fx.VisualAnimator.Trigger(this, "Attack");
+                    Fx.VisualAnimator.Attack(this, Fx.AttackStyle.ForMonster(_data.Id));
                     break;
                 case MonsterActionKind.AttackLanded:
                     HideTelegraph();
@@ -141,7 +143,14 @@ namespace Game.Client.Monsters
             _respawnAt = Time.time + _data.RespawnSeconds;
             HideTelegraph();
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(_target.CenterPosition, new Color(0.9f, 0.9f, 0.9f), 30);
-            SetVisible(false);
+            // Modelo animado: cai e some depois; forma simples: some na hora.
+            if (_body != null && _body.GetComponentInChildren<Fx.VisualAnimator>() != null)
+            {
+                Fx.VisualAnimator.SetDead(this, true);
+                _controller.enabled = false;
+                _hideAt = Time.time + 2.2f;
+            }
+            else SetVisible(false);
             Killed?.Invoke(this);
             AnyKilled?.Invoke(this);
         }
@@ -153,6 +162,8 @@ namespace Game.Client.Monsters
             _controller.enabled = true;
             _target.RestoreFullHealth();
             _brain.Revive(Time.time);
+            Fx.VisualAnimator.SetDead(this, false);
+            _hideAt = float.PositiveInfinity;
             SetVisible(true);
         }
 

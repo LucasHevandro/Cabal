@@ -17,6 +17,7 @@ namespace Game.Client.Fx
 
         private readonly HashSet<int> _parameters = new HashSet<int>();
         private Animator _animator;
+        private ProceduralRig _rig;
         private Vector3 _lastPosition;
         private float _speed;
 
@@ -36,7 +37,9 @@ namespace Game.Client.Fx
         {
             if (owner == null) return;
             var visual = owner.GetComponentInChildren<VisualAnimator>();
-            if (visual == null || visual._animator == null) return;
+            if (visual == null) return;
+            if (visual._rig != null) visual._rig.Trigger("Attack");
+            if (visual._animator == null) return;
             if (visual._parameters.Contains(AttackKindId)) visual._animator.SetInteger(AttackKindId, style);
             if (visual._parameters.Contains(AttackId)) visual._animator.SetTrigger(AttackId);
         }
@@ -52,14 +55,16 @@ namespace Game.Client.Fx
         private void Awake()
         {
             _animator = GetComponentInChildren<Animator>();
+            _rig = GetComponentInChildren<ProceduralRig>();
+            _lastPosition = transform.position;
             if (_animator == null)
             {
-                enabled = false;
+                // Modelo em partes (animais, golem): a animação é por código.
+                enabled = _rig != null;
                 return;
             }
             _animator.applyRootMotion = false; // quem move é o jogo (servidor ou controle), não a animação
             foreach (var parameter in _animator.parameters) _parameters.Add(parameter.nameHash);
-            _lastPosition = transform.position;
         }
 
         private void Update()
@@ -70,12 +75,19 @@ namespace Game.Client.Fx
             _lastPosition = position;
             var instant = Time.deltaTime > 0 ? delta.magnitude / Time.deltaTime : 0f;
             _speed = Mathf.Lerp(_speed, instant, 1f - Mathf.Exp(-Time.deltaTime * 12f));
+            if (_rig != null)
+            {
+                _rig.Speed = _speed;
+                _rig.Dead = Dead;
+            }
+            if (_animator == null) return;
             if (_parameters.Contains(SpeedId)) _animator.SetFloat(SpeedId, _speed);
             if (_parameters.Contains(DeadId)) _animator.SetBool(DeadId, Dead);
         }
 
         private void Fire(string trigger)
         {
+            if (_rig != null) _rig.Trigger(trigger);
             var id = Animator.StringToHash(trigger);
             if (_animator != null && _parameters.Contains(id)) _animator.SetTrigger(id);
         }

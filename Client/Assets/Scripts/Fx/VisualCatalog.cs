@@ -47,7 +47,8 @@ namespace Game.Client.Fx
             instance.name = "Modelo: " + id;
             foreach (var collider in instance.GetComponentsInChildren<Collider>(true)) Object.Destroy(collider);
             foreach (var body in instance.GetComponentsInChildren<Rigidbody>(true)) Object.Destroy(body);
-            if (instance.GetComponentInChildren<Animator>() != null && instance.GetComponent<VisualAnimator>() == null)
+            var animated = instance.GetComponentInChildren<Animator>() != null || instance.GetComponentInChildren<ProceduralRig>() != null;
+            if (animated && instance.GetComponent<VisualAnimator>() == null)
                 instance.AddComponent<VisualAnimator>();
             return instance;
         }

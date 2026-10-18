@@ -21,8 +21,9 @@ namespace Game.Client.Fx
         public const int MagicCast = 7;
         public const int MagicRaise = 8;
         public const int Finisher = 9;
+        public const int RangedShoot = 10;
 
-        public const int Count = 10;
+        public const int Count = 11;
 
         public static int For(SkillData skill)
         {
@@ -42,6 +43,21 @@ namespace Game.Client.Fx
                 case "meteoro":
                 case "cataclismo": return MagicRaise;
                 default: return skill.Kind == SkillKind.Magical ? MagicShoot : Slice;
+            }
+        }
+
+        /// <summary>Golpe de monstro (esqueletos têm Animator; os bichos em partes só dão o bote).</summary>
+        public static int ForMonster(string monsterId)
+        {
+            switch (monsterId)
+            {
+                case "esqueleto_arqueiro": return RangedShoot;
+                case "espectro":
+                case "senhor_da_cripta": return MagicShoot;
+                case "cavaleiro_ossudo":
+                case "guardiao_das_ruinas": return Finisher;
+                case "cavaleiro_caido": return Chop;
+                default: return Slice;
             }
         }
 

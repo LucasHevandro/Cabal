@@ -88,7 +88,7 @@ namespace Game.Client.Net
             if (windUp && !_windUp)
             {
                 _telegraphStartedAt = Time.time;
-                Fx.VisualAnimator.Trigger(this, "Attack");
+                Fx.VisualAnimator.Attack(this, Fx.AttackStyle.ForMonster(TypeId));
             }
             _windUp = windUp;
             IsEnraged = (state.Flags & EntityState.FlagEnraged) != 0;
