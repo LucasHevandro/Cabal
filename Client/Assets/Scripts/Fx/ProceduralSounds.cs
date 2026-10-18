@@ -20,6 +20,12 @@ namespace Game.Client.Fx
         RareDrop,
         UpgradeSuccess,
         UpgradeFail,
+        UiClick,
+        UiOpen,
+        UiClose,
+        Step,
+        SwordSwing,
+        MagicImpact,
     }
 
     /// <summary>
@@ -91,6 +97,27 @@ namespace Game.Client.Fx
                     break;
                 case SoundId.UpgradeFail:
                     data = Mix(Noise(0.25f, 0.5f, attack: 0.002f, smoothing: 0.75f), Tone(260, 90, 0.4f, Wave.Square, 0.2f));
+                    break;
+                case SoundId.UiClick:
+                    data = Mix(Tone(1800, 1400, 0.03f, Wave.Sine, 0.25f), Noise(0.015f, 0.15f, attack: 0.001f, smoothing: 0.2f));
+                    break;
+                case SoundId.UiOpen:
+                    data = Mix(Noise(0.09f, 0.18f, attack: 0.3f, smoothing: 0.6f), Tone(500, 900, 0.09f, Wave.Sine, 0.18f));
+                    break;
+                case SoundId.UiClose:
+                    data = Mix(Noise(0.08f, 0.16f, attack: 0.05f, smoothing: 0.6f), Tone(800, 450, 0.08f, Wave.Sine, 0.16f));
+                    break;
+                case SoundId.Step:
+                    // Passo na terra: baque grave curto e um pouco de cascalho.
+                    data = Mix(Tone(90, 50, 0.07f, Wave.Sine, 0.5f), Noise(0.06f, 0.25f, attack: 0.002f, smoothing: 0.85f));
+                    break;
+                case SoundId.SwordSwing:
+                    // Lâmina cortando o ar: chiado que sobe e desce, com um brilho metálico.
+                    data = Mix(Noise(0.18f, 0.45f, attack: 0.25f, smoothing: 0.35f), Tone(2600, 1900, 0.12f, Wave.Sine, 0.06f));
+                    break;
+                case SoundId.MagicImpact:
+                    data = Mix(Mix(Noise(0.2f, 0.4f, attack: 0.002f, smoothing: 0.6f), Tone(600, 200, 0.25f, Wave.Sine, 0.35f)),
+                        Tone(1500, 1500, 0.3f, Wave.Sine, 0.12f));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(id), id, null);

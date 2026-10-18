@@ -119,7 +119,7 @@ namespace Game.Client.UI
         {
             var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
-            if (KeyBindings.Pressed(GameAction.Friends)) _friendsOpen = !_friendsOpen;
+            if (KeyBindings.Pressed(GameAction.Friends)) Fx.UiSounds.Toggle(_friendsOpen = !_friendsOpen);
             if (keyboard.escapeKey.wasPressedThisFrame) _friendsOpen = false;
         }
 

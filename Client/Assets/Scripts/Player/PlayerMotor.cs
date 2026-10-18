@@ -43,6 +43,26 @@ namespace Game.Client.Player
         /// <summary>Quantas esquivas já começaram (a rede avisa o servidor quando muda).</summary>
         public int DodgeCount { get; private set; }
 
+        private Vector3 _lastStepPosition;
+        private float _stepDistance;
+
+        /// <summary>Toca um passo a cada passada (mais longa correndo), alternando o tom entre os pés.</summary>
+        private void PlaySteps(bool running)
+        {
+            var position = transform.position;
+            var moved = new Vector2(position.x - _lastStepPosition.x, position.z - _lastStepPosition.z).magnitude;
+            _lastStepPosition = position;
+            if (moved > 1.5f || IsDodging) return; // teleporte (correção do servidor) ou esquiva não são passos
+            _stepDistance += moved;
+            var stride = running ? 2.1f : 1.5f;
+            if (_stepDistance < stride) return;
+            _stepDistance = 0f;
+            _leftFoot = !_leftFoot;
+            Fx.SoundPlayer.Play(Fx.SoundId.Step, running ? 0.35f : 0.25f, _leftFoot ? 0.08f : 0.12f);
+        }
+
+        private bool _leftFoot;
+
         /// <summary>Move o jogador na hora, sem colisão (correção do servidor, renascer).</summary>
         public void Teleport(Vector3 position)
         {
@@ -96,6 +116,8 @@ namespace Game.Client.Player
 
             CurrentSpeed = horizontal.magnitude;
             _controller.Move((horizontal + Vector3.up * _verticalVelocity) * Time.deltaTime);
+            if (CurrentSpeed > 0.5f) PlaySteps(CurrentSpeed > walkSpeed + 0.1f);
+            else _lastStepPosition = transform.position;
         }
 
         /// <summary>Gira o jogador para olhar um ponto (usado ao atacar um alvo).</summary>

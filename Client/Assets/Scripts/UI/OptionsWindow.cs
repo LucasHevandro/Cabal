@@ -55,6 +55,7 @@ namespace Game.Client.UI
             if (_instance == null) return;
             _instance.Refresh();
             _instance._keysTab = keysTab;
+            if (!IsOpen) UiSounds.Toggle(true);
             IsOpen = true;
         }
 
@@ -62,6 +63,7 @@ namespace Game.Client.UI
         {
             if (!IsOpen) return;
             IsOpen = false;
+            UiSounds.Toggle(false);
             if (_instance != null) _instance._waitingFor = null;
             GameSettings.Save();
         }
@@ -131,6 +133,7 @@ namespace Game.Client.UI
             _scale = Mathf.Min(Screen.width / VirtualWidth, Screen.height / VirtualHeight);
             _offset = new Vector2((Screen.width - VirtualWidth * _scale) / 2, (Screen.height - VirtualHeight * _scale) / 2);
             GUI.matrix = Matrix4x4.TRS(new Vector3(_offset.x, _offset.y, 0), Quaternion.identity, new Vector3(_scale, _scale, 1));
+            if (Event.current.type == EventType.MouseDown && _rect.Contains(Event.current.mousePosition)) UiSounds.Click();
 
             _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 360, 660, 720);
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0, 0, 0, 0.35f));

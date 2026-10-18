@@ -47,7 +47,8 @@ namespace Game.Client.Fx
         {
             if (!_clips.TryGetValue(id, out var clip))
             {
-                clip = ProceduralSounds.Create(id);
+                // Arquivo de verdade em Resources/Audio/sfx/<Id> (ex.: SwordSwing.wav) troca o som gerado em código.
+                clip = Resources.Load<AudioClip>("Audio/sfx/" + id) ?? ProceduralSounds.Create(id);
                 _clips[id] = clip;
             }
 

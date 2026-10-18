@@ -107,6 +107,7 @@ namespace Game.Client.DevTools
                 Log($"Personagem ao entrar: Nv {progress.Level}, XP {progress.Xp}, Alz {bag.Alz}, itens {count}, HP {me.Hp.Current}/{me.Hp.Max}");
             }
             Log($"Vendo {monsters} monstros e {players} outros jogadores");
+            Log($"Música tocando: {Game.Client.Fx.MusicPlayer.Playing}");
 
             // Tutorial do começo (o personagem de teste sempre recomeça do primeiro passo).
             Tutorial.Restart();
@@ -297,6 +298,7 @@ namespace Game.Client.DevTools
                         yield return null;
                     }
                     Capture("2-combo-online");
+                    Log($"Música no campo: {Game.Client.Fx.MusicPlayer.Playing}");
                     yield return new WaitForEndOfFrame();
                 }
 
@@ -692,6 +694,7 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(1.5f);
             Log($"Na cripta: origem z {CharacterState.Dungeon.OriginZ}, posição {motor.transform.position}");
             Capture("12-cripta");
+            Log($"Música na cripta: {Game.Client.Fx.MusicPlayer.Playing}");
             yield return new WaitForEndOfFrame();
             yield return null;
 
@@ -733,6 +736,7 @@ namespace Game.Client.DevTools
                     bossShot = true;
                     yield return new WaitForSecondsRealtime(1f);
                     Capture("13-chefe");
+                    Log($"Música no chefe: {Game.Client.Fx.MusicPlayer.Playing}");
                     yield return new WaitForEndOfFrame();
                 }
                 yield return new WaitForSecondsRealtime(0.15f);

@@ -131,9 +131,9 @@ namespace Game.Client.UI
             var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
 
-            if (KeyBindings.Pressed(GameAction.Inventory)) _inventoryOpen = !_inventoryOpen;
-            if (KeyBindings.Pressed(GameAction.Attributes)) _attributesOpen = !_attributesOpen;
-            if (KeyBindings.Pressed(GameAction.QuestLog)) _questLogOpen = !_questLogOpen;
+            if (KeyBindings.Pressed(GameAction.Inventory)) Fx.UiSounds.Toggle(_inventoryOpen = !_inventoryOpen);
+            if (KeyBindings.Pressed(GameAction.Attributes)) Fx.UiSounds.Toggle(_attributesOpen = !_attributesOpen);
+            if (KeyBindings.Pressed(GameAction.QuestLog)) Fx.UiSounds.Toggle(_questLogOpen = !_questLogOpen);
             if (KeyBindings.Pressed(GameAction.Talk)) TalkToNearest();
             if (keyboard.escapeKey.wasPressedThisFrame) CloseAll();
 
@@ -200,6 +200,7 @@ namespace Game.Client.UI
             if (Player == null || ConnectMenu.IsOpen) return;
             GUI.depth = -10; // por cima do HUD (plaquinhas dos monstros e barras)
             EnsureStyles();
+            Fx.UiSounds.ClickIn(OpenRects, _scale, _offset); // janelas do quadro anterior, antes de limpar a lista
             OpenRects.Clear();
             _hoverItem = null;
 

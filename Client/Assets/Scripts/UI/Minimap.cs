@@ -52,7 +52,7 @@ namespace Game.Client.UI
 
         public static bool BigOpen { get; set; }
 
-        public static void Toggle() => BigOpen = !BigOpen;
+        public static void Toggle() => Fx.UiSounds.Toggle(BigOpen = !BigOpen);
 
         /// <summary>Mapa grande no meio da tela (chamado pelo <see cref="MapOverlay"/>, por cima das janelas).</summary>
         public static void DrawBig(Transform player, Targetable selected, float virtualWidth, float virtualHeight)

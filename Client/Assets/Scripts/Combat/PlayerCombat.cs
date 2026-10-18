@@ -326,6 +326,7 @@ namespace Game.Client.Combat
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
             VisualAnimator.Trigger(this, "Attack");
+            if (skill.Kind == SkillKind.Physical) SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f);
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
             if (Online)

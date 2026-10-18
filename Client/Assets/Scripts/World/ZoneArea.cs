@@ -16,6 +16,9 @@ namespace Game.Client.World
 
         /// <summary>Nome da zona no idioma do jogador (a cena guarda a chave, ex.: zone.vila).</summary>
         public string DisplayName => Loc.Has(displayName) ? Loc.T(displayName) : displayName;
+        /// <summary>Chave do nome guardada na cena (ex.: zone.vila), estável em qualquer idioma.</summary>
+        public string Key => displayName;
+
         public int MinLevel => minLevel;
         public int MaxLevel => maxLevel;
         public float Radius => radius;
