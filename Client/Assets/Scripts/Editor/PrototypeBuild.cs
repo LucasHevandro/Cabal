@@ -13,6 +13,25 @@ namespace Game.Client.Editor
     {
         private const string OutputPath = "Builds/Windows/Prototipo.exe";
 
+        /// <summary>
+        /// Servidor padrão do build: a variável GAME_SERVER (o GitHub Actions passa, ex.: "jogo.com.br:7777") vira o
+        /// servidor.txt ao lado do exe. Sem ela, copia o Client/servidor.txt se existir; sem nenhum, o jogo usa 127.0.0.1.
+        /// </summary>
+        private static void WriteServerFile()
+        {
+            var target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(OutputPath) ?? ".", Net.GameMode.ServerFileName);
+            var server = System.Environment.GetEnvironmentVariable("GAME_SERVER");
+            if (!string.IsNullOrWhiteSpace(server))
+            {
+                System.IO.File.WriteAllText(target, "# Servidor padrão do jogo (endereço:porta).\njogo = " + server.Trim() + "\n");
+                Debug.Log($"[Protótipo] servidor.txt: {server.Trim()}");
+            }
+            else if (System.IO.File.Exists(Net.GameMode.ServerFileName))
+            {
+                System.IO.File.Copy(Net.GameMode.ServerFileName, target, true);
+            }
+        }
+
         [MenuItem("Protótipo/Gerar build Windows")]
         public static void BuildWindows()
         {
@@ -29,6 +48,7 @@ namespace Game.Client.Editor
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
+            if (summary.result == BuildResult.Succeeded) WriteServerFile();
             Debug.Log($"[Protótipo] Build {summary.result}: {summary.outputPath} ({summary.totalSize / (1024 * 1024)} MB, {summary.totalErrors} erros)");
 
             if (Application.isBatchMode && summary.result != BuildResult.Succeeded) EditorApplication.Exit(1);

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Game.Shared.Net;
 using UnityEngine;
 
@@ -8,6 +9,8 @@ namespace Game.Client.Net
     /// Offline (tudo simulado no cliente, como nas Fases 1 e 2) ou online (o servidor decide).
     /// Definido antes da cena carregar: pela linha de comando (<c>-connect host:porta -name Nome</c>)
     /// ou pelo menu de conexão, que recarrega a cena no modo escolhido.
+    /// O servidor padrão do menu vem do <c>servidor.txt</c> ao lado do executável (<c>jogo = host:porta</c> e, se
+    /// precisar, <c>api = https://...</c>); o <c>-server</c> e o <c>-api</c> da linha de comando passam na frente.
     /// </summary>
     public static class GameMode
     {
@@ -16,6 +19,12 @@ namespace Game.Client.Net
         public static string Host { get; private set; } = "127.0.0.1";
         public static int Port { get; private set; } = Protocol.DefaultPort;
         public static string PlayerName { get; private set; } = "Aventureiro";
+
+        /// <summary>URL da API de login no lugar da regra padrão (<see cref="ServerAddress.ApiUrl"/>); vazio = regra.</summary>
+        public static string ApiOverride { get; private set; } = "";
+
+        /// <summary>Nome do arquivo com o servidor padrão, ao lado do executável (na pasta Client/ no Editor).</summary>
+        public const string ServerFileName = "servidor.txt";
 
         /// <summary>Token da API de login e personagem escolhido (vazio/0 = entra como convidado).</summary>
         public static string Token { get; private set; } = "";
@@ -69,9 +78,34 @@ namespace Game.Client.Net
             return parts.Length == 1 || (parts.Length == 2 && int.TryParse(parts[1], out port) && port > 0 && port < 65536);
         }
 
+        /// <summary>Lê o servidor.txt (linhas <c>chave = valor</c>; <c>#</c> comenta). Sem o arquivo, fica o 127.0.0.1.</summary>
+        private static void ReadServerFile()
+        {
+            try
+            {
+                var path = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", ServerFileName);
+                if (!File.Exists(path)) return;
+                foreach (var raw in File.ReadAllLines(path))
+                {
+                    var line = raw.Trim();
+                    var equals = line.IndexOf('=');
+                    if (line.StartsWith("#") || equals <= 0) continue;
+                    var key = line.Substring(0, equals).Trim().ToLowerInvariant();
+                    var value = line.Substring(equals + 1).Trim();
+                    if (key == "jogo" && TryParseAddress(value, out var host, out var port)) SetServer(host, port);
+                    if (key == "api") ApiOverride = value;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[Servidor] Não consegui ler o {ServerFileName}: {ex.Message}");
+            }
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void ReadCommandLine()
         {
+            ReadServerFile();
             var args = Environment.GetCommandLineArgs();
             string name = null;
             for (var i = 0; i < args.Length - 1; i++)
@@ -87,6 +121,7 @@ namespace Game.Client.Net
                 }
                 if (args[i] == "-server" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var serverHost, out var serverPort))
                     SetServer(serverHost, serverPort);
+                if (args[i] == "-api" && i + 1 < args.Length) ApiOverride = args[i + 1];
                 if (args[i] == "-offline") SetOffline();
                 if (args[i] == "-connect" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var host, out var port))
                     SetOnline(host, port, name);

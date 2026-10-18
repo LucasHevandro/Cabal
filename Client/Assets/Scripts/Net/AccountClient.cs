@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Game.Shared.Accounts;
+using Game.Shared.Net;
 using Game.Shared.Text;
 using UnityEngine;
 
@@ -25,9 +26,10 @@ namespace Game.Client.Net
     }
 
     /// <summary>
-    /// Cliente da API HTTP de contas do servidor (porta do jogo + 1). Usa HttpClient (funciona no Unity sem a opção de
-    /// "HTTP inseguro"); o JSON é o mesmo do servidor (DTOs do Shared com JsonUtility).
-    /// Em desenvolvimento a API é HTTP; em produção ficará atrás de HTTPS.
+    /// Cliente da API HTTP de contas do servidor. Usa HttpClient (funciona no Unity sem a opção de "HTTP inseguro");
+    /// o JSON é o mesmo do servidor (DTOs do Shared com JsonUtility).
+    /// Endereço: IP usa HTTP na porta do jogo + 1 (desenvolvimento); domínio usa HTTPS (produção, atrás do Caddy);
+    /// o servidor.txt ou o -api trocam (<see cref="GameMode.ApiOverride"/>).
     /// </summary>
     public sealed class AccountClient
     {
@@ -39,7 +41,7 @@ namespace Game.Client.Net
 
         public AccountClient(string host, int gamePort)
         {
-            _baseUrl = $"http://{host}:{gamePort + 1}/api";
+            _baseUrl = (GameMode.ApiOverride.Length > 0 ? GameMode.ApiOverride : ServerAddress.ApiUrl(host, gamePort)).TrimEnd('/');
         }
 
         public Task<ApiResult<ApiError>> RegisterAsync(string account, string password) =>
