@@ -46,6 +46,12 @@ namespace Game.Client.Editor
                 Id = "lobo_cinzento", Model = "Animais/Wolf", Height = 1.25f, Walk = "Walk", Run = "Gallop", Attack = "Attack",
                 Hit = "Idle_HitReact_Left", WalkSpeed = 1.8f, RunSpeed = 5f,
             },
+            // O javali furioso vira o Touro Furioso (os pacotes não têm javali; os ids do jogo ficam os mesmos).
+            new Spec
+            {
+                Id = "javali_furioso", Model = "Animais/Bull", Height = 1.6f, Walk = "Walk", Run = "Gallop", Attack = "Attack_Headbutt",
+                Hit = "Idle_HitReact_Left", WalkSpeed = 1.6f, RunSpeed = 5.5f,
+            },
         };
 
         private static readonly (string Id, string Model, float Height)[] Fauna =

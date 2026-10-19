@@ -73,6 +73,19 @@ namespace Game.Client.Editor
                 return obj.transform;
             }
 
+            /// <summary>Peça com uma malha pronta (pedra do KayKit) em <paramref name="parent"/>, girada e no tamanho dado.</summary>
+            public Transform Piece(Transform parent, Vector3 position, Mesh mesh, Material material, float scale, Vector3 euler, string name = "Pedra")
+            {
+                var obj = new GameObject(name);
+                obj.transform.SetParent(parent, false);
+                obj.transform.localPosition = position;
+                obj.transform.localRotation = Quaternion.Euler(euler);
+                obj.transform.localScale = Vector3.one * scale;
+                obj.AddComponent<MeshFilter>().sharedMesh = mesh;
+                obj.AddComponent<MeshRenderer>().sharedMaterial = material;
+                return obj.transform;
+            }
+
             /// <summary>Junta (sem malha) para girar uma pata ou um braço.</summary>
             public Transform Joint(Transform parent, Vector3 position, string name)
             {
@@ -237,6 +250,11 @@ namespace Game.Client.Editor
 
         private static void Golem()
         {
+            if (PackMeshes.Has(PackMeshes.Nature))
+            {
+                RockGolem();
+                return;
+            }
             var r = new System.Random(505);
             var stone = Mat("pedra_golem", new Color(0.52f, 0.51f, 0.53f));
             var dark = Mat("pedra_golem_escura", new Color(0.36f, 0.35f, 0.38f));
@@ -268,6 +286,39 @@ namespace Game.Client.Editor
                     k.Blob(0, new Vector3(0, -0.3f, 0), new Vector3(0.26f, 0.32f, 0.26f), r, 0.15f);
                     k.Blob(0, new Vector3(0, -0.85f, 0.06f), new Vector3(0.3f, 0.2f, 0.36f), r, 0.12f);
                 }, "Perna");
+                c.Limb(hip, side > 0 ? 0.5f : 0f, 24f, Vector3.right);
+            }
+            c.Save(1.4f, false, 0.08f, 0.3f);
+        }
+
+        /// <summary>
+        /// Golem montado com as pedras do KayKit Forest (mesmo estilo do cenário): tronco de rocha, cabeça, braços e pernas
+        /// de pedras empilhadas e o núcleo azul brilhando. Anima por código como os outros bichos.
+        /// </summary>
+        private static void RockGolem()
+        {
+            var r = new System.Random(505);
+            var rock = PackMeshes.Atlas(PackMeshes.Nature, "forest_texture.png", "floresta");
+            var core = Glow("nucleo_golem", new Color(0.35f, 0.9f, 1f));
+            Mesh M(string name) => PackMeshes.Load(PackMeshes.Nature, name)[0];
+            var c = new Creature("golem_de_pedra", 1.35f);
+            c.Piece(c.Body, new Vector3(0, -0.45f, 0), M("Rock_3_G_Color1"), rock, 0.75f, new Vector3(0, 20, 0), "Tronco");
+            c.Piece(c.Body, new Vector3(0, 0.55f, -0.15f), M("Rock_2_C_Color1"), rock, 0.55f, new Vector3(0, 0, 0), "Ombros");
+            c.Part(c.Body, new Vector3(0, 0.25f, 0.62f), core, k => k.Blob(0, Vector3.zero, new Vector3(0.16f, 0.16f, 0.08f), r, 0.1f), "Núcleo");
+            var head = c.Joint(c.Body, new Vector3(0, 1.0f, 0.2f), "Cabeça");
+            c.Piece(head, new Vector3(0, -0.2f, 0), M("Rock_1_D_Color1"), rock, 0.42f, new Vector3(0, 45, 0));
+            foreach (var side in new[] { -1f, 1f })
+                c.Part(head, new Vector3(side * 0.11f, 0.08f, 0.24f), core, k => k.Blob(0, Vector3.zero, Vector3.one * 0.06f, r, 0.05f), "Olho");
+            c.Limb(head, 0.5f, 3f, Vector3.right, 10f);
+            foreach (var side in new[] { -1f, 1f })
+            {
+                // Braços de pedras empilhadas: balançam ao andar e sobem e descem no golpe.
+                var shoulder = c.Joint(c.Body, new Vector3(side * 0.95f, 0.55f, 0), "Braço");
+                c.Piece(shoulder, new Vector3(0, -0.45f, 0), M("Rock_3_C_Color1"), rock, 0.5f, new Vector3(0, side * 30, 0));
+                c.Piece(shoulder, new Vector3(0, -1.05f, 0.1f), M("Rock_1_E_Color1"), rock, 0.42f, new Vector3(0, side * 60, 0));
+                c.Limb(shoulder, side > 0 ? 0f : 0.5f, 22f, Vector3.right, -70f);
+                var hip = c.Joint(c.Body, new Vector3(side * 0.4f, -0.35f, 0), "Perna");
+                c.Piece(hip, new Vector3(0, -1.0f, 0.05f), M("Rock_3_B_Color1"), rock, 0.55f, new Vector3(0, side * 15, 0));
                 c.Limb(hip, side > 0 ? 0.5f : 0f, 24f, Vector3.right);
             }
             c.Save(1.4f, false, 0.08f, 0.3f);
