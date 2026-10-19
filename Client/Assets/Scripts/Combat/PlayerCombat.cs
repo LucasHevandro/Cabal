@@ -191,14 +191,10 @@ namespace Game.Client.Combat
 
             if (KeyBindings.Pressed(GameAction.StartCombo)) RequestStartCombo();
             if (KeyBindings.Pressed(GameAction.Finisher)) RequestFinisher();
-            if (KeyBindings.Pressed(GameAction.Skill1)) RequestHotbar(0);
-            if (KeyBindings.Pressed(GameAction.Skill2)) RequestHotbar(1);
-            if (KeyBindings.Pressed(GameAction.Skill3)) RequestHotbar(2);
-            if (KeyBindings.Pressed(GameAction.Skill4)) RequestHotbar(3);
-            if (KeyBindings.Pressed(GameAction.Skill5)) RequestHotbar(4);
-            if (KeyBindings.Pressed(GameAction.Skill6)) RequestHotbar(5);
-            if (KeyBindings.Pressed(GameAction.Skill7)) RequestHotbar(6);
-            if (KeyBindings.Pressed(GameAction.Skill8)) RequestHotbar(7);
+            // 1 a 0: primeira fileira da barra; com Alt, a segunda (como no CABAL).
+            var alt = keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed;
+            for (var key = 0; key < Game.Shared.Progression.SkillTraining.HotbarRow; key++)
+                if (KeyBindings.Pressed(GameAction.Skill1 + key)) RequestHotbar(alt ? key + Game.Shared.Progression.SkillTraining.HotbarRow : key);
             if (KeyBindings.Pressed(GameAction.Awakening) && Online) NetworkSession.Instance.Send(new Msg.ActivateAwakening());
         }
 

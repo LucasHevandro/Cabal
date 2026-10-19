@@ -451,11 +451,13 @@ namespace Game.Client.DevTools
             var original = new List<byte>(CharacterState.Sheet.Hotbar);
             var swapped = new List<byte>(original);
             (swapped[0], swapped[1]) = (swapped[1], swapped[0]);
+            // A skill da casa 8 vai para a segunda fileira (Alt+3).
+            swapped[12] = swapped[7];
             swapped[7] = Game.Shared.Progression.SkillTraining.Empty;
             NetworkSession.Instance.Send(new SetHotbar { Slots = swapped });
-            yield return WaitFor(() => CharacterState.Sheet.Hotbar.Count == 8 && CharacterState.Sheet.Hotbar[0] == original[1]
+            yield return WaitFor(() => CharacterState.Sheet.Hotbar.Count == SkillTraining.HotbarSize && CharacterState.Sheet.Hotbar[0] == original[1]
                 && CharacterState.Sheet.Hotbar[7] == Game.Shared.Progression.SkillTraining.Empty, 3f);
-            if (CharacterState.HotbarSkill(0) != original[1] || CharacterState.HotbarSkill(7) != -1)
+            if (CharacterState.HotbarSkill(0) != original[1] || CharacterState.HotbarSkill(7) != -1 || CharacterState.HotbarSkill(12) != original[7])
             {
                 outcome.Message = "a barra de atalhos não foi arrumada pelo servidor";
                 yield break;

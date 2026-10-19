@@ -12,7 +12,7 @@ namespace Game.Client.UI
     public enum GameAction
     {
         MoveForward, MoveBack, MoveLeft, MoveRight, Run, Dodge,
-        Skill1, Skill2, Skill3, Skill4, Skill5, Skill6, Skill7, Skill8,
+        Skill1, Skill2, Skill3, Skill4, Skill5, Skill6, Skill7, Skill8, Skill9, Skill10,
         StartCombo, Finisher, Awakening, Pickup, NextTarget, Talk,
         Inventory, Attributes, QuestLog, Friends, Map, Help, Options,
         Skills,
@@ -33,6 +33,7 @@ namespace Game.Client.UI
             [GameAction.Skill1] = Key.Digit1, [GameAction.Skill2] = Key.Digit2, [GameAction.Skill3] = Key.Digit3,
             [GameAction.Skill4] = Key.Digit4, [GameAction.Skill5] = Key.Digit5, [GameAction.Skill6] = Key.Digit6,
             [GameAction.Skill7] = Key.Digit7, [GameAction.Skill8] = Key.Digit8,
+            [GameAction.Skill9] = Key.Digit9, [GameAction.Skill10] = Key.Digit0,
             [GameAction.StartCombo] = Key.Q, [GameAction.Finisher] = Key.F, [GameAction.Awakening] = Key.R,
             [GameAction.Pickup] = Key.E, [GameAction.NextTarget] = Key.Tab, [GameAction.Talk] = Key.T,
             [GameAction.Inventory] = Key.I, [GameAction.Attributes] = Key.C, [GameAction.QuestLog] = Key.J,
@@ -149,7 +150,7 @@ namespace Game.Client.UI
 
         /// <summary>Nome da ação na tela de atalhos.</summary>
         public static string ActionName(GameAction action) =>
-            action >= GameAction.Skill1 && action <= GameAction.Skill8
+            action >= GameAction.Skill1 && action <= GameAction.Skill10
                 ? Loc.T("action.skill", (int)(action - GameAction.Skill1) + 1)
                 : Loc.T("action." + action.ToString().ToLowerInvariant());
     }

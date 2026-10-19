@@ -27,6 +27,7 @@ namespace Game.Client.UI
         private GUIStyle _center;
         private GUIStyle _big;
         private GUIStyle _small;
+        private GUIStyle _key;
 
         private static readonly Color Panel = new Color(0f, 0f, 0f, 0.55f);
         private static readonly Color BarBack = new Color(0.12f, 0.12f, 0.14f, 0.9f);
@@ -118,18 +119,22 @@ namespace Game.Client.UI
             GUI.color = Color.white;
         }
 
-        private readonly string[] _skillKeys = new string[8];
+        private readonly string[] _skillKeys = new string[SkillTraining.HotbarSize];
         private int _skillKeysVersion = -1;
 
-        /// <summary>Tecla da skill em negrito, guardada até os atalhos mudarem (a barra é desenhada todo quadro).</summary>
-        private string SkillKeyLabel(int index)
+        /// <summary>Tecla da casa (fileira de cima com "A+", de Alt), guardada até os atalhos mudarem.</summary>
+        private string SlotKeyLabel(int slot)
         {
             if (_skillKeysVersion != KeyBindings.Version)
             {
-                for (var i = 0; i < _skillKeys.Length; i++) _skillKeys[i] = "<b>" + KeyBindings.Label(GameAction.Skill1 + i) + "</b>";
+                for (var i = 0; i < _skillKeys.Length; i++)
+                {
+                    var key = KeyBindings.Label(GameAction.Skill1 + i % SkillTraining.HotbarRow);
+                    _skillKeys[i] = "<b>" + (i >= SkillTraining.HotbarRow ? "A+" + key : key) + "</b>";
+                }
                 _skillKeysVersion = KeyBindings.Version;
             }
-            return index < _skillKeys.Length ? _skillKeys[index] : "";
+            return slot < _skillKeys.Length ? _skillKeys[slot] : "";
         }
 
         /// <summary>Retângulos do HUD no quadro atual (tela virtual): os nomes dos NPCs não são escritos por cima deles.</summary>
@@ -324,7 +329,7 @@ namespace Game.Client.UI
 
         private void DrawSpBar()
         {
-            var rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight - 210, 660, 18);
+            var rect = new Rect(VirtualWidth / 2 - 330, BarTop - 38, 660, 18);
             Bar(rect, (float)combat.Sp.Current / Mathf.Max(1, combat.Sp.Max), SpColor);
             GUI.Label(rect, Loc.T("hud.sp", combat.Sp.Current, combat.Sp.Max), _small.WithCenter());
         }
@@ -351,7 +356,7 @@ namespace Game.Client.UI
         {
             var sheet = CharacterState.Sheet;
             if (!GameMode.IsOnline || sheet == null) return;
-            var rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight - 232, 660, 14);
+            var rect = new Rect(VirtualWidth / 2 - 330, BarTop - 60, 660, 14);
             var session = NetworkSession.Instance;
             var remaining = session != null ? sheet.AwakeningUntil - session.ServerNow : 0;
             if (remaining > 0)
@@ -366,69 +371,93 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? Loc.T("hud.awakening_ready", KeyBindings.Label(GameAction.Awakening)) : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
         }
 
-        /// <summary>Casas da barra de atalhos: online sempre 8 (o jogador arruma); offline, uma por skill.</summary>
-        public static int HotbarCount(int skillCount) => GameMode.IsOnline ? Game.Shared.Progression.SkillTraining.HotbarSize : skillCount;
+        /// <summary>Casas da barra de atalhos: online sempre 20 (o jogador arruma); offline, uma por skill.</summary>
+        public static int HotbarCount(int skillCount) => GameMode.IsOnline ? SkillTraining.HotbarSize : skillCount;
 
-        /// <summary>Retângulo da casa <paramref name="slot"/> da barra (tela virtual); as janelas usam para arrastar.</summary>
+        private const float SlotSize = 48f;
+        private const float SlotGap = 4f;
+
+        /// <summary>
+        /// Retângulo da casa <paramref name="slot"/> (tela virtual): fileira de baixo = teclas 1 a 0, de cima = Alt.
+        /// As janelas usam para arrastar.
+        /// </summary>
         public static Rect HotbarRect(int slot, int count)
         {
-            var size = count > 4 ? 104f : 150f;
-            var gap = count > 4 ? 10f : 20f;
-            var total = count * size + (count - 1) * gap;
-            return new Rect(VirtualWidth / 2 - total / 2 + slot * (size + gap), VirtualHeight - 180, size, 120);
+            var row = slot / SkillTraining.HotbarRow;
+            var column = slot % SkillTraining.HotbarRow;
+            var columns = Mathf.Min(count, SkillTraining.HotbarRow);
+            var total = columns * SlotSize + (columns - 1) * SlotGap;
+            return new Rect(VirtualWidth / 2 - total / 2 + column * (SlotSize + SlotGap), BarBottom - SlotSize - row * (SlotSize + SlotGap),
+                SlotSize, SlotSize);
+        }
+
+        private const float BarBottom = VirtualHeight - 22f;
+
+        /// <summary>Topo da barra de atalhos (o SP e o Despertar ficam logo acima).</summary>
+        private float BarTop
+        {
+            get
+            {
+                var rows = Mathf.CeilToInt(HotbarCount(combat.Skills.Count) / (float)SkillTraining.HotbarRow);
+                return BarBottom - rows * SlotSize - (rows - 1) * SlotGap;
+            }
         }
 
         private void DrawSkillBar()
         {
             var skills = combat.Skills;
             var count = HotbarCount(skills.Count);
+            var mouse = Event.current.mousePosition;
+            var hovered = -1;
+
+            // Moldura atrás das fileiras.
+            var first = HotbarRect(0, count);
+            var last = HotbarRect(Mathf.Min(count, SkillTraining.HotbarRow) - 1, count);
+            var frame = new Rect(first.x - 8, BarTop - 8, last.xMax - first.x + 16, BarBottom - BarTop + 16);
+            UiTheme.Panel(frame, 0.85f);
+            PanelRects.Add(frame);
 
             for (var slot = 0; slot < count; slot++)
             {
                 var rect = HotbarRect(slot, count);
-                PanelRects.Add(rect);
                 var i = CharacterState.HotbarSkill(slot);
-                if (i < 0 || i >= skills.Count)
+                var filled = i >= 0 && i < skills.Count;
+                UiTheme.Slot(rect, rect.Contains(mouse));
+                if (filled)
                 {
-                    // Casa vazia: só a tecla, apagada.
-                    UiTheme.Panel(rect, 0.45f);
-                    GUI.color = new Color(1f, 1f, 1f, 0.4f);
-                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
-                    GUI.color = Color.white;
-                    continue;
-                }
-                var skill = skills[i];
-                UiTheme.Panel(rect, 0.78f);
-                var iconSize = count > 4 ? 40f : 46f;
-                var icon = SkillIcons.Get(skill);
-                if (icon != null) GUI.DrawTexture(new Rect(rect.xMax - iconSize - 6, rect.y + 6, iconSize, iconSize), icon);
-                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
-                GUI.Label(new Rect(rect.x + 8, rect.y + 50, rect.width - 16, 38), skill.Name, _small.WithCenter());
-                var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
-                if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
-                if (count > 4) _small.fontSize = 13; // com 8 skills a caixa é estreita: "mágico · 25 MP" cabe menor
-                GUI.Label(new Rect(rect.x + 4, rect.y + 88, rect.width - 8, 24), kindText, _small.WithCenter());
-                _small.fontSize = 16;
+                    var skill = skills[i];
+                    if (rect.Contains(mouse)) hovered = i;
+                    var icon = SkillIcons.Get(skill);
+                    if (icon != null) GUI.DrawTexture(new Rect(rect.x + 2, rect.y + 2, rect.width - 4, rect.height - 4), icon);
 
-                // Sem mana: escurece a skill inteira.
-                if (!combat.Mp.Has(skill.MpCost)) Box(rect, new Color(0.1f, 0.1f, 0.4f, 0.5f));
+                    // Sem mana ou ainda não aprendida (offline): escurece.
+                    if (!combat.Mp.Has(skill.MpCost)) Box(rect, new Color(0.05f, 0.08f, 0.35f, 0.55f));
+                    if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i)) Box(rect, new Color(0.03f, 0.03f, 0.05f, 0.8f));
 
-                if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i))
-                {
-                    Box(rect, new Color(0.05f, 0.05f, 0.07f, 0.95f));
-                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
-                    GUI.Label(new Rect(rect.x + 4, rect.y + 36, rect.width - 8, 80), $"<color=#999999>{skill.Name}</color>\n{combat.UnlockText(i, compact: true)}", _small.WithCenter());
-                    continue;
+                    var remaining = combat.CooldownRemaining(i);
+                    if (remaining > 0)
+                    {
+                        var fraction = Mathf.Clamp01(remaining / Mathf.Max(0.01f, skill.CooldownSeconds));
+                        Box(new Rect(rect.x + 2, rect.y + 2 + (rect.height - 4) * (1 - fraction), rect.width - 4, (rect.height - 4) * fraction), new Color(0, 0, 0, 0.65f));
+                        ShadowLabel(rect, remaining >= 10f ? $"<b>{remaining:0}</b>" : $"<b>{remaining:0.0}</b>", _small.WithCenter(), Color.white, 1f);
+                    }
                 }
-
-                var remaining = combat.CooldownRemaining(i);
-                if (remaining > 0)
-                {
-                    var fraction = Mathf.Clamp01(remaining / Mathf.Max(0.01f, skill.CooldownSeconds));
-                    Box(new Rect(rect.x, rect.y + rect.height * (1 - fraction), rect.width, rect.height * fraction), new Color(0, 0, 0, 0.6f));
-                    GUI.Label(rect, $"<b>{remaining:0.0}</b>", _big.WithCenter());
-                }
+                ShadowLabel(new Rect(rect.x + 3, rect.y + 1, rect.width, 16), SlotKeyLabel(slot), _key, filled ? Color.white : new Color(1f, 1f, 1f, 0.45f), 1f);
             }
+
+            if (hovered >= 0) DrawSkillTooltip(skills[hovered], hovered, mouse);
+        }
+
+        /// <summary>Nome, tipo, MP e recarga da skill embaixo do mouse.</summary>
+        private void DrawSkillTooltip(SkillData skill, int index, Vector2 mouse)
+        {
+            var kind = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
+            if (skill.MpCost > 0) kind = Loc.T("hud.kind_with_mp", kind, skill.MpCost);
+            var text = $"<b>{skill.Name}</b>\n<size=14>{kind} · {skill.CooldownSeconds:0.#} s</size>";
+            if (GameMode.IsOnline && !CharacterState.SkillUnlocked(index)) text += $"\n<size=14><color=#ff8a7a>{combat.UnlockText(index)}</color></size>";
+            var rect = new Rect(Mathf.Clamp(mouse.x - 120, 10, VirtualWidth - 250), BarTop - 92, 240, 74);
+            UiTheme.Panel(rect, 0.95f);
+            GUI.Label(new Rect(rect.x + 10, rect.y + 6, rect.width - 20, rect.height - 12), text, _small);
         }
 
         private void DrawGradePopup()
@@ -500,6 +529,7 @@ namespace Game.Client.UI
             _center = new GUIStyle(_label) { alignment = TextAnchor.MiddleCenter };
             _big = new GUIStyle(_label) { fontSize = 30 };
             _small = new GUIStyle(_label) { fontSize = 16 };
+            _key = new GUIStyle(_label) { fontSize = 12 };
         }
     }
 
