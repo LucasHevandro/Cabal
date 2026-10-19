@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Game.Client.Fx;
 using Game.Shared.Accounts;
 using Game.Shared.Text;
 using UnityEngine;
@@ -39,6 +40,9 @@ namespace Game.Client.Net
         private string _passwordAgain = "";
         private string _newName = "";
         private CharacterClass _newClass = CharacterClass.Blade;
+        private int _newHair;
+        private int _newCloth;
+        private readonly CharacterPreview _preview = new CharacterPreview();
         private string _message = "";
         private bool _messageIsError;
         private string _busyText = "";
@@ -115,7 +119,20 @@ namespace Game.Client.Net
             _backdropReady = false;
         }
 
-        private void OnDestroy() => ReleaseBackdrop();
+        /// <summary>Para o teste da tela de entrada: abre a criação com estas escolhas.</summary>
+        internal void OpenCreateForTest(CharacterClass characterClass, int hair, int cloth)
+        {
+            _screen = Screen.CreateCharacter;
+            _newClass = characterClass;
+            _newHair = hair;
+            _newCloth = cloth;
+        }
+
+        private void OnDestroy()
+        {
+            ReleaseBackdrop();
+            _preview.Hide();
+        }
 
         private void Awake()
         {
@@ -206,7 +223,7 @@ namespace Game.Client.Net
             }
             await Run(Loc.T("login.creating_character"), async () =>
             {
-                var created = await _api.CreateCharacterAsync(_newName, _newClass);
+                var created = await _api.CreateCharacterAsync(_newName, _newClass, _newHair, _newCloth);
                 if (!created.Ok)
                 {
                     ShowError(created.Error);
@@ -353,8 +370,8 @@ namespace Game.Client.Net
 
             var scale = Mathf.Max(1f, UnityEngine.Screen.height / 900f);
             // Os termos precisam de mais espaço para ler.
-            var width = (_screen == Screen.Terms ? 820 : 480) * scale;
-            var height = (_screen == Screen.Terms ? 780 : 520) * scale;
+            var width = (_screen == Screen.Terms ? 820 : _screen == Screen.CreateCharacter ? 820 : 480) * scale;
+            var height = (_screen == Screen.Terms ? 780 : _screen == Screen.CreateCharacter ? 600 : 520) * scale;
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
             GUILayout.BeginArea(area, GUI.skin.box);
             GUILayout.Space(8 * scale);
@@ -383,6 +400,10 @@ namespace Game.Client.Net
 
         private void Update()
         {
+            // Prévia do personagem só na tela de criação.
+            if (!GameMode.ChoiceMade && _screen == Screen.CreateCharacter) _preview.Show(_newClass, _newHair, _newCloth);
+            else _preview.Hide();
+
             // Status dos servidores enquanto a lista está na tela.
             if (GameMode.ChoiceMade || _screen != Screen.Login) return;
             foreach (var entry in ServerList.Entries)
@@ -521,6 +542,54 @@ namespace Game.Client.Net
 
         private void DrawCreate(float scale)
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(450 * scale));
+            DrawCreateOptions(scale);
+            GUILayout.EndVertical();
+            GUILayout.Space(12 * scale);
+            GUILayout.BeginVertical();
+            var preview = GUILayoutUtility.GetRect(300 * scale, 366 * scale, GUILayout.ExpandWidth(false));
+            if (_preview.Texture != null) GUI.DrawTexture(preview, _preview.Texture, ScaleMode.ScaleAndCrop, false);
+            Game.Client.UI.UiTheme.Frame(preview);
+            GUILayout.Label(Loc.T("login.preview_hint"), _small, GUILayout.Width(300 * scale));
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+        }
+
+        /// <summary>Fileira de quadradinhos de cor (o primeiro é a cor original do modelo).</summary>
+        private int ColorRow(string title, Color[] palette, int current, float scale)
+        {
+            GUILayout.Label(title, _label);
+            GUILayout.BeginHorizontal();
+            for (var i = 0; i < palette.Length; i++)
+            {
+                var rect = GUILayoutUtility.GetRect((i == 0 ? 86 : 48) * scale, 34 * scale, GUILayout.ExpandWidth(false));
+                if (GUI.Button(rect, i == 0 ? Loc.T("login.color_original") : "")) current = i;
+                if (i > 0)
+                {
+                    GUI.color = palette[i];
+                    GUI.DrawTexture(new Rect(rect.x + 4 * scale, rect.y + 4 * scale, rect.width - 8 * scale, rect.height - 8 * scale), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
+                if (i == current)
+                {
+                    // A escolhida ganha uma moldura clara e grossa.
+                    var t = 3 * scale;
+                    GUI.color = new Color(1f, 0.86f, 0.45f);
+                    GUI.DrawTexture(new Rect(rect.x - t, rect.y - t, rect.width + 2 * t, t), Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(rect.x - t, rect.yMax, rect.width + 2 * t, t), Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(rect.x - t, rect.y, t, rect.height), Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(rect.xMax, rect.y, t, rect.height), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
+                GUILayout.Space(4 * scale);
+            }
+            GUILayout.EndHorizontal();
+            return current;
+        }
+
+        private void DrawCreateOptions(float scale)
+        {
             GUILayout.Label(Loc.T("login.new_character"), _label);
             GUILayout.Label(Loc.T("login.name_rule", AccountRules.MinCharacterNameLength, AccountRules.MaxCharacterNameLength), _small);
             _newName = GUILayout.TextField(_newName, AccountRules.MaxCharacterNameLength, GUILayout.Height(26 * scale));
@@ -531,6 +600,8 @@ namespace Game.Client.Net
             if (GUILayout.Toggle(_newClass == CharacterClass.Arcanist, " " + Loc.T("login.class_arcanist"), GUI.skin.button, GUILayout.Height(34 * scale)))
                 _newClass = CharacterClass.Arcanist;
             GUILayout.EndHorizontal();
+            _newHair = ColorRow(Loc.T("login.hair"), CharacterPaint.HairColors, _newHair, scale);
+            _newCloth = ColorRow(Loc.T("login.cloth"), CharacterPaint.ClothColors, _newCloth, scale);
             GUILayout.Space(10 * scale);
             if (GUILayout.Button(Loc.T("login.create"), GUILayout.Height(38 * scale))) _ = CreateCharacterAsync();
             if (_characters.Count > 0 && GUILayout.Button(Loc.T("ui.back"), GUILayout.Height(28 * scale)))

@@ -32,6 +32,19 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.5f);
             // Câmera desligada não conta como Camera.main.
             var stopped = ConnectMenu.IsOpen && Camera.main == null;
+            // A criação de personagem, com a prévia nas duas classes e cores diferentes.
+            var menu = FindAnyObjectByType<ConnectMenu>();
+            if (menu != null)
+            {
+                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Arcanist, 1, 3);
+                yield return new WaitForSecondsRealtime(1.5f);
+                ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "criacao_arcanista.png"));
+                yield return new WaitForSecondsRealtime(0.4f);
+                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Blade, 3, 1);
+                yield return new WaitForSecondsRealtime(1.5f);
+                ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "criacao_lamina.png"));
+                yield return new WaitForSecondsRealtime(0.4f);
+            }
             var servers = string.Join("; ", ServerList.Entries.ConvertAll(e => $"{e.Name} {e.Address} = {e.Status} ({e.Players} jogadores, {e.PingMs} ms)"));
             // Escolheu jogar (offline): o jogo volta a ser desenhado.
             GameMode.SetOffline();

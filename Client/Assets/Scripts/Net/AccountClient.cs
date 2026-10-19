@@ -63,8 +63,9 @@ namespace Game.Client.Net
 
         public Task<ApiResult<CharacterList>> ListCharactersAsync() => SendAsync<CharacterList>(HttpMethod.Get, "/characters", null);
 
-        public Task<ApiResult<CharacterSummary>> CreateCharacterAsync(string name, CharacterClass characterClass) =>
-            SendAsync<CharacterSummary>(HttpMethod.Post, "/characters", new CreateCharacterRequest { Name = name, ClassId = (int)characterClass });
+        public Task<ApiResult<CharacterSummary>> CreateCharacterAsync(string name, CharacterClass characterClass, int hair = 0, int cloth = 0) =>
+            SendAsync<CharacterSummary>(HttpMethod.Post, "/characters",
+                new CreateCharacterRequest { Name = name, ClassId = (int)characterClass, Hair = hair, Cloth = cloth });
 
         private async Task<ApiResult<T>> SendAsync<T>(HttpMethod method, string path, object body)
         {

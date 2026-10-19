@@ -191,12 +191,16 @@ namespace Game.Client.Net
                     break;
                 case EntitySpawned spawned:
                     if (spawned.Id != PlayerId) CreateView(spawned);
-                    else if (_combat != null) _combat.ApplyLook(spawned.WeaponId, spawned.WeaponUpgrade);
+                    else if (_combat != null) _combat.ApplyLook(spawned.WeaponId, spawned.WeaponUpgrade, spawned.ArmorGrade, spawned.Hair, spawned.Cloth);
                     break;
                 case EntityLook look:
-                    // Trocou de arma ou melhorou: o modelo e o brilho acompanham (eu ou quem eu vejo).
-                    if (look.Id == PlayerId && _combat != null) _combat.ApplyLook(look.WeaponId, look.WeaponUpgrade);
-                    else if (_views.TryGetValue(look.Id, out var looked)) Fx.WeaponFx.SetLook(looked, look.WeaponId, look.WeaponUpgrade);
+                    // Trocou de arma ou de armadura, ou melhorou: o modelo, o brilho e o metal acompanham (eu ou quem eu vejo).
+                    if (look.Id == PlayerId && _combat != null) _combat.ApplyLook(look.WeaponId, look.WeaponUpgrade, look.ArmorGrade);
+                    else if (_views.TryGetValue(look.Id, out var looked))
+                    {
+                        Fx.WeaponFx.SetLook(looked, look.WeaponId, look.WeaponUpgrade);
+                        looked.SetArmor(look.ArmorGrade);
+                    }
                     break;
                 case EntityDespawned despawned:
                     if (_views.TryGetValue(despawned.Id, out var view))
@@ -264,7 +268,11 @@ namespace Game.Client.Net
 
             var view = root.AddComponent<NetEntityView>();
             view.Initialize(spawned, parts.Body, parts.Ring, parts.Telegraph, target, data);
-            if (spawned.Kind == EntityKind.Player) Fx.WeaponFx.SetLook(root.transform, spawned.WeaponId, spawned.WeaponUpgrade);
+            if (spawned.Kind == EntityKind.Player)
+            {
+                Fx.WeaponFx.SetLook(root.transform, spawned.WeaponId, spawned.WeaponUpgrade);
+                Fx.CharacterPaint.Apply(root.transform, spawned.ArmorGrade, spawned.Hair, spawned.Cloth);
+            }
             _views.Add(spawned.Id, view);
         }
 

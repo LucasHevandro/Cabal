@@ -58,7 +58,15 @@ namespace Game.Client.Net
             Target = target;
             MonsterData = monsterData;
             transform.position = Game.Client.World.Ground.Point(spawned.X, spawned.Z);
+            _hair = spawned.Hair;
+            _cloth = spawned.Cloth;
         }
+
+        private int _hair;
+        private int _cloth;
+
+        /// <summary>Jogadores: trocou de armadura (o metal muda de cor; cabelo e roupa ficam os da criação).</summary>
+        public void SetArmor(int armorGrade) => Fx.CharacterPaint.Apply(transform, armorGrade, _hair, _cloth);
 
         /// <summary>Recebe o estado do snapshot.</summary>
         public void AddSample(double serverTime, in EntityState state)
