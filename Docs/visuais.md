@@ -228,6 +228,13 @@ Só as malhas com esqueleto (o corpo) são repintadas; a arma na mão tem o bril
 # Interface
 
 - **Tema** (`UiTheme`): painéis com degradê escuro, cantos arredondados e moldura bronze. Barras de vida, mana, SP e XP com brilho. Botões, campos, casas de item e caixas de marcar próprios. Fonte Segoe UI do sistema, com Arial de reserva. Tudo é gerado em código.
+- **Arte do tema** (`UiArt`), também em código:
+  - **Títulos** numa fonte serifada que já vem no Windows (Palatino Linotype; senão Constantia, Book Antiqua ou
+    Georgia), em dourado claro. Valem para as janelas, o nome da zona, as opções, o tutorial e a tela de entrada. A
+    dica entre parênteses do título fica clara e menor.
+  - **Ornamento dourado** nos quatro cantos de todo painel com pelo menos 120×70: filetes que somem ao longo da borda,
+    um losango e um ponto. A tela de entrada usa o mesmo painel.
+  - **Silhuetas** nas casas de equipamento vazias: espada, couraça, luva, bota e anel.
 - **Ícones de skill** (`SkillIcons`): um medalhão na cor do tipo com o símbolo de cada uma das 16 skills (corte, giro, runa, chama, floco de gelo, raio...).
 - **Ícones de item** (`ItemIcons`): uma câmera escondida fotografa o modelo do item na primeira vez que ele aparece numa janela, com luz própria e fundo transparente. Sem modelo, fica o quadradinho com o nome.
 
