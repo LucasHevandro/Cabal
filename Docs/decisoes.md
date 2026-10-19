@@ -180,7 +180,7 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   40 × nível² Alz (Nv 3 = 360, Nv 12 = 5.760, Nv 25 = 25.000). As skills de nível 1 já vêm com o personagem.
 - **Ninguém perde skill:** personagens salvos antes do mestre (sem a lista no banco) ficam com tudo o que o nível e as
   missões já liberavam.
-- **Barra de atalhos com 8 casas**, arrumada pelo jogador como no CABAL:
+- **Barra de atalhos com 20 casas** em duas fileiras de 10 (teclas 1 a 0 e Alt+1 a Alt+0), casas pequenas só com o ícone e dica ao passar o mouse, arrumada pelo jogador como no CABAL:
   - da janela de skills (K) ou do mestre para a barra;
   - entre as casas, trocando de lugar;
   - para fora da barra, tirando a skill.
