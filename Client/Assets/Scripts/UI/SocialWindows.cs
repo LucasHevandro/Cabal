@@ -263,7 +263,7 @@ namespace Game.Client.UI
         private void DrawChat()
         {
             var typing = GameInput.Typing;
-            var rect = new Rect(40, VirtualHeight - 150 - 300, 460, 290); // termina antes da barra de skills
+            var rect = new Rect(20, VirtualHeight - 340, 460, 290); // canto inferior esquerdo, acima das linhas de XP
             var now = Time.unscaledTime;
 
             // Sem digitar, as linhas antigas somem; o fundo só aparece enquanto digita.
