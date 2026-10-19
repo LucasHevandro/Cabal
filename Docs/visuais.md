@@ -267,3 +267,17 @@ renderizador do PC. O `RenderLook` liga o shader toda vez que a cena é montada.
   troca de pose de vez em quando (`Idle_B`). Os gatilhos `Talk` e `Idle2` estão no Animator dos personagens (`World/NpcLife.cs`).
 - **Moradores** (`World/VillageLife`), em `Resources/Visuals/villager`: dois adultos andam pela praça e duas crianças
   (menores, para não confundir com os NPCs) correm de um lado para o outro. São só enfeite: não são alvo e não falam.
+
+# Clima das regiões
+
+`World/RegionAmbience.cs` põe partículas em volta da câmera, na altura do chão. Cada camada pesa conforme a distância do
+centro da sua região (cheia até 80% do raio, some até 130%), então o clima muda aos poucos ao andar.
+
+| Região | Camadas |
+|---|---|
+| Campos do Vento | pólen claro e folhinhas levadas pelo vento |
+| Mata Sombria | vaga-lumes (mais fortes à noite) e névoa rasteira |
+| Ruínas Esquecidas | partículas mágicas roxas subindo e brilhos ciano (mais fortes à noite) |
+
+- Usam o material `Resources/Visuals/fx/particula_suave` e acendem e apagam devagar.
+- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa também a mata e as ruínas, de dia, no pôr do sol e à noite.
