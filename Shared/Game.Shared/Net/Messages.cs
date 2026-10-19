@@ -62,6 +62,7 @@ namespace Game.Shared.Net
         DungeonInfo = 126,
         DuelInvite = 127,
         PvpState = 128,
+        EntityLook = 129,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -74,7 +75,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 12;
+        public const int Version = 13;
         public const int DefaultPort = 7777;
     }
 
@@ -274,6 +275,11 @@ namespace Game.Shared.Net
         public float X;
         public float Z;
 
+        /// <summary>Jogadores: arma na mão (id do item; vazio = sem arma) e nível de melhoria (o brilho dela).</summary>
+        public string WeaponId = "";
+
+        public byte WeaponUpgrade;
+
         public void Write(PacketWriter w)
         {
             w.WriteInt(Id);
@@ -284,13 +290,37 @@ namespace Game.Shared.Net
             w.WriteInt(MaxHp);
             w.WriteFloat(X);
             w.WriteFloat(Z);
+            w.WriteString(WeaponId);
+            w.WriteByte(WeaponUpgrade);
         }
 
         public static EntitySpawned Read(PacketReader r) => new EntitySpawned
         {
             Id = r.ReadInt(), Kind = (EntityKind)r.ReadByte(), TypeId = r.ReadString(), Name = r.ReadString(),
             Level = r.ReadInt(), MaxHp = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
+            WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
         };
+    }
+
+    /// <summary>
+    /// A aparência de um jogador mudou (trocou de arma ou melhorou a arma): quem o vê troca o modelo e o brilho.
+    /// Mandado a quem já conhece o jogador (o EntitySpawned leva a aparência de quem acaba de aparecer).
+    /// </summary>
+    public sealed class EntityLook : INetMessage
+    {
+        public MessageType Type => MessageType.EntityLook;
+        public int Id;
+        public string WeaponId = "";
+        public byte WeaponUpgrade;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteInt(Id);
+            w.WriteString(WeaponId);
+            w.WriteByte(WeaponUpgrade);
+        }
+
+        public static EntityLook Read(PacketReader r) => new EntityLook { Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte() };
     }
 
     public sealed class EntityDespawned : INetMessage
@@ -732,6 +762,7 @@ namespace Game.Shared.Net
                 MessageType.ClientReport => ClientReport.Read(reader),
                 MessageType.DuelInvite => DuelInvite.Read(reader),
                 MessageType.PvpState => PvpState.Read(reader),
+                MessageType.EntityLook => EntityLook.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

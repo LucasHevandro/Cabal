@@ -42,6 +42,10 @@ public class ProtocolTests
         Assert.Equal(9, RoundTrip(new StartCombo { TargetId = 9, ClientTime = 1 }).TargetId);
         Assert.Equal(9, RoundTrip(new Finisher { TargetId = 9 }).TargetId);
         Assert.Equal(5, RoundTrip(new PickupLoot { LootId = 5 }).LootId);
+        var look = RoundTrip(new EntityLook { Id = 4, WeaponId = "espada_astralita", WeaponUpgrade = 10 });
+        Assert.Equal((4, "espada_astralita", (byte)10), (look.Id, look.WeaponId, look.WeaponUpgrade));
+        var spawned = RoundTrip(new EntitySpawned { Id = 3, Kind = EntityKind.Player, TypeId = "blade", WeaponId = "espada_ferro", WeaponUpgrade = 7 });
+        Assert.Equal(("espada_ferro", (byte)7), (spawned.WeaponId, spawned.WeaponUpgrade));
         Assert.Equal(3.5, RoundTrip(new Ping { ClientTime = 3.5 }).ClientTime);
     }
 
