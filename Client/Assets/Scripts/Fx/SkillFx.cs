@@ -113,8 +113,27 @@ namespace Game.Client.Fx
             }
         }
 
+        /// <summary>Quanto o projétil da skill leva de <paramref name="from"/> até <paramref name="to"/> (segundos).</summary>
+        public static float TravelSeconds(SkillData skill, Vector3 from, Vector3 to)
+        {
+            var fx = CombatFx.Instance;
+            if (fx == null || skill == null || skill.Kind != SkillKind.Magical) return 0f;
+            var feel = For(skill);
+            var speed = fx.ProjectileSpeed * (feel.Projectile switch
+            {
+                ProjectileStyle.Meteor => 1.4f,
+                ProjectileStyle.Twin => 1.2f,
+                ProjectileStyle.Lance => 1.6f,
+                _ => 1f,
+            });
+            var distance = feel.Projectile == ProjectileStyle.Meteor ? 11.5f : Vector3.Distance(from, to);
+            return distance / Mathf.Max(1f, speed);
+        }
+
         /// <summary>Lança o projétil da skill mágica do jeito dela; <paramref name="onArrive"/> roda na chegada do primeiro.</summary>
-        public static void Launch(SkillData skill, Transform caster, Transform target, Vector3 targetOffset, ComboGrade? grade, Action onArrive)
+        /// <param name="origin">De onde sai (ponta do cajado); sem ela, da frente do peito.</param>
+        public static void Launch(SkillData skill, Transform caster, Transform target, Vector3 targetOffset, ComboGrade? grade, Action onArrive,
+            Vector3? origin = null)
         {
             var fx = CombatFx.Instance;
             if (fx == null || caster == null || target == null)
@@ -124,12 +143,17 @@ namespace Game.Client.Fx
             }
             var feel = For(skill);
             var color = ColorFor(skill, grade, false);
-            var hand = caster.position + Vector3.up * 1.4f + caster.forward * 0.6f;
+            var hand = origin ?? caster.position + Vector3.up * 1.4f + caster.forward * 0.6f;
+            // A magia sai com um clarão na ponta do cajado.
+            fx.Flash(hand, color, 2.5f, 4f, 0.12f);
+            for (var i = 0; i < 8; i++) fx.Glow(hand, UnityEngine.Random.onUnitSphere * 1.5f, color, 0.18f, 0.25f);
             switch (feel.Projectile)
             {
                 case ProjectileStyle.Meteor:
                     var sky = target.position + Vector3.up * 11f - caster.forward * 3f;
                     fx.LaunchProjectile(sky, target, targetOffset, color, onArrive, feel.ProjectileSize, 1.4f);
+                    // Cataclismo: chovem mais pedras em volta do alvo (só visual; o dano é o do primeiro).
+                    if (skill.Id == "cataclismo") fx.StartCoroutine(MeteorShower(target.position, color, Mathf.Max(2f, skill.AreaRadius)));
                     break;
                 case ProjectileStyle.Twin:
                     fx.LaunchProjectile(hand + caster.right * 0.3f, target, targetOffset, color, onArrive, feel.ProjectileSize, 1.2f);
@@ -162,14 +186,197 @@ namespace Game.Client.Fx
             LastAreaAt[skill.Id] = now;
             if (firstOfCast && skill.AreaRadius > 0 && !feel.AroundCaster)
                 Ring(new Vector3(center.x, center.y - 0.6f, center.z), skill.AreaRadius, color, 28 + (int)(skill.AreaRadius * 8));
-            if (firstOfCast && feel.Double) fx.StartCoroutine(SecondHit(center, color, feel.Sparks));
+            if (firstOfCast && feel.Double) fx.StartCoroutine(SecondHit(center, color, feel.Sparks, SecondHitDelay(skill)));
             if (firstOfCast && feel.Weight >= 1f) fx.Sparks(center + Vector3.up * 0.3f, Color.white, 12);
+            if (firstOfCast) Signature(skill, center, color, heavy);
             return feel.Weight;
         }
 
-        private static System.Collections.IEnumerator SecondHit(Vector3 center, Color color, int sparks)
+        /// <summary>Tempo entre as duas batidas, pelo golpe da skill (estocada dupla, tempestade, raio duplo).</summary>
+        private static float SecondHitDelay(SkillData skill)
         {
-            yield return new WaitForSeconds(0.11f);
+            var move = SkillMoves.For(skill.Id);
+            return move != null && move.Impacts.Length > 1 ? move.Impacts[1] - move.Impacts[0] : 0.11f;
+        }
+
+        // ===== Assinatura de cada skill no impacto =====
+
+        /// <summary>As assinaturas são vistas de longe (câmera atrás do jogador): partículas maiores que as faíscas comuns.</summary>
+        private const float Boost = 2.3f;
+
+        private static void EmitBig(Vector3 position, Vector3 velocity, Color color, float size, float lifetime) =>
+            CombatFx.Instance?.Emit(position, velocity, color, size * Boost, lifetime * 1.2f);
+
+        private static void GlowBig(Vector3 position, Vector3 velocity, Color color, float size, float lifetime) =>
+            CombatFx.Instance?.Glow(position, velocity, color, size * Boost, lifetime * 1.2f);
+
+        private static float GroundAt(Vector3 point) => World.Ground.HeightAt(point.x, point.z) + 0.1f;
+
+        private static void Signature(SkillData skill, Vector3 center, Color color, bool heavy)
+        {
+            var fx = CombatFx.Instance;
+            if (fx == null) return;
+            var ground = new Vector3(center.x, GroundAt(center), center.z);
+            switch (skill.Id)
+            {
+                case "golpe_runico":
+                    // Círculo de runas no chão que sobe devagar.
+                    for (var i = 0; i < 24; i++)
+                    {
+                        var a = i / 24f * Mathf.PI * 2f;
+                        GlowBig(ground + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 1.2f, Vector3.up * 0.6f, color, 0.16f, 0.7f);
+                    }
+                    for (var i = 0; i < 6; i++) GlowBig(center + UnityEngine.Random.insideUnitSphere * 0.4f, Vector3.up * 1.5f, color, 0.25f, 0.6f);
+                    fx.Flash(center, color, 2f, 5f, 0.15f);
+                    break;
+                case "fenda_sismica":
+                    // A terra racha: três linhas de pedra saindo do ponto e poeira.
+                    for (var line = 0; line < 3; line++)
+                    {
+                        var a = (line / 3f + UnityEngine.Random.value * 0.1f) * Mathf.PI * 2f;
+                        var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                        for (var i = 0; i < 9; i++)
+                            EmitBig(ground + dir * (0.4f * i), Vector3.up * (3.5f - i * 0.25f) + dir * 0.5f, new Color(0.55f, 0.45f, 0.32f), 0.22f, 0.5f);
+                    }
+                    Dust(ground, 2.5f, 18);
+                    fx.Flash(center, new Color(1f, 0.8f, 0.5f), 2f, 6f, 0.15f);
+                    break;
+                case "lamina_flamejante":
+                    for (var i = 0; i < 26; i++)
+                        EmitBig(center, UnityEngine.Random.insideUnitSphere * 2.5f + Vector3.up * 3f, new Color(1f, 0.35f + UnityEngine.Random.value * 0.4f, 0.08f), 0.2f, 0.55f);
+                    for (var i = 0; i < 10; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 1.2f + Vector3.up, new Color(1f, 0.55f, 0.15f), 0.45f, 0.35f);
+                    fx.Flash(center, new Color(1f, 0.55f, 0.2f), 3f, 6f, 0.2f);
+                    break;
+                case "execucao":
+                    // Um X vermelho no ar e um clarão.
+                    foreach (var tilt in new[] { 1f, -1f })
+                        for (var i = -6; i <= 6; i++)
+                            GlowBig(center + new Vector3(i * 0.12f, i * 0.12f * tilt, 0), Vector3.zero, new Color(1f, 0.2f, 0.15f), 0.3f, 0.3f);
+                    fx.Flash(center, new Color(1f, 0.25f, 0.2f), 4f, 7f, 0.25f);
+                    Dust(ground, 1.8f, 12);
+                    break;
+                case "tempestade_de_aco":
+                    for (var i = 0; i < 30; i++)
+                    {
+                        var a = i / 30f * Mathf.PI * 2f;
+                        var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                        GlowBig(center + dir * 0.8f, new Vector3(-dir.z, 0.3f, dir.x) * 5f, color, 0.14f, 0.3f);
+                    }
+                    break;
+                case "corrente_gelida":
+                    // Cristais de gelo brotando e uma geada que fica um pouco no chão.
+                    for (var i = 0; i < 22; i++)
+                    {
+                        var dir = UnityEngine.Random.insideUnitCircle * 1.2f;
+                        EmitBig(ground + new Vector3(dir.x, 0, dir.y), Vector3.up * UnityEngine.Random.Range(3f, 6f) + new Vector3(dir.x, 0, dir.y),
+                            Color.Lerp(color, Color.white, UnityEngine.Random.value * 0.6f), 0.18f, 0.6f);
+                    }
+                    for (var i = 0; i < 30; i++)
+                    {
+                        var a = i / 30f * Mathf.PI * 2f;
+                        GlowBig(ground + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * UnityEngine.Random.Range(0.4f, 1.6f), Vector3.up * 0.15f,
+                            new Color(0.8f, 0.97f, 1f), 0.2f, 1.1f);
+                    }
+                    fx.Flash(center, color, 3f, 6f, 0.25f);
+                    break;
+                case "explosao_arcana":
+                    fx.StartCoroutine(Implode(center, color, Mathf.Max(1.5f, skill.AreaRadius)));
+                    break;
+                case "meteoro":
+                    Explosion(center, ground, color, Mathf.Max(2f, skill.AreaRadius), 1f);
+                    break;
+                case "cataclismo":
+                    fx.StartCoroutine(Shockwaves(center, ground, color, Mathf.Max(2f, skill.AreaRadius)));
+                    break;
+                case "raio_duplo":
+                case "faisca":
+                case "lanca_de_forca":
+                    fx.Flash(center, color, heavy ? 3f : 2f, 4f, 0.1f);
+                    for (var i = 0; i < 8; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 2f, Color.white, 0.12f, 0.2f);
+                    break;
+            }
+        }
+
+        private static void Dust(Vector3 ground, float radius, int count)
+        {
+            var fx = CombatFx.Instance;
+            for (var i = 0; i < count; i++)
+            {
+                var dir = UnityEngine.Random.insideUnitCircle.normalized;
+                GlowBig(ground + new Vector3(dir.x, 0, dir.y) * radius * 0.3f, new Vector3(dir.x, 0.25f, dir.y) * radius * 0.8f,
+                    new Color(0.6f, 0.55f, 0.48f, 0.6f), 0.6f, 0.9f);
+            }
+        }
+
+        /// <summary>Explosão: clarão, onda no chão, pedaços voando e fumaça subindo.</summary>
+        private static void Explosion(Vector3 center, Vector3 ground, Color color, float radius, float scale)
+        {
+            var fx = CombatFx.Instance;
+            fx.Flash(center, color, 6f * scale, radius * 4f, 0.35f);
+            Ring(ground, radius, color, 40);
+            for (var i = 0; i < (int)(40 * scale); i++)
+                EmitBig(center, UnityEngine.Random.insideUnitSphere * 5f + Vector3.up * 6f, Color.Lerp(color, new Color(0.3f, 0.25f, 0.2f), UnityEngine.Random.value), 0.25f, 0.8f);
+            for (var i = 0; i < (int)(16 * scale); i++)
+                GlowBig(ground + UnityEngine.Random.insideUnitSphere * radius * 0.4f, Vector3.up * UnityEngine.Random.Range(0.8f, 1.8f),
+                    new Color(0.25f, 0.22f, 0.22f, 0.7f), 0.9f, 1.4f);
+            for (var i = 0; i < 12; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 3f, Color.Lerp(color, Color.white, 0.5f), 0.5f, 0.25f);
+        }
+
+        private static System.Collections.IEnumerator Implode(Vector3 center, Color color, float radius)
+        {
+            var fx = CombatFx.Instance;
+            // Energia sendo sugada para o ponto, depois duas ondas para fora.
+            for (var i = 0; i < 36; i++)
+            {
+                var from = center + UnityEngine.Random.onUnitSphere * radius;
+                GlowBig(from, (center - from) * 5f, color, 0.18f, 0.2f);
+            }
+            yield return new WaitForSeconds(0.18f);
+            if (CombatFx.Instance == null) yield break;
+            var ground = new Vector3(center.x, GroundAt(center), center.z);
+            fx.Flash(center, color, 4f, radius * 3f, 0.25f);
+            Ring(ground, radius, color, 36);
+            for (var i = 0; i < 20; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * radius * 2f, color, 0.3f, 0.3f);
+            yield return new WaitForSeconds(0.12f);
+            if (CombatFx.Instance == null) yield break;
+            Ring(ground + Vector3.up * 0.4f, radius * 0.7f, Color.Lerp(color, Color.white, 0.5f), 28);
+        }
+
+        private static System.Collections.IEnumerator Shockwaves(Vector3 center, Vector3 ground, Color color, float radius)
+        {
+            Explosion(center, ground, color, radius, 1.4f);
+            for (var wave = 1; wave <= 3; wave++)
+            {
+                yield return new WaitForSeconds(0.14f);
+                if (CombatFx.Instance == null) yield break;
+                Ring(ground, radius * (1f + wave * 0.35f), Color.Lerp(color, Color.white, wave * 0.2f), 36 + wave * 8);
+                CombatFx.Instance.Flash(center, color, 3f, radius * 3f, 0.12f);
+            }
+        }
+
+        /// <summary>Pedras extras caindo em volta (Cataclismo).</summary>
+        private static System.Collections.IEnumerator MeteorShower(Vector3 around, Color color, float radius)
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                yield return new WaitForSeconds(0.12f + i * 0.08f);
+                var fx = CombatFx.Instance;
+                if (fx == null) yield break;
+                var spot = around + new Vector3(UnityEngine.Random.Range(-radius, radius), 0, UnityEngine.Random.Range(-radius, radius));
+                var ground = new Vector3(spot.x, GroundAt(spot), spot.z);
+                var holder = new GameObject("Pedra do cataclismo").transform;
+                holder.position = ground;
+                fx.LaunchProjectile(ground + Vector3.up * 12f + new Vector3(-2f, 0, -2f), holder, Vector3.zero, color, () =>
+                {
+                    if (CombatFx.Instance != null) Explosion(ground + Vector3.up * 0.5f, ground, color, radius * 0.4f, 0.4f);
+                    if (holder != null) UnityEngine.Object.Destroy(holder.gameObject);
+                }, 1.3f, 1.5f);
+            }
+        }
+
+        private static System.Collections.IEnumerator SecondHit(Vector3 center, Color color, int sparks, float delay)
+        {
+            yield return new WaitForSeconds(delay);
             if (CombatFx.Instance == null) yield break;
             CombatFx.Instance.Sparks(center + Vector3.up * 0.15f, color, sparks);
             SoundPlayer.Play(SoundId.Hit, 0.6f, 0.08f);

@@ -78,7 +78,7 @@ namespace Game.Client.Editor
                 Clip("MovementBasic", "Running_A"), Clip("General", "Death_A"));
             var skeleton = BuildController("Esqueleto", Clip("Special", "Skeletons_Idle"), Clip("Special", "Skeletons_Walking"),
                 Clip("MovementBasic", "Running_A"), Clip("Special", "Skeletons_Death"));
-            foreach (var (id, look) in ClassLooks) MakePrefab($"{Visuals}/class/{id}.prefab", look, materials, controller);
+            foreach (var (id, look) in ClassLooks) MakePrefab($"{Visuals}/class/{id}.prefab", look, materials, controller, weaponFx: true);
             foreach (var (id, look) in NpcLooks) MakePrefab($"{Visuals}/npc/{id}.prefab", look, materials, controller);
             foreach (var (id, look) in MonsterLooks) MakePrefab($"{Visuals}/monster/{id}.prefab", look, materials, skeleton);
             AssetDatabase.SaveAssets();
@@ -155,7 +155,8 @@ namespace Game.Client.Editor
             result["glow_vermelho"] = Solid("glow_vermelho", "Universal Render Pipeline/Unlit", new Color(1f, 0.25f, 0.15f) * 2f);
 
             // Espectro: o atlas do esqueleto, roxo e translúcido.
-            var ghost = Solid("fantasma", "Universal Render Pipeline/Lit", new Color(0.75f, 0.6f, 1f, 0.5f));
+            // Unlit: brilho próprio e sem sombra (o Lit translúcido com emissão estoura o compilador de shader).
+            var ghost = Solid("fantasma", "Universal Render Pipeline/Unlit", new Color(0.8f, 0.65f, 1f, 0.55f));
             ghost.SetTexture("_BaseMap", result["skeleton"].GetTexture("_BaseMap"));
             ghost.SetFloat("_Surface", 1f);
             ghost.SetFloat("_Blend", 0f);
@@ -165,10 +166,25 @@ namespace Game.Client.Editor
             ghost.SetOverrideTag("RenderType", "Transparent");
             ghost.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             ghost.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            ghost.SetColor("_EmissionColor", new Color(0.25f, 0.12f, 0.4f));
-            ghost.EnableKeyword("_EMISSION");
             result["fantasma"] = ghost;
             return result;
+        }
+
+        /// <summary>Material do rastro da arma: partícula sem textura, aditiva (a cor vem do TrailRenderer).</summary>
+        private static Material TrailMaterial()
+        {
+            var material = Solid("rastro", "Universal Render Pipeline/Particles/Unlit", Color.white);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 2f); // aditivo
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            material.SetTexture("_BaseMap", null); // cor pura: o rastro some pela transparência do fim
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         private static Material Solid(string name, string shader, Color color)
@@ -180,6 +196,7 @@ namespace Game.Client.Editor
                 material = new Material(Shader.Find(shader));
                 AssetDatabase.CreateAsset(material, path);
             }
+            if (material.shader != Shader.Find(shader)) material.shader = Shader.Find(shader);
             material.SetColor("_BaseColor", color);
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.2f);
             EditorUtility.SetDirty(material);
@@ -207,6 +224,10 @@ namespace Game.Client.Editor
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dead", AnimatorControllerParameterType.Bool);
+            controller.AddParameter(new AnimatorControllerParameter
+            {
+                name = "AttackSpeed", type = AnimatorControllerParameterType.Float, defaultFloat = 1f,
+            });
             var machine = controller.layers[0].stateMachine;
 
             // Parado → andar → correr pela velocidade (m/s) que o jogo passa.
@@ -246,6 +267,43 @@ namespace Game.Client.Editor
                 Quick(enter, 0.06f);
                 enter.canTransitionToSelf = true;
                 Leave(state, locomotion, 0.85f);
+            }
+
+            // Golpe próprio de cada skill (SkillMoves): passos em sequência, no ritmo do AttackSpeed (Excellent acelera).
+            for (var i = 0; i < SkillMoves.All.Count; i++)
+            {
+                var move = SkillMoves.All[i];
+                var kind = SkillMoves.FirstKind + i;
+                AnimatorState previous = null;
+                for (var step = 0; step < move.Steps.Length; step++)
+                {
+                    var (file, clipName, seconds) = move.Steps[step];
+                    var clip = Clip(file, clipName);
+                    var state = machine.AddState($"Skill {kind}-{step + 1}: {move.Id}");
+                    state.motion = clip;
+                    state.speed = clip.length / seconds;
+                    state.speedParameterActive = true;
+                    state.speedParameter = "AttackSpeed";
+                    if (previous == null)
+                    {
+                        var enter = machine.AddAnyStateTransition(state);
+                        enter.AddCondition(AnimatorConditionMode.If, 0, "Attack");
+                        enter.AddCondition(AnimatorConditionMode.Equals, kind, "AttackKind");
+                        enter.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+                        Quick(enter, 0.05f);
+                        enter.canTransitionToSelf = true;
+                    }
+                    else
+                    {
+                        var next = previous.AddTransition(state);
+                        next.hasExitTime = true;
+                        next.exitTime = 0.94f;
+                        next.duration = 0.05f;
+                        next.hasFixedDuration = true;
+                    }
+                    previous = state;
+                }
+                if (previous != null) Leave(previous, locomotion, 0.9f);
             }
 
             var hit = machine.AddState("Dano");
@@ -297,7 +355,8 @@ namespace Game.Client.Editor
 
         // ===== Prefabs =====
 
-        private static void MakePrefab(string path, Look look, Dictionary<string, Material> materials, AnimatorController controller)
+        private static void MakePrefab(string path, Look look, Dictionary<string, Material> materials, AnimatorController controller,
+            bool weaponFx = false)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>($"{Characters}/{look.Model}.fbx");
@@ -333,6 +392,9 @@ namespace Game.Client.Editor
             model.transform.localScale = Vector3.one * scale;
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
+
+            // Classes: rastro na arma, energia no cajado e avanço nos golpes (WeaponFx).
+            if (weaponFx) root.AddComponent<WeaponFx>().SetTrailMaterial(TrailMaterial());
 
             AssetDatabase.DeleteAsset(path);
             PrefabUtility.SaveAsPrefabAsset(root, path);

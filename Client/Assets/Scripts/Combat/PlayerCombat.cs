@@ -242,6 +242,7 @@ namespace Game.Client.Combat
             Combo.TryFinish(out var multiplier);
             if (_motor != null) _motor.FacePoint(target.transform.position);
             VisualAnimator.Attack(this, AttackStyle.Finisher);
+            _finisherDue = Time.time + 0.45f; // a lâmina desce no meio do golpe de duas mãos
             BestChain = Mathf.Max(BestChain, chain);
             if (Online)
             {
@@ -326,36 +327,79 @@ namespace Game.Client.Combat
 
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
-            VisualAnimator.Attack(this, AttackStyle.For(skill));
-            if (skill.Kind == SkillKind.Physical) SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f);
-            SkillFx.OnCast(skill, transform);
             if (_motor != null) _motor.FacePoint(target.transform.position);
+
+            // O golpe da skill (SkillMoves): a animação toca agora e o efeito cai quando a arma acerta (ou a magia sai).
+            // Excellent sai um pouco mais rápido. A nota e a rota do combo já apareceram no aperto, acima.
+            var move = SkillMoves.For(skill.Id);
+            var pace = grade == ComboGrade.Excellent ? 1.15f : 1f;
+            var impact = (move != null ? move.FirstImpact : 0f) / pace;
+            VisualAnimator.Attack(this, AttackStyle.For(skill), pace);
+            WeaponFx.Play(this, skill, grade);
+            var magical = skill.Kind == SkillKind.Magical && CombatFx.Instance != null;
+            if (!magical)
+            {
+                After(Mathf.Max(0f, impact - 0.1f), () => SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f));
+                After(impact, () => SkillFx.OnCast(skill, transform));
+            }
 
             if (Online)
             {
-                // O servidor julga o mesmo instante do aperto (no relógio dele) e manda o resultado.
+                // O servidor julga o mesmo instante do aperto (no relógio dele) e manda o resultado; o que ele mandar
+                // deste golpe só aparece quando a arma chega no alvo (ShowServerHit espera até lá).
                 NetworkSession.Instance.Send(new Msg.UseSkill { Slot = (byte)index, TargetId = target.NetworkId, ClientTime = ServerNow });
-                if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
+                var due = impact;
+                if (magical)
                 {
-                    SoundPlayer.Play(SoundId.Cast, 0.6f);
-                    SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, null);
+                    due += SkillFx.TravelSeconds(skill, WeaponFx.TipOf(this) ?? transform.position + Vector3.up * 1.4f, target.CenterPosition);
+                    After(impact, () =>
+                    {
+                        if (target == null) return;
+                        SoundPlayer.Play(SoundId.Cast, 0.6f);
+                        SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, null, WeaponFx.TipOf(this));
+                    });
                 }
+                _impactDue[index] = Time.time + due;
                 return;
             }
 
             // Skills mágicas viajam como projétil; o dano (já decidido agora) é aplicado na chegada.
-            if (skill.Kind == SkillKind.Magical && CombatFx.Instance != null)
+            if (magical)
             {
-                SoundPlayer.Play(SoundId.Cast, 0.6f);
-                SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, () =>
+                After(impact, () =>
                 {
-                    if (target != null) LandSkill(skill, target, multiplier, inCombo, grade);
+                    if (target == null) return;
+                    SoundPlayer.Play(SoundId.Cast, 0.6f);
+                    SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, () =>
+                    {
+                        if (target != null) LandSkill(skill, target, multiplier, inCombo, grade);
+                    }, WeaponFx.TipOf(this));
                 });
             }
             else
             {
-                LandSkill(skill, target, multiplier, inCombo, grade);
+                After(impact, () =>
+                {
+                    if (target != null && target.IsAlive) LandSkill(skill, target, multiplier, inCombo, grade);
+                });
             }
+        }
+
+        // Quando o efeito de cada golpe meu (por posição da skill) deve aparecer no online; o finalizador à parte.
+        private readonly Dictionary<int, float> _impactDue = new Dictionary<int, float>();
+        private float _finisherDue;
+
+        /// <summary>Roda <paramref name="action"/> daqui a <paramref name="seconds"/> (na hora, se for 0).</summary>
+        private void After(float seconds, System.Action action)
+        {
+            if (seconds <= 0f) action();
+            else StartCoroutine(AfterRoutine(seconds, action));
+        }
+
+        private static System.Collections.IEnumerator AfterRoutine(float seconds, System.Action action)
+        {
+            yield return new WaitForSeconds(seconds);
+            action();
         }
 
         /// <summary>O golpe chega ao alvo: dano, faíscas, som, hit stop e tremida.</summary>
@@ -608,9 +652,20 @@ namespace Game.Client.Combat
         }
 
         /// <summary>Resultado de um golpe do jogador (este ou outro) num monstro.</summary>
-        public void ShowServerHit(Msg.CombatEvent hit, Targetable target, bool mine)
+        public void ShowServerHit(Msg.CombatEvent hit, Targetable target, bool mine, bool waited = false)
         {
             if (target == null) return;
+            // Meu golpe: o resultado do servidor costuma chegar antes de a arma (ou a magia) chegar no alvo; espera.
+            if (mine && !waited)
+            {
+                var due = hit.Source == Msg.CombatSource.Finisher ? _finisherDue : _impactDue.TryGetValue(hit.Source, out var at) ? at : 0f;
+                var wait = due - Time.time;
+                if (wait > 0.02f)
+                {
+                    After(Mathf.Min(wait, 1.5f), () => ShowServerHit(hit, target, true, true));
+                    return;
+                }
+            }
             var grade = hit.Grade == 255 ? (ComboGrade?)null : (ComboGrade)hit.Grade;
             var finisher = hit.Source == Msg.CombatSource.Finisher;
             if (mine && finisher) FinishersLanded++;

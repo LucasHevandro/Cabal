@@ -28,6 +28,9 @@ namespace Game.Client.Fx
         public static int For(SkillData skill)
         {
             if (skill == null) return Slice;
+            // Cada skill tem o próprio golpe (SkillMoves); os estilos abaixo ficam para skills novas e monstros.
+            var move = SkillMoves.IndexOf(skill.Id);
+            if (move >= 0) return SkillMoves.FirstKind + move;
             switch (skill.Id)
             {
                 case "corte": return Slice;

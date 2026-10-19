@@ -14,6 +14,7 @@ namespace Game.Client.Fx
         private static readonly int DeadId = Animator.StringToHash("Dead");
         private static readonly int AttackId = Animator.StringToHash("Attack");
         private static readonly int AttackKindId = Animator.StringToHash("AttackKind");
+        private static readonly int AttackSpeedId = Animator.StringToHash("AttackSpeed");
 
         private readonly HashSet<int> _parameters = new HashSet<int>();
         private Animator _animator;
@@ -33,7 +34,8 @@ namespace Game.Client.Fx
         }
 
         /// <summary>Golpe com estilo (<see cref="AttackStyle"/>): escolhe a animação e dispara o Attack.</summary>
-        public static void Attack(Component owner, int style)
+        /// <param name="speed">Ritmo do golpe (o Excellent sai um pouco mais rápido).</param>
+        public static void Attack(Component owner, int style, float speed = 1f)
         {
             if (owner == null) return;
             var visual = owner.GetComponentInChildren<VisualAnimator>();
@@ -41,6 +43,7 @@ namespace Game.Client.Fx
             if (visual._rig != null) visual._rig.Trigger("Attack");
             if (visual._animator == null) return;
             if (visual._parameters.Contains(AttackKindId)) visual._animator.SetInteger(AttackKindId, style);
+            if (visual._parameters.Contains(AttackSpeedId)) visual._animator.SetFloat(AttackSpeedId, speed);
             if (visual._parameters.Contains(AttackId)) visual._animator.SetTrigger(AttackId);
         }
 
@@ -56,7 +59,7 @@ namespace Game.Client.Fx
         {
             _animator = GetComponentInChildren<Animator>();
             _rig = GetComponentInChildren<ProceduralRig>();
-            _lastPosition = transform.position;
+            _lastPosition = Anchor.position;
             if (_animator == null)
             {
                 // Modelo em partes (animais, golem): a animação é por código.
@@ -69,7 +72,8 @@ namespace Game.Client.Fx
 
         private void Update()
         {
-            var position = transform.position;
+            // A velocidade vem do objeto do jogo (pai), não do modelo: o avanço visual do golpe não conta como andar.
+            var position = Anchor.position;
             var delta = position - _lastPosition;
             delta.y = 0;
             _lastPosition = position;
@@ -84,6 +88,8 @@ namespace Game.Client.Fx
             if (_parameters.Contains(SpeedId)) _animator.SetFloat(SpeedId, _speed);
             if (_parameters.Contains(DeadId)) _animator.SetBool(DeadId, Dead);
         }
+
+        private Transform Anchor => transform.parent != null ? transform.parent : transform;
 
         private void Fire(string trigger)
         {

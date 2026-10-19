@@ -24,8 +24,12 @@ namespace Game.Client.Fx
         [SerializeField] private float projectileSize = 0.35f;
 
         private ParticleSystem _sparks;
+        private ParticleSystem _glow;
 
         public static CombatFx Instance => _instance;
+
+        /// <summary>Velocidade base dos projéteis (m/s), para estimar quando a magia chega.</summary>
+        public float ProjectileSpeed => projectileSpeed;
 
         /// <summary>Material das partículas (para os outros efeitos usarem o mesmo shader incluído no build).</summary>
         public Material ParticleMaterial => particleMaterial;
@@ -47,6 +51,29 @@ namespace Game.Client.Fx
                 sparkSize *= 1.7f; // o disco esfumado parece menor que o quadrado do mesmo tamanho
             }
             _sparks = CreateSparkSystem();
+            _glow = CreateSparkSystem(0f, "Brilho");
+        }
+
+        /// <summary>Partícula sem gravidade (brilho, energia, fumaça leve): flutua e some.</summary>
+        public void Glow(Vector3 position, Vector3 velocity, Color color, float size, float lifetime)
+        {
+            _glow.Emit(new ParticleSystem.EmitParams
+            {
+                position = position, velocity = velocity, startColor = color, startSize = size, startLifetime = lifetime,
+                applyShapeToPosition = false,
+            }, 1);
+        }
+
+        /// <summary>
+        /// Clarão curto (explosões, golpes pesados): um brilho grande que o bloom espalha. Antes eram luzes pontuais,
+        /// que deixavam um ponto branco solto na tela.
+        /// </summary>
+        public void Flash(Vector3 position, Color color, float intensity, float range, float seconds)
+        {
+            var size = Mathf.Clamp(range * 0.35f, 0.8f, 4f);
+            var bright = Color.Lerp(color, Color.white, 0.35f) * Mathf.Clamp(intensity * 0.5f, 1f, 3f);
+            Glow(position, Vector3.zero, bright, size, Mathf.Max(0.08f, seconds));
+            Glow(position, Vector3.zero, color, size * 1.8f, Mathf.Max(0.08f, seconds) * 0.7f);
         }
 
         private void OnDestroy()
@@ -119,9 +146,9 @@ namespace Game.Client.Fx
             }, 1);
         }
 
-        private ParticleSystem CreateSparkSystem()
+        private ParticleSystem CreateSparkSystem(float gravity = 1.2f, string name = "Faíscas")
         {
-            var host = new GameObject("Faíscas");
+            var host = new GameObject(name);
             host.transform.SetParent(transform, false);
             var system = host.AddComponent<ParticleSystem>();
             system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -130,7 +157,7 @@ namespace Game.Client.Fx
             main.playOnAwake = false;
             main.loop = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.gravityModifier = 1.2f;
+            main.gravityModifier = gravity;
             main.maxParticles = 1000;
 
             var emission = system.emission;
