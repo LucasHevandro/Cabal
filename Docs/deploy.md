@@ -170,14 +170,21 @@ O arquivo é `.github/workflows/ci.yml`.
   - O build sai como artefato do Actions e fica disponível por 14 dias.
 - **itch.io (opcional, só em tags `v*`):** segredo `BUTLER_API_KEY` (gerado no itch.io → Settings → API keys) e variável `ITCH_TARGET` (por exemplo `usuario/nome-do-jogo`).
 
-## 8. Endereço do servidor no cliente
+## 8. Lista de servidores no cliente
 
-O menu de entrada já vem com o servidor do `servidor.txt`, que fica ao lado do `Prototipo.exe`:
+O jogador escolhe o servidor numa lista na tela de entrada, sem digitar o endereço. Cada servidor mostra o status lido
+do `/api/health` dele: no ar (com jogadores e ping), instável, outra versão do jogo ou fora do ar. O último escolhido
+fica salvo. O "Outro endereço…" continua lá para testes. A lista vem do `servidor.txt`, que fica ao lado do
+`Prototipo.exe`:
 
 ```
-# Servidor padrão do jogo
+# Servidores da lista: nome | host:porta | api (opcional, só se a API não estiver no mesmo domínio)
+servidor = Servidor Brasil | jogo.exemplo.com.br:7777
+servidor = Servidor de testes | teste.exemplo.com.br:7777
+# Lista na internet, no mesmo formato, baixada ao abrir o jogo (abre servidor novo sem mandar outro cliente)
+lista = https://exemplo.com.br/servidores.txt
+# Formato antigo (ainda vale): vira o "Servidor principal", no topo da lista
 jogo = jogo.exemplo.com.br:7777
-# api = https://outro-lugar/api   (opcional: só se a API não estiver no mesmo domínio)
 ```
 
 - **Na linha de comando:** `-server host:porta` e `-api URL` passam na frente do arquivo.
