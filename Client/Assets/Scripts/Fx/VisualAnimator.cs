@@ -94,6 +94,7 @@ namespace Game.Client.Fx
         private void Fire(string trigger)
         {
             if (_rig != null) _rig.Trigger(trigger);
+            if (trigger == "Hit") HitFlash.Play(gameObject);
             var id = Animator.StringToHash(trigger);
             if (_animator != null && _parameters.Contains(id)) _animator.SetTrigger(id);
         }

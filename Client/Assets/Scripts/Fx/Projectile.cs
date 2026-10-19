@@ -37,6 +37,8 @@ namespace Game.Client.Fx
             }
 
             var destination = _target.position + _targetOffset;
+            var toDestination = destination - transform.position;
+            if (toDestination.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(toDestination);
             transform.position = Vector3.MoveTowards(transform.position, destination, _speed * Time.deltaTime);
 
             if (TrailEmitter != null && Time.time >= _nextTrailAt)

@@ -119,6 +119,8 @@ namespace Game.Client.Fx
             Destroy(orb.GetComponent<Collider>());
             orb.transform.position = from;
             orb.transform.localScale = Vector3.one * (projectileSize * sizeMultiplier);
+            // Lança (rápida): alongada na direção do voo, como um raio de luz.
+            if (speedMultiplier >= 1.5f) orb.transform.localScale = new Vector3(0.7f, 0.7f, 2.6f) * (projectileSize * sizeMultiplier);
             var renderer = orb.GetComponent<Renderer>();
             if (projectileMaterial != null)
             {

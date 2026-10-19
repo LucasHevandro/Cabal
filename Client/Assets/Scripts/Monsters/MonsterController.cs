@@ -165,6 +165,7 @@ namespace Game.Client.Monsters
             Fx.VisualAnimator.SetDead(this, false);
             _hideAt = float.PositiveInfinity;
             SetVisible(true);
+            Fx.ItemFx.MonsterSpawn(transform.position, 0.8f);
         }
 
         private void SetVisible(bool visible)

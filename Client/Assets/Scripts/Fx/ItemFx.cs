@@ -96,6 +96,51 @@ namespace Game.Client.Fx
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(position + Vector3.up * 0.4f, color, rarity >= ItemRarity.Epic ? 50 : 30);
         }
 
+        /// <summary>Poeirinha no chão (passos correndo, esquiva): sobe e espalha.</summary>
+        public static void Dust(Vector3 position, int count, float spread)
+        {
+            var fx = CombatFx.Instance;
+            if (fx == null) return;
+            var ground = new Vector3(position.x, World.Ground.HeightAt(position.x, position.z) + 0.08f, position.z);
+            var color = new Color(0.62f, 0.56f, 0.46f, 0.5f);
+            for (var i = 0; i < count; i++)
+            {
+                var dir = Random.insideUnitCircle;
+                fx.Glow(ground + new Vector3(dir.x, 0, dir.y) * 0.15f, new Vector3(dir.x * spread, Random.Range(0.3f, 0.7f), dir.y * spread),
+                    color, Random.Range(0.25f, 0.45f), Random.Range(0.4f, 0.7f));
+            }
+        }
+
+        /// <summary>Renascer: luz clara subindo em espiral pelo personagem.</summary>
+        public static void Respawn(Vector3 position)
+        {
+            var fx = CombatFx.Instance;
+            if (fx == null) return;
+            var color = new Color(0.75f, 0.95f, 1f);
+            for (var i = 0; i < 40; i++)
+            {
+                var a = i * 0.45f;
+                var offset = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 0.7f;
+                fx.Glow(position + offset + Vector3.up * (i * 0.05f), Vector3.up * 1.6f - offset * 0.5f, color, 0.18f, 0.8f);
+            }
+            fx.Flash(position + Vector3.up, color, 3f, 4f, 0.3f);
+        }
+
+        /// <summary>Monstro voltando: fumaça escura saindo do chão e um brilho roxo.</summary>
+        public static void MonsterSpawn(Vector3 position, float size)
+        {
+            var fx = CombatFx.Instance;
+            if (fx == null) return;
+            for (var i = 0; i < 18; i++)
+            {
+                var dir = Random.insideUnitCircle * size;
+                fx.Glow(position + new Vector3(dir.x, 0.1f, dir.y), Vector3.up * Random.Range(0.6f, 1.4f),
+                    new Color(0.18f, 0.12f, 0.22f, 0.7f), Random.Range(0.5f, 0.9f) * size, Random.Range(0.6f, 1f));
+            }
+            for (var i = 0; i < 10; i++)
+                fx.Glow(position + Vector3.up * 0.3f, Random.onUnitSphere * 1.5f + Vector3.up, new Color(0.6f, 0.35f, 1f), 0.15f, 0.5f);
+        }
+
         /// <summary>Subida de nível: anel dourado se abrindo no chão e uma coluna de luz subindo pelo personagem.</summary>
         public static void LevelUp(Transform player)
         {

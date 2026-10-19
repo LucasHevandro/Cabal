@@ -59,6 +59,7 @@ namespace Game.Client.Player
             _stepDistance = 0f;
             _leftFoot = !_leftFoot;
             Fx.SoundPlayer.Play(Fx.SoundId.Step, running ? 0.35f : 0.25f, _leftFoot ? 0.08f : 0.12f);
+            if (running) Fx.ItemFx.Dust(position + transform.right * (_leftFoot ? -0.15f : 0.15f), 3, 0.6f);
         }
 
         private bool _leftFoot;
@@ -93,6 +94,7 @@ namespace Game.Client.Player
                 _nextDodgeAt = Time.time + dodgeCooldown;
                 DodgeCount++;
                 Fx.VisualAnimator.Trigger(this, "Dodge");
+                Fx.ItemFx.Dust(transform.position, 10, 1.4f);
             }
 
             Vector3 horizontal;

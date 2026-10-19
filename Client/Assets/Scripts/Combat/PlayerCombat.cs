@@ -544,6 +544,7 @@ namespace Game.Client.Combat
         {
             transform.localScale = Vector3.one;
             VisualAnimator.SetDead(this, false);
+            ItemFx.Respawn(transform.position);
             IsDead = false;
             ShowMessage(message);
         }

@@ -74,6 +74,8 @@ namespace Game.Client.Net
             {
                 IsDead = dead;
                 var animated = _body != null ? _body.GetComponentInChildren<Fx.VisualAnimator>(true) : null;
+                // Monstro voltando (estava morto e reviveu): fumaça saindo do chão.
+                if (!dead && Kind == EntityKind.Monster) Fx.ItemFx.MonsterSpawn(transform.position, Mathf.Max(0.6f, Target != null ? Target.Radius : 0.6f));
                 if (animated != null)
                 {
                     _body.SetActive(true);
