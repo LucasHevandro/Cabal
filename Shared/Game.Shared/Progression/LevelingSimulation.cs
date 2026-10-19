@@ -19,6 +19,10 @@ namespace Game.Shared.Progression
         public int XpPerKill;
         public int Kills;
         public long QuestXp;
+
+        /// <summary>Alz e itens das missões entregues neste nível (para a revisão da economia).</summary>
+        public long QuestAlz;
+        public List<(string ItemId, int Quantity)> QuestItems = new List<(string, int)>();
         public double Minutes;
     }
 
@@ -63,6 +67,8 @@ namespace Game.Shared.Progression
             {
                 // Missões disponíveis neste nível: a XP delas conta, e os objetivos já entram no tempo de caça.
                 long questXp = 0;
+                long questAlz = 0;
+                var questItems = new List<(string ItemId, int Quantity)>();
                 var questMinutes = 0.0;
                 foreach (var quest in QuestCatalog.All)
                 {
@@ -70,6 +76,8 @@ namespace Game.Shared.Progression
                     if (!string.IsNullOrEmpty(quest.PreviousQuestId) && !completed.Contains(quest.PreviousQuestId)) continue;
                     completed.Add(quest.Id);
                     questXp += quest.RewardXp;
+                    questAlz += quest.RewardAlz;
+                    questItems.AddRange(quest.RewardItems);
                     questMinutes += assumptions.QuestOverheadMinutes;
                 }
 
@@ -90,6 +98,8 @@ namespace Game.Shared.Progression
                 var needed = Math.Max(0, LevelCurve.XpToNext(level) - questXp);
                 best.Level = level;
                 best.QuestXp = questXp;
+                best.QuestAlz = questAlz;
+                best.QuestItems = questItems;
                 best.Kills = (int)Math.Ceiling(needed / (double)best.XpPerKill);
                 best.Minutes = best.Kills * best.SecondsPerKill / 60 / (1 - assumptions.Downtime) + questMinutes;
                 steps.Add(best);

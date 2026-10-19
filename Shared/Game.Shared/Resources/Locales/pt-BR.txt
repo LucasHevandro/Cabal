@@ -963,3 +963,52 @@ servers.unstable = <color=#f0c860>● Instável</color>
 servers.other_version = <color=#f0a050>● Outra versão do jogo (atualize)</color>
 servers.offline = <color=#ff8070>● Fora do ar</color>
 servers.checking = <color=#aaaaaa>● Verificando…</color>
+
+# Missões das regiões (Caçador Rurik, Batedora Nara, Erudita Veska) e da Cripta
+npc.cacador_rurik = Caçador Rurik
+npc.batedora_nara = Batedora Nara
+npc.erudita_veska = Erudita Veska
+quest.coelhos_na_horta = Coelhos na horta
+quest.coelhos_na_horta.desc = Os coelhos saltadores estão comendo a horta da vila. Espante uns oito deles.
+quest.pelos_para_o_inverno = Pelos para o inverno
+quest.pelos_para_o_inverno.desc = O inverno vem aí. Traga pelos macios dos coelhos para forrar os casacos da vila.
+quest.uivos_na_noite = Uivos na noite
+quest.uivos_na_noite.desc = Os lobos cinzentos andam perto demais da ponte. Afaste a matilha.
+quest.presas_afiadas = Presas afiadas
+quest.presas_afiadas.desc = Uma presa de lobo dá uma boa ponta de flecha. Consiga duas para mim.
+quest.matilha_alfa = A matilha do alfa
+quest.matilha_alfa.desc = A matilha cresceu. Derrube os lobos e traga as peles, para o alfa não voltar.
+quest.rastros_na_trilha = Rastros na trilha
+quest.rastros_na_trilha.desc = Achei rastros grandes rumo à Mata Sombria. Avise a Batedora Nara, na entrada da mata.
+quest.javalis_famintos = Javalis famintos
+quest.javalis_famintos.desc = Os javalis furiosos estão atacando quem passa pela trilha. Abra caminho.
+quest.couro_resistente = Couro resistente
+quest.couro_resistente.desc = Couro de javali aguenta qualquer espinho da mata. Traga dez para os batedores.
+quest.teias_na_trilha = Teias na trilha
+quest.teias_na_trilha.desc = As aranhas cobriram a trilha de teias. Derrube algumas antes que alguém se perca.
+quest.seda_fina = Seda fina
+quest.seda_fina.desc = A seda das aranhas vale ouro na vila. Junte oito novelos.
+quest.ninho_da_aranha = O ninho
+quest.ninho_da_aranha.desc = Achei o ninho das aranhas no fundo da mata. Acabe com ele de vez.
+quest.limpar_a_mata = Limpar a mata
+quest.limpar_a_mata.desc = Uma última varredura: javalis e aranhas, para a trilha ficar segura.
+quest.pedras_que_andam = Pedras que andam
+quest.pedras_que_andam.desc = Dizem que as pedras das Ruínas Esquecidas se mexem. A Erudita Veska estuda isso: vá falar com ela.
+quest.golens_despertos = Golens despertos
+quest.golens_despertos.desc = Os golens de pedra acordaram. Derrube alguns para eu estudar como se movem.
+quest.nucleo_de_pedra = Núcleo de pedra
+quest.nucleo_de_pedra.desc = Preciso de fragmentos dos golens para descobrir o que os mantém de pé.
+quest.lamentos = Lamentos
+quest.lamentos.desc = Os espectros não deixam ninguém chegar perto das ruínas. Silencie alguns deles.
+quest.essencia_perdida = Essência perdida
+quest.essencia_perdida.desc = A essência dos espectros guarda memórias das ruínas. Traga seis para mim.
+quest.cavaleiros_caidos = Cavaleiros caídos
+quest.cavaleiros_caidos.desc = Os antigos guardiões das ruínas ainda vigiam as muralhas. Liberte-os.
+quest.honra_perdida = Honra perdida
+quest.honra_perdida.desc = Os cavaleiros guardam o caminho até o Guardião. Abra passagem e traga a essência deles.
+quest.a_cripta_esquecida = A Cripta Esquecida
+quest.a_cripta_esquecida.desc = Algo acordou embaixo da vila. Junte um grupo, entre pela Guardiã Selene e derrote o Senhor da Cripta.
+quest.antidoto = Antídoto
+quest.antidoto.desc = Um batedor foi picado. O veneno das aranhas serve para fazer o antídoto: traga quatro frascos.
+quest.o_ultimo_portao = O último portão
+quest.o_ultimo_portao.desc = O caminho até o Guardião ainda tem vigias. Derrube cavaleiros e espectros e o portão das Ruínas fica livre.

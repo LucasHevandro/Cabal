@@ -22,7 +22,7 @@ namespace Game.Shared.Progression
         Trainer = 5,
     }
 
-    /// <summary>NPC da vila: posição fixa e o que ele faz.</summary>
+    /// <summary>NPC da vila ou de uma região: posição fixa e o que ele faz.</summary>
     public sealed class NpcDefinition
     {
         public string Id = "";
@@ -48,6 +48,11 @@ namespace Game.Shared.Progression
         public const string DungeonPortal = "guardia_selene";
         public const string Trainer = "mestre_aldric";
 
+        /// <summary>Quem dá as missões de cada região, na entrada dela (fora da vila).</summary>
+        public const string Hunter = "cacador_rurik";
+        public const string Scout = "batedora_nara";
+        public const string Scholar = "erudita_veska";
+
         public static readonly IReadOnlyList<NpcDefinition> All = new List<NpcDefinition>
         {
             new NpcDefinition { Id = Elder, Role = NpcRole.QuestGiver, X = 0, Z = 8 },
@@ -56,6 +61,9 @@ namespace Game.Shared.Progression
             new NpcDefinition { Id = Merchant, Role = NpcRole.Merchant, X = 5, Z = -6 },
             new NpcDefinition { Id = DungeonPortal, Role = NpcRole.DungeonPortal, X = -5, Z = -6 },
             new NpcDefinition { Id = Trainer, Role = NpcRole.Trainer, X = -9, Z = -1.5f },
+            new NpcDefinition { Id = Hunter, Role = NpcRole.QuestGiver, X = -10, Z = 33 },
+            new NpcDefinition { Id = Scout, Role = NpcRole.QuestGiver, X = 32, Z = 66 },
+            new NpcDefinition { Id = Scholar, Role = NpcRole.QuestGiver, X = -32, Z = 106 },
         };
 
         public static NpcDefinition? Find(string id) => All.FirstOrDefault(n => n.Id == id);
@@ -121,8 +129,9 @@ namespace Game.Shared.Progression
     }
 
     /// <summary>
-    /// Missões do MVP, do nível 1 ao 30 (GDD: matar N, coletar N, falar com NPC). Encadeadas: cada uma pede a anterior.
-    /// Três delas são as missões de rank — liberam o combo e as skills de nível médio e alto.
+    /// Missões do MVP, do nível 1 ao 30 (GDD: matar N, coletar N, falar com NPC). A história principal fica com o
+    /// Ancião, encadeada (três delas são as missões de rank: combo e skills de nível médio e alto). Cada região tem um
+    /// NPC na entrada com missões paralelas de quase todo nível, valendo cerca de meio nível de XP cada.
     /// </summary>
     public static class QuestCatalog
     {
@@ -197,6 +206,144 @@ namespace Game.Shared.Progression
                 Id = "o_guardiao", MinLevel = 30, PreviousQuestId = "ecos_espectrais",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "guardiao_das_ruinas") },
                 RewardXp = 0, RewardAlz = 200000, RewardItems = { (ItemCatalog.CoreHigh, 5) },
+            },
+
+            // ----- Missões das regiões e da Cripta -----
+            new QuestDefinition
+            {
+                Id = "coelhos_na_horta", GiverNpcId = NpcCatalog.Hunter, MinLevel = 2,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "coelho_saltador", 8) },
+                RewardXp = 900, RewardAlz = 100, RewardItems = { ("pocao_hp_p", 3) },
+            },
+            new QuestDefinition
+            {
+                Id = "pelos_para_o_inverno", GiverNpcId = NpcCatalog.Hunter, MinLevel = 4, PreviousQuestId = "coelhos_na_horta",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "pelo_macio", 8) },
+                RewardXp = 2300, RewardAlz = 300, RewardItems = { ("pocao_hp_p", 4) },
+            },
+            new QuestDefinition
+            {
+                Id = "uivos_na_noite", GiverNpcId = NpcCatalog.Hunter, MinLevel = 5,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "lobo_cinzento", 8) },
+                RewardXp = 3200, RewardAlz = 400, RewardItems = { ("pocao_hp_m", 2) },
+            },
+            new QuestDefinition
+            {
+                Id = "presas_afiadas", GiverNpcId = NpcCatalog.Hunter, MinLevel = 7, PreviousQuestId = "uivos_na_noite",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "presa_lobo", 2) },
+                RewardXp = 4900, RewardAlz = 600, RewardItems = { ("nucleo_baixo", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "matilha_alfa", GiverNpcId = NpcCatalog.Hunter, MinLevel = 8, PreviousQuestId = "presas_afiadas",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "lobo_cinzento", 15), new QuestObjective(QuestObjectiveKind.Collect, "pele_lobo", 5) },
+                RewardXp = 8000, RewardAlz = 1000, RewardItems = { ("pocao_hp_m", 3), ("nucleo_baixo", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "rastros_na_trilha", GiverNpcId = NpcCatalog.Hunter, MinLevel = 9, PreviousQuestId = "matilha_alfa",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Talk, NpcCatalog.Scout) },
+                RewardXp = 5600, RewardAlz = 700,
+            },
+            new QuestDefinition
+            {
+                Id = "javalis_famintos", GiverNpcId = NpcCatalog.Scout, MinLevel = 11,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "javali_furioso", 12) },
+                RewardXp = 11000, RewardAlz = 1300, RewardItems = { ("pocao_hp_m", 3) },
+            },
+            new QuestDefinition
+            {
+                Id = "couro_resistente", GiverNpcId = NpcCatalog.Scout, MinLevel = 12, PreviousQuestId = "javalis_famintos",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "couro_javali", 10) },
+                RewardXp = 12700, RewardAlz = 1500, RewardItems = { ("nucleo_baixo", 2) },
+            },
+            new QuestDefinition
+            {
+                Id = "teias_na_trilha", GiverNpcId = NpcCatalog.Scout, MinLevel = 13,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 10) },
+                RewardXp = 14300, RewardAlz = 1700, RewardItems = { ("pocao_hp_m", 3) },
+            },
+            new QuestDefinition
+            {
+                Id = "seda_fina", GiverNpcId = NpcCatalog.Scout, MinLevel = 14, PreviousQuestId = "teias_na_trilha",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "seda", 8) },
+                RewardXp = 16100, RewardAlz = 1900, RewardItems = { ("nucleo_medio", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "ninho_da_aranha", GiverNpcId = NpcCatalog.Scout, MinLevel = 17, PreviousQuestId = "seda_fina",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 25) },
+                RewardXp = 26200, RewardAlz = 3100, RewardItems = { ("nucleo_medio", 1), ("pocao_hp_m", 4) },
+            },
+            new QuestDefinition
+            {
+                Id = "limpar_a_mata", GiverNpcId = NpcCatalog.Scout, MinLevel = 18, PreviousQuestId = "couro_resistente",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "javali_furioso", 15), new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 15) },
+                RewardXp = 28700, RewardAlz = 3400, RewardItems = { ("nucleo_medio", 2) },
+            },
+            new QuestDefinition
+            {
+                Id = "pedras_que_andam", GiverNpcId = NpcCatalog.Scout, MinLevel = 19, PreviousQuestId = "ninho_da_aranha",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Talk, NpcCatalog.Scholar) },
+                RewardXp = 18200, RewardAlz = 2200,
+            },
+            new QuestDefinition
+            {
+                Id = "golens_despertos", GiverNpcId = NpcCatalog.Scholar, MinLevel = 21,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "golem_de_pedra", 10) },
+                RewardXp = 30500, RewardAlz = 3700, RewardItems = { ("pocao_hp_m", 4) },
+            },
+            new QuestDefinition
+            {
+                Id = "nucleo_de_pedra", GiverNpcId = NpcCatalog.Scholar, MinLevel = 23, PreviousQuestId = "golens_despertos",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "fragmento_pedra", 12) },
+                RewardXp = 35200, RewardAlz = 4200, RewardItems = { ("nucleo_alto", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "lamentos", GiverNpcId = NpcCatalog.Scholar, MinLevel = 24,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "espectro", 12) },
+                RewardXp = 37700, RewardAlz = 4500, RewardItems = { ("pocao_hp_m", 4) },
+            },
+            new QuestDefinition
+            {
+                Id = "essencia_perdida", GiverNpcId = NpcCatalog.Scholar, MinLevel = 26, PreviousQuestId = "lamentos",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "essencia", 6) },
+                RewardXp = 42700, RewardAlz = 5100, RewardItems = { ("nucleo_alto", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "cavaleiros_caidos", GiverNpcId = NpcCatalog.Scholar, MinLevel = 27, PreviousQuestId = "essencia_perdida",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "cavaleiro_caido", 10) },
+                RewardXp = 49900, RewardAlz = 6000, RewardItems = { ("nucleo_alto", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "honra_perdida", GiverNpcId = NpcCatalog.Scholar, MinLevel = 28, PreviousQuestId = "cavaleiros_caidos",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "cavaleiro_caido", 20), new QuestObjective(QuestObjectiveKind.Collect, "essencia", 5) },
+                RewardXp = 57700, RewardAlz = 6900, RewardItems = { ("nucleo_alto", 2) },
+            },
+            new QuestDefinition
+            {
+                Id = "antidoto", GiverNpcId = NpcCatalog.Scout, MinLevel = 16, PreviousQuestId = "teias_na_trilha",
+                Objectives = { new QuestObjective(QuestObjectiveKind.Collect, "veneno", 4) },
+                RewardXp = 21900, RewardAlz = 2600, RewardItems = { ("pocao_hp_m", 5) },
+            },
+            new QuestDefinition
+            {
+                Id = "o_ultimo_portao", GiverNpcId = NpcCatalog.Scholar, MinLevel = 29, PreviousQuestId = "honra_perdida",
+                Objectives =
+                {
+                    new QuestObjective(QuestObjectiveKind.Kill, "cavaleiro_caido", 15),
+                    new QuestObjective(QuestObjectiveKind.Kill, "espectro", 10),
+                },
+                RewardXp = 61000, RewardAlz = 7300, RewardItems = { ("nucleo_alto", 2) },
+            },
+            new QuestDefinition
+            {
+                Id = "a_cripta_esquecida", GiverNpcId = NpcCatalog.Elder, MinLevel = 18, PreviousQuestId = ClassCatalog.RankTwoQuestId,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "senhor_da_cripta") },
+                RewardXp = 38300, RewardAlz = 4600, RewardItems = { ("nucleo_medio", 2) },
             },
         };
 

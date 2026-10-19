@@ -25,20 +25,24 @@ namespace Game.Shared.Economy
         public double Hours;
         public long AlzFromMonsters;
         public long AlzFromSales;
+        public long AlzFromQuests;
         public long SpentOnUpgrades;
         public long SpentOnCores;
         public long SpentOnPotions;
         public long SpentOnGear;
 
-        public long Income => AlzFromMonsters + AlzFromSales;
-        public long Spent => SpentOnUpgrades + SpentOnCores + SpentOnPotions + SpentOnGear;
+        /// <summary>Skills aprendidas no mestre nesta faixa.</summary>
+        public long SpentOnSkills;
+
+        public long Income => AlzFromMonsters + AlzFromSales + AlzFromQuests;
+        public long Spent => SpentOnUpgrades + SpentOnCores + SpentOnPotions + SpentOnGear + SpentOnSkills;
         public long Balance => Income - Spent;
     }
 
     /// <summary>
     /// Revisão da economia 1→30: usa a simulação de subida de nível (onde e quanto caçou) para estimar o Alz que entra
-    /// (Alz dos monstros e venda dos drops na loja, exceto núcleos e pedras) e o que sai (melhorias até o nível médio de
-    /// cada grau, núcleos comprados que faltaram, poções e o conjunto de Ferro).
+    /// (Alz dos monstros, das missões e venda dos drops na loja, exceto núcleos e pedras) e o que sai (melhorias até o nível médio de
+    /// cada grau, núcleos comprados que faltaram, poções, o conjunto de Ferro e as skills do mestre).
     /// </summary>
     public static class EconomySimulation
     {
@@ -61,6 +65,12 @@ namespace Game.Shared.Economy
                     var monster = monsters[step.MonsterId];
                     band.Hours += step.Minutes / 60;
                     band.AlzFromMonsters += (long)(step.Kills * (monster.Drops.AlzMin + monster.Drops.AlzMax) / 2.0);
+                    band.AlzFromQuests += step.QuestAlz;
+                    foreach (var (itemId, quantity) in step.QuestItems)
+                    {
+                        var reward = ItemCatalog.Find(itemId);
+                        if (reward != null && reward.UpgradeCoreGrade > 0) coresDropped[itemId] = coresDropped.GetValueOrDefault(itemId) + quantity;
+                    }
                     foreach (var entry in monster.Drops.Entries)
                     {
                         var amount = step.Kills * entry.Chance * (entry.MinQuantity + entry.MaxQuantity) / 2.0;
@@ -91,6 +101,10 @@ namespace Game.Shared.Economy
                 coresDropped[coreId] = Math.Max(0, coresDropped.GetValueOrDefault(coreId) - coresNeeded);
                 var shopCore = ShopCatalog.Find(coreId);
                 if (shopCore != null) band.SpentOnCores += (long)(missing * shopCore.Price);
+
+                // Skills do mestre: aprende cada uma quando o nível deixa.
+                foreach (var skill in ClassCatalog.SkillsFor(characterClass))
+                    if (skill.RequiredLevel >= from && skill.RequiredLevel <= to) band.SpentOnSkills += SkillTraining.PriceFor(skill);
 
                 var potion = ShopCatalog.Find(grade == 1 ? "pocao_hp_p" : "pocao_hp_m")!;
                 band.SpentOnPotions += (long)(band.Hours * economy.PotionsPerHour * potion.Price);

@@ -39,7 +39,7 @@ foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arca
         $"{LevelingSimulation.TotalHours(LevelingSimulation.Run(characterClass, slow)):0.0} h");
 }
 
-// Economia: Alz que entra (monstros e venda de drops) e que sai (melhoria, núcleos, poções, equipamento da loja).
+// Economia: Alz que entra (monstros, missões e venda de drops) e que sai (melhoria, núcleos, poções, loja e skills do mestre).
 Console.WriteLine();
 Console.WriteLine(markdown ? "## Economia (1→30)\n" : "== Economia (1→30) ==");
 foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
@@ -48,17 +48,17 @@ foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arca
     Console.WriteLine(markdown ? $"### {AccountRules.ClassDisplayName(characterClass)}\n" : $"-- {AccountRules.ClassDisplayName(characterClass)} --");
     if (markdown)
     {
-        Console.WriteLine("| Faixa | Horas | Alz dos monstros | Venda de drops | Melhoria | Núcleos | Poções | Loja (equip.) | Saldo |");
-        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+        Console.WriteLine("| Faixa | Horas | Alz dos monstros | Missões | Venda de drops | Melhoria | Núcleos | Poções | Loja (equip.) | Skills | Saldo |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
     }
     long saved = 0;
     foreach (var b in bands)
     {
         saved += b.Balance;
         Console.WriteLine(markdown
-            ? $"| {b.Name} | {b.Hours:0.0} | {b.AlzFromMonsters:N0} | {b.AlzFromSales:N0} | {b.SpentOnUpgrades:N0} | {b.SpentOnCores:N0} | {b.SpentOnPotions:N0} | {b.SpentOnGear:N0} | {b.Balance:N0} |"
-            : $"{b.Name,-24} {b.Hours,4:0.0} h  entra {b.Income,9:N0} (monstros {b.AlzFromMonsters:N0}, vendas {b.AlzFromSales:N0})  " +
-              $"sai {b.Spent,9:N0} (melhoria {b.SpentOnUpgrades:N0}, núcleos {b.SpentOnCores:N0}, poções {b.SpentOnPotions:N0}, loja {b.SpentOnGear:N0})  saldo {b.Balance,9:N0}");
+            ? $"| {b.Name} | {b.Hours:0.0} | {b.AlzFromMonsters:N0} | {b.AlzFromQuests:N0} | {b.AlzFromSales:N0} | {b.SpentOnUpgrades:N0} | {b.SpentOnCores:N0} | {b.SpentOnPotions:N0} | {b.SpentOnGear:N0} | {b.SpentOnSkills:N0} | {b.Balance:N0} |"
+            : $"{b.Name,-24} {b.Hours,4:0.0} h  entra {b.Income,9:N0} (monstros {b.AlzFromMonsters:N0}, missões {b.AlzFromQuests:N0}, vendas {b.AlzFromSales:N0})  " +
+              $"sai {b.Spent,9:N0} (melhoria {b.SpentOnUpgrades:N0}, núcleos {b.SpentOnCores:N0}, poções {b.SpentOnPotions:N0}, loja {b.SpentOnGear:N0}, skills {b.SpentOnSkills:N0})  saldo {b.Balance,9:N0}");
     }
     var income = bands.Sum(b => b.Income);
     var spent = bands.Sum(b => b.Spent);
