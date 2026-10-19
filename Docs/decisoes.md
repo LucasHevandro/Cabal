@@ -172,3 +172,19 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   Excellent e crítico continuam somando por cima.
 - **Revisar com gente:** se o hit stop das skills pesadas não atrapalha o timing do combo em sequência rápida.
 
+
+## 2026-10-19 — Skills aprendidas no mestre e barra de atalhos
+
+- **Mestre de skills** (Mestre Aldric, na vila): as skills não entram mais sozinhas ao subir de nível. O nível e a
+  missão de rank só deixam aprender, e a skill entra quando o jogador paga ao mestre. Preço provisório:
+  40 × nível² Alz (Nv 3 = 360, Nv 12 = 5.760, Nv 25 = 25.000). As skills de nível 1 já vêm com o personagem.
+- **Ninguém perde skill:** personagens salvos antes do mestre (sem a lista no banco) ficam com tudo o que o nível e as
+  missões já liberavam.
+- **Barra de atalhos com 8 casas**, arrumada pelo jogador como no CABAL:
+  - da janela de skills (K) ou do mestre para a barra;
+  - entre as casas, trocando de lugar;
+  - para fora da barra, tirando a skill.
+  Clicar na casa usa a skill. O servidor confere a barra (só skills aprendidas, sem repetir) e salva com o
+  personagem nas colunas `LearnedSkills` e `Hotbar` (migração `SkillsAprendidas`). O `UseSkill` continua mandando o
+  índice da skill na classe; a barra só diz qual tecla usa qual skill.
+- Convidados continuam sabendo todas as skills, para os bots e os testes.

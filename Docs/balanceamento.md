@@ -12,7 +12,7 @@ dotnet run --project Tools/Game.Balance -- --markdown
 
 - Usa as regras reais do `Shared`: atributos (60% no atributo principal, 40% em destreza), equipamento completo do
   grau do nível (Ferro até o 9, Aço Negro do 10 ao 19, Astralita do 20 em diante) com melhoria média +2/+4/+5,
-  skills liberadas por nível e missão, fórmula de dano contra a defesa do monstro, crítico e MP.
+  skills disponíveis por nível e missão (supõe que o jogador aprende no mestre assim que pode), fórmula de dano contra a defesa do monstro, crítico e MP.
 - A cada nível escolhe o monstro que dá mais XP por segundo entre os de até 6 níveis abaixo e 5 acima.
 - Soma a XP das missões do catálogo quando o nível e a missão anterior permitem.
 - Premissas de um jogador típico: 0,9 s por ação, 7 s entre um monstro e outro, 20% do tempo parado (vila,
