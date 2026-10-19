@@ -57,6 +57,7 @@ namespace Game.Client.DevTools
                 foreach (var (label, hour) in times)
                 {
                     Atmosphere.ForcedTime = hour;
+                    RegionAmbience.ForcedRain = name == "mata" ? 1f : 0f; // a mata fotografada na chuva
                     yield return new WaitForSeconds(1.5f); // tempo para o clima da região aparecer
                     if (name == "ceu" && RenderSettings.sun != null)
                     {

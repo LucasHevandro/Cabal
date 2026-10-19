@@ -83,6 +83,9 @@ namespace Game.Client.World
         /// <summary>0 = dia, 1 = noite cheia (lanternas e tochas acompanham).</summary>
         public static float Night { get; private set; }
 
+        /// <summary>Tempo fechado de 0 a 1 (chuva onde o jogador está, vinda do <see cref="RegionAmbience"/>).</summary>
+        public static float Overcast { get; set; }
+
         /// <summary>Hora do dia de 0 a 1 (0,25 = meio da manhã, 0,62 = pôr do sol, 0,8 = meia-noite). Para os testes.</summary>
         public static float? ForcedTime { get; set; }
 
@@ -144,6 +147,7 @@ namespace Game.Client.World
             var outdoors = focus.z > -500f && focus.z < 500f;
             var hour = DayTime();
             if (outdoors) target = WithTimeOfDay(target, hour, out _sunsetGlow);
+            if (outdoors && Overcast > 0.001f) target = Look.Lerp(target, Overcasted(target), Overcast);
             Night = outdoors ? NightAmount(hour) : 0f;
             // Entrar na dungeon ou na arena é um corte (teleporte); andando pelo mapa a troca é suave.
             var jump = !_started || Mathf.Abs(target.FogDensity - _current.FogDensity) > 0.012f;
@@ -192,6 +196,19 @@ namespace Game.Client.World
             return Look.Lerp(result, NightLook, NightAmount(hour) * 0.85f);
         }
 
+        /// <summary>O mesmo clima com o tempo fechado: sol fraco, neblina cinza mais densa e cores apagadas.</summary>
+        private static Look Overcasted(Look look)
+        {
+            var grey = look;
+            grey.Fog = Color.Lerp(look.Fog, new Color(0.42f, 0.47f, 0.5f) * Mathf.Max(0.35f, look.Fog.maxColorComponent), 0.8f);
+            grey.FogDensity = Mathf.Max(look.FogDensity * 1.6f, 0.026f);
+            grey.SunIntensity = look.SunIntensity * 0.35f;
+            grey.Sky = Color.Lerp(look.Sky, new Color(0.45f, 0.48f, 0.52f) * look.Sky.maxColorComponent, 0.7f);
+            grey.Filter = Color.Lerp(look.Filter, new Color(0.85f, 0.9f, 0.95f), 0.5f);
+            grey.Saturation = look.Saturation - 18f;
+            return grey;
+        }
+
         private static float Bump(float x, float start, float peak, float end)
         {
             if (x <= start || x >= end) return 0f;
@@ -214,9 +231,11 @@ namespace Game.Client.World
             sun.transform.rotation = Quaternion.Euler(elevation, _sunRotation.eulerAngles.y + heading * 0.5f, 0f);
             if (RenderSettings.skybox != null)
             {
-                if (RenderSettings.skybox.HasProperty("_Exposure")) RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(1.25f, 0.18f, night));
+                if (RenderSettings.skybox.HasProperty("_Exposure"))
+                    RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(1.25f, 0.18f, night) * Mathf.Lerp(1f, 0.55f, Overcast));
                 if (RenderSettings.skybox.HasProperty("_SkyTint"))
-                    RenderSettings.skybox.SetColor("_SkyTint", Color.Lerp(new Color(0.48f, 0.56f, 0.7f), new Color(0.75f, 0.45f, 0.4f), _sunsetGlow));
+                    RenderSettings.skybox.SetColor("_SkyTint", Color.Lerp(Color.Lerp(new Color(0.48f, 0.56f, 0.7f), new Color(0.75f, 0.45f, 0.4f), _sunsetGlow),
+                        new Color(0.42f, 0.44f, 0.47f), Overcast * 0.85f));
             }
         }
 

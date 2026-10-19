@@ -8,16 +8,39 @@ namespace Game.Client.World
     /// Clima de cada região, em partículas que acompanham a câmera e mudam aos poucos conforme a distância do centro de
     /// cada região: pólen e folhas no vento nos Campos do Vento, vaga-lumes (mais fortes à noite) e névoa rasteira na Mata
     /// Sombria, partículas mágicas subindo e brilhos fantasmas nas Ruínas Esquecidas. Só no mundo aberto.
+    /// O tempo muda sozinho: de vez em quando chove na Mata Sombria e o vento dos Campos vem em rajadas. O ciclo segue o
+    /// relógio de verdade (UTC), então quem está online vê mais ou menos o mesmo tempo.
     /// </summary>
     public sealed class RegionAmbience : MonoBehaviour
     {
+        private enum Weather { Always, Rain, Gust }
+
         private sealed class Layer
         {
             public ParticleSystem System;
             public string Zone = "";
             public float Rate;
             public bool NightBoost;
+            public Weather Weather;
+            public Vector3 Velocity;
         }
+
+        /// <summary>Para os testes: chuva fixa (0 a 1) em vez do ciclo do relógio.</summary>
+        public static float? ForcedRain { get; set; }
+
+        /// <summary>Quanto chove agora (0 a 1): pancadas de alguns minutos, com intervalos maiores.</summary>
+        public static float Rain
+        {
+            get
+            {
+                if (ForcedRain.HasValue) return ForcedRain.Value;
+                var minutes = (float)(System.DateTime.UtcNow.TimeOfDay.TotalMinutes % 1440.0);
+                return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 0.74f, Mathf.PerlinNoise(minutes / 6f, 0.37f)));
+            }
+        }
+
+        /// <summary>Força do vento agora (0,4 calmaria, até 1,8 nas rajadas).</summary>
+        public static float Gust => 0.4f + 1.4f * Mathf.PerlinNoise(Time.time / 9f, 4.2f);
 
         private readonly List<Layer> _layers = new List<Layer>();
         private readonly Dictionary<string, ZoneDefinition> _zones = new Dictionary<string, ZoneDefinition>();
@@ -57,9 +80,20 @@ namespace Game.Client.World
                 new Vector3(0f, 0.7f, 0f), 0.6f, new Vector3(34f, 2f, 34f), 0.8f);
             Add("ruinas_esquecidas", "Brilhos", 5f, true, new Color(0.5f, 1.4f, 1.8f, 0.8f), 0.25f, 0.4f, 7f,
                 new Vector3(0.3f, 0.15f, 0f), 0.9f, new Vector3(34f, 3f, 34f), 1.5f);
+
+            // Tempo que muda: chuva na Mata (gotas esticadas, caindo rápido) e o pólen e as folhas dos Campos nas rajadas.
+            var rain = Add("mata_sombria", "Chuva", 1100f, false, new Color(0.72f, 0.8f, 0.92f, 0.42f), 0.04f, 0.06f, 0.9f,
+                new Vector3(0.8f, -17f, 0.3f), 0f, new Vector3(30f, 0.2f, 30f), 15f);
+            rain.Weather = Weather.Rain;
+            var drops = rain.System.GetComponent<ParticleSystemRenderer>();
+            drops.renderMode = ParticleSystemRenderMode.Stretch;
+            drops.velocityScale = 0.035f;
+            drops.lengthScale = 1f;
+            foreach (var layer in _layers)
+                if (layer.Zone == "campos_do_vento") layer.Weather = Weather.Gust;
         }
 
-        private void Add(string zone, string name, float rate, bool nightBoost, Color color, float minSize, float maxSize, float lifetime,
+        private Layer Add(string zone, string name, float rate, bool nightBoost, Color color, float minSize, float maxSize, float lifetime,
             Vector3 velocity, float noise, Vector3 box, float height)
         {
             var obj = new GameObject(name);
@@ -114,7 +148,9 @@ namespace Game.Client.World
             renderer.maxParticleSize = 2f;
 
             ps.Play();
-            _layers.Add(new Layer { System = ps, Zone = zone, Rate = rate, NightBoost = nightBoost });
+            var layer = new Layer { System = ps, Zone = zone, Rate = rate, NightBoost = nightBoost, Velocity = velocity };
+            _layers.Add(layer);
+            return layer;
         }
 
         private void LateUpdate()
@@ -125,10 +161,23 @@ namespace Game.Client.World
             var eye = camera.transform.position;
             var focus = new Vector3(eye.x, Ground.HeightAt(eye.x, eye.z), eye.z);
             transform.position = focus;
+            var rain = Rain;
+            var gust = Gust;
+            // Onde chove, o tempo fecha (sol fraco, neblina cinza).
+            Atmosphere.Overcast = rain * Weight("mata_sombria", focus);
             foreach (var layer in _layers)
             {
                 var weight = Weight(layer.Zone, focus);
                 if (layer.NightBoost) weight *= Mathf.Lerp(0.25f, 1.6f, Atmosphere.Night);
+                if (layer.Weather == Weather.Rain) weight *= rain;
+                if (layer.Weather == Weather.Gust)
+                {
+                    // Na rajada vem mais pólen e folha, e mais rápido no sentido do vento.
+                    weight *= gust;
+                    var velocity = layer.System.velocityOverLifetime;
+                    velocity.x = layer.Velocity.x * gust * 1.6f;
+                    velocity.z = layer.Velocity.z * gust * 1.6f;
+                }
                 var emission = layer.System.emission;
                 emission.rateOverTime = layer.Rate * weight;
             }
