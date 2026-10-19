@@ -74,6 +74,12 @@ namespace Game.Client.World
             // O ruído fica perto de 0,5 quase sempre: estica para ter várzeas (0) e morros (1).
             var hills = Mathf.Clamp01((Fbm(x * 0.018f + 11.3f, z * 0.018f + 4.7f, 3) - 0.3f) / 0.45f);
             var height = hills * Amplitude(x, z) * Flatness(x, z, 0f);
+            // Perto do rio a várzea fica no zero; senão, num morro, o leito cavado ficaria acima da água (trecho seco).
+            if (OutsideDistance(x, z) < -6f)
+            {
+                var bank = Mathf.Clamp01((RiverHalfWidth + 10f - Mathf.Abs(z - RiverZ(x))) / 6f);
+                height *= 1f - bank * bank * (3f - 2f * bank);
+            }
 
             // Montanhas: começam a subir um pouco antes do limite do servidor e fecham o horizonte.
             var outside = OutsideDistance(x, z);

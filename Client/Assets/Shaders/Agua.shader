@@ -106,8 +106,17 @@ Shader "Jogo/Agua"
 
                 // Quanto de água há entre a superfície e o fundo neste pixel.
                 float2 screenUV = input.screenPos.xy / input.screenPos.w;
-                float sceneDepth = LinearEyeDepth(SampleSceneDepth(screenUV), _ZBufferParams);
-                float depth = max(0.0, sceneDepth - input.screenPos.w);
+                float raw = SampleSceneDepth(screenUV);
+                float sceneDepth = LinearEyeDepth(raw, _ZBufferParams);
+                if (unity_OrthoParams.w > 0.5) // câmera ortográfica (a foto do mapa): profundidade linear
+                {
+                    #if UNITY_REVERSED_Z
+                    raw = 1.0 - raw;
+                    #endif
+                    sceneDepth = lerp(_ProjectionParams.y, _ProjectionParams.z, raw);
+                }
+                float surfaceDepth = -TransformWorldToView(input.positionWS).z;
+                float depth = max(0.0, sceneDepth - surfaceDepth);
                 float deep = saturate(depth / _DepthMax);
                 half4 water = lerp(_Shallow, _Deep, deep);
 
