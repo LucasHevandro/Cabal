@@ -219,8 +219,17 @@ namespace Game.Client.World
                     Kit.Place(_root.transform, "velas", new Vector3(side * (edge - 0.5f), 0, Range(room.StartZ + 2, room.EndZ - 2)), Quaternion.identity);
                 }
             }
-            // Sala do chefe: trono no fundo e braseiros nos cantos.
+            // Sala do chefe: trono no fundo, braseiros nos cantos e um círculo rúnico roxo no meio, onde ele luta.
             Kit.Place(_root.transform, "trono", new Vector3(0, 0, bossRoom.EndZ - 1.8f), Quaternion.identity);
+            Kit.Rune(_root.transform, "Círculo do chefe", new Vector3(0, 0.03f, (bossRoom.StartZ + bossRoom.EndZ) / 2f), edge * 1.5f,
+                new Color(0.6f, 0.22f, 1.1f, 0.4f), 3.7f);
+
+            // Ar parado da cripta: poeira clara flutuando e uma névoa roxa rente ao chão, o corredor inteiro.
+            var middle = length / 2f;
+            Kit.Haze(_root.transform, "Poeira", new Vector3(0, 2.2f, middle), new Vector3(edge * 2f - 1f, 3.6f, length),
+                new Color(0.95f, 0.88f, 0.75f, 0.35f), 0.03f, 0.06f, 7f, length * 0.9f, new Vector3(0.05f, 0.04f, 0.02f));
+            Kit.Haze(_root.transform, "Névoa", new Vector3(0, 0.35f, middle), new Vector3(edge * 2f - 1f, 0.4f, length),
+                new Color(0.55f, 0.35f, 0.75f, 0.07f), 3f, 5.5f, 10f, length * 0.35f, new Vector3(0.08f, 0f, 0.05f));
             foreach (var x in new[] { -1f, 1f })
             foreach (var z in new[] { bossRoom.StartZ + 5f, bossRoom.EndZ - 6f })
                 Kit.Place(_root.transform, "braseiro_arena", new Vector3(x * (edge - 2f), 0, z), Quaternion.identity);

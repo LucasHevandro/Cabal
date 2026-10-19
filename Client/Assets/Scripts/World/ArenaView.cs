@@ -22,6 +22,7 @@ namespace Game.Client.World
         private GameObject _root;
         private string _builtFor = "";
         private readonly List<Renderer> _points = new List<Renderer>();
+        private readonly List<Renderer> _runes = new List<Renderer>();
         private readonly List<Transform> _fills = new List<Transform>();
         private readonly List<Renderer> _flags = new List<Renderer>();
         private MaterialPropertyBlock _flagColor;
@@ -58,7 +59,9 @@ namespace Game.Client.World
             {
                 var point = state.Points[i];
                 var ownerColor = point.Owner == (sbyte)ArenaTeam.Blue ? Blue : point.Owner == (sbyte)ArenaTeam.Red ? Red : Neutral;
-                _points[i].sharedMaterial = Tint(ownerColor);
+                // Disco escuro meio puxado para a cor do dono e o círculo rúnico brilhando nela por cima.
+                _points[i].sharedMaterial = Tint(Color.Lerp(Sand, ownerColor, 0.3f));
+                if (i < _runes.Count) Kit.SetRuneColor(_runes[i], Glow(ownerColor));
                 // A bandeira do ponto fica com a cor do dono.
                 if (i < _flags.Count && _flags[i] != null)
                 {
@@ -69,7 +72,7 @@ namespace Game.Client.World
                 // O disco de dentro cresce com o progresso da captura, na cor de quem está tomando.
                 var amount = Mathf.Abs(point.Progress);
                 _fills[i].localScale = new Vector3(amount * ArenaRules.CaptureRadius * 2, 0.02f, amount * ArenaRules.CaptureRadius * 2);
-                _fills[i].GetComponent<Renderer>().sharedMaterial = Tint(point.Progress < 0 ? Blue : Red);
+                _fills[i].GetComponent<Renderer>().sharedMaterial = Tint(Color.Lerp(Sand, point.Progress < 0 ? Blue : Red, 0.6f));
             }
         }
 
@@ -101,6 +104,7 @@ namespace Game.Client.World
             _root = null;
             _builtFor = "";
             _points.Clear();
+            _runes.Clear();
             _fills.Clear();
             _flags.Clear();
         }
@@ -152,9 +156,23 @@ namespace Game.Client.World
 
             foreach (var team in new[] { ArenaTeam.Blue, ArenaTeam.Red })
             {
+                // Base: piso escuro puxado para a cor do time, três círculos rúnicos e as bandeiras do time nos cantos.
                 var (x, z) = ArenaRules.BaseOf(team);
+                var color = team == ArenaTeam.Blue ? Blue : Red;
                 Block($"Base {ArenaRules.TeamName(team)}", new Vector3(x, 0.02f, z), new Vector3(14, 0.04f, 6),
-                    Tint(team == ArenaTeam.Blue ? Blue : Red), collider: false);
+                    Tint(Color.Lerp(Sand, color, 0.35f)), collider: false);
+                for (var k = -1; k <= 1; k++)
+                    Kit.Rune(_root.transform, $"Runa da base {ArenaRules.TeamName(team)}", new Vector3(x + k * 4.5f, 0.05f, z), 4f, Glow(color) * 0.7f, k + 2);
+                if (!hasKit) continue;
+                foreach (var side in new[] { -1f, 1f })
+                {
+                    var teamFlag = Kit.Place(_root.transform, "bandeira", new Vector3(x + side * 7.5f, 0, z), Quaternion.identity);
+                    var cloth = teamFlag != null ? teamFlag.transform.Find("Pano")?.GetComponentInChildren<Renderer>() : null;
+                    if (cloth == null) continue;
+                    _flagColor ??= new MaterialPropertyBlock();
+                    _flagColor.SetColor("_BaseColor", color);
+                    cloth.SetPropertyBlock(_flagColor);
+                }
             }
             // Obstáculos para quebrar a linha reta entre as bases.
             foreach (var (x, z) in new[] { (-10f, -14f), (10f, -14f), (-10f, 14f), (10f, 14f) })
@@ -165,8 +183,11 @@ namespace Game.Client.World
 
             foreach (var point in ArenaRules.Points)
             {
-                var disc = Disc($"Ponto {point.Name}", new Vector3(point.X, 0.03f, point.Z), ArenaRules.CaptureRadius * 2, Tint(Neutral));
+                var disc = Disc($"Ponto {point.Name}", new Vector3(point.X, 0.03f, point.Z), ArenaRules.CaptureRadius * 2,
+                    Tint(Color.Lerp(Sand, Neutral, 0.3f)));
                 _points.Add(disc.GetComponent<Renderer>());
+                _runes.Add(Kit.Rune(_root.transform, $"Runa {point.Name}", new Vector3(point.X, 0.07f, point.Z), ArenaRules.CaptureRadius * 2.1f,
+                    Glow(Neutral), point.Name.Length + point.X));
                 var fill = Disc($"Captura {point.Name}", new Vector3(point.X, 0.05f, point.Z), 0.01f, Tint(Blue));
                 _fills.Add(fill.transform);
                 var flag = hasKit ? Kit.Place(_root.transform, "bandeira", new Vector3(point.X, 0, point.Z), Quaternion.identity) : null;
@@ -174,6 +195,11 @@ namespace Game.Client.World
                 else Block($"Bandeira {point.Name}", new Vector3(point.X, 2f, point.Z), new Vector3(0.25f, 4f, 0.25f), wall, collider: false);
             }
         }
+
+        private static readonly Color Sand = new Color(0.4f, 0.36f, 0.3f);
+
+        /// <summary>A cor do time em HDR (o círculo rúnico brilha com o bloom).</summary>
+        private static Color Glow(Color color) => new Color(color.r * 1.4f, color.g * 1.4f, color.b * 1.4f, 0.5f);
 
         private Material Tint(Color color)
         {
