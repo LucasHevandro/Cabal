@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Game.Client.Net
 {
     /// <summary>
-    /// Prévia da criação de personagem: o modelo da classe girando devagar, com as cores escolhidas, filmado por uma
-    /// câmera própria para uma textura que a tela de criação desenha. Fica no alto, longe do mundo (só o céu atrás).
+    /// Prévia do personagem (criação e seleção): o modelo da classe girando devagar, com as cores e a armadura, filmado
+    /// por uma câmera própria para uma textura que a tela desenha. Fica no alto, longe do mundo (só o céu atrás).
     /// </summary>
     public sealed class CharacterPreview
     {
@@ -19,10 +19,11 @@ namespace Game.Client.Net
         private CharacterClass _class;
         private int _hair = -1;
         private int _cloth = -1;
+        private int _armor = -1;
 
         public Texture Texture => _texture;
 
-        public void Show(CharacterClass characterClass, int hair, int cloth)
+        public void Show(CharacterClass characterClass, int hair, int cloth, int armorGrade = 0)
         {
             if (_rig == null)
             {
@@ -39,21 +40,22 @@ namespace Game.Client.Net
                 _camera.targetTexture = _texture;
                 _camera.depth = -10;
                 _model = null;
-                _hair = _cloth = -1;
+                _hair = _cloth = _armor = -1;
             }
             if (_model == null || characterClass != _class)
             {
                 if (_model != null) Object.Destroy(_model);
                 _class = characterClass;
                 _model = VisualCatalog.Spawn(VisualCatalog.Class, characterClass == CharacterClass.Arcanist ? "arcanist" : "blade", _rig.transform);
-                _hair = _cloth = -1;
+                _hair = _cloth = _armor = -1;
             }
             if (_model == null) return;
-            if (hair != _hair || cloth != _cloth)
+            if (hair != _hair || cloth != _cloth || armorGrade != _armor)
             {
                 _hair = hair;
                 _cloth = cloth;
-                CharacterPaint.Apply(_model.transform, 0, hair, cloth);
+                _armor = armorGrade;
+                CharacterPaint.Apply(_model.transform, armorGrade, hair, cloth);
             }
             _model.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(Time.unscaledTime * 0.6f) * 50f, 0f);
         }

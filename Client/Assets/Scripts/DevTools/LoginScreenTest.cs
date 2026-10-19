@@ -44,6 +44,14 @@ namespace Game.Client.DevTools
                 yield return new WaitForSecondsRealtime(1.5f);
                 ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "criacao_lamina.png"));
                 yield return new WaitForSecondsRealtime(0.4f);
+                menu.OpenCharactersForTest(new System.Collections.Generic.List<Game.Shared.Accounts.CharacterSummary>
+                {
+                    new Game.Shared.Accounts.CharacterSummary { Id = 1, Name = "Aria", ClassId = 1, Level = 24, Hair = 2, Cloth = 1, ArmorGrade = 3 },
+                    new Game.Shared.Accounts.CharacterSummary { Id = 2, Name = "Bruno", ClassId = 0, Level = 12, Hair = 5, Cloth = 4, ArmorGrade = 2 },
+                });
+                yield return new WaitForSecondsRealtime(1.5f);
+                ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "selecao.png"));
+                yield return new WaitForSecondsRealtime(0.4f);
             }
             var servers = string.Join("; ", ServerList.Entries.ConvertAll(e => $"{e.Name} {e.Address} = {e.Status} ({e.Players} jogadores, {e.PingMs} ms)"));
             // Escolheu jogar (offline): o jogo volta a ser desenhado.

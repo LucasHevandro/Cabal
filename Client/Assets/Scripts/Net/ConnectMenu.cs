@@ -43,6 +43,7 @@ namespace Game.Client.Net
         private int _newHair;
         private int _newCloth;
         private readonly CharacterPreview _preview = new CharacterPreview();
+        private int _previewed; // personagem da lista mostrado na prévia (o do mouse; senão o último mostrado)
         private string _message = "";
         private bool _messageIsError;
         private string _busyText = "";
@@ -120,6 +121,14 @@ namespace Game.Client.Net
         }
 
         /// <summary>Para o teste da tela de entrada: abre a criação com estas escolhas.</summary>
+        /// <summary>Para o teste da tela de entrada: abre a seleção com esta lista (sem servidor).</summary>
+        internal void OpenCharactersForTest(List<CharacterSummary> characters)
+        {
+            _characters = characters;
+            _screen = Screen.Characters;
+            _previewed = 0;
+        }
+
         internal void OpenCreateForTest(CharacterClass characterClass, int hair, int cloth)
         {
             _screen = Screen.CreateCharacter;
@@ -370,8 +379,9 @@ namespace Game.Client.Net
 
             var scale = Mathf.Max(1f, UnityEngine.Screen.height / 900f);
             // Os termos precisam de mais espaço para ler.
-            var width = (_screen == Screen.Terms ? 820 : _screen == Screen.CreateCharacter ? 820 : 480) * scale;
-            var height = (_screen == Screen.Terms ? 780 : _screen == Screen.CreateCharacter ? 600 : 520) * scale;
+            var wide = _screen == Screen.CreateCharacter || (_screen == Screen.Characters && _characters.Count > 0);
+            var width = (_screen == Screen.Terms || wide ? 820 : 480) * scale;
+            var height = (_screen == Screen.Terms ? 780 : wide ? 600 : 520) * scale;
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
             Game.Client.UI.UiTheme.Panel(area, 0.94f);
             GUILayout.BeginArea(new Rect(area.x + 14 * scale, area.y + 6 * scale, area.width - 28 * scale, area.height - 12 * scale));
@@ -403,6 +413,11 @@ namespace Game.Client.Net
         {
             // Prévia do personagem só na tela de criação.
             if (!GameMode.ChoiceMade && _screen == Screen.CreateCharacter) _preview.Show(_newClass, _newHair, _newCloth);
+            else if (!GameMode.ChoiceMade && _screen == Screen.Characters && _characters.Count > 0)
+            {
+                var shown = _characters[Mathf.Clamp(_previewed, 0, _characters.Count - 1)];
+                _preview.Show((CharacterClass)shown.ClassId, shown.Hair, shown.Cloth, shown.ArmorGrade);
+            }
             else _preview.Hide();
 
             // Status dos servidores enquanto a lista está na tela.
@@ -521,11 +536,41 @@ namespace Game.Client.Net
 
         private void DrawCharacters(float scale)
         {
-            GUILayout.Label(Loc.T("login.your_characters", _characters.Count, AccountRules.MaxCharactersPerAccount), _label);
-            foreach (var character in _characters)
+            if (_characters.Count == 0)
             {
+                DrawCharacterList(scale);
+                return;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(450 * scale));
+            DrawCharacterList(scale);
+            GUILayout.EndVertical();
+            GUILayout.Space(12 * scale);
+            GUILayout.BeginVertical();
+            DrawPreview(scale, Loc.T("login.preview_select"));
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+        }
+
+        /// <summary>A prévia 3D com moldura e uma linha de texto embaixo.</summary>
+        private void DrawPreview(float scale, string caption)
+        {
+            var preview = GUILayoutUtility.GetRect(300 * scale, 366 * scale, GUILayout.ExpandWidth(false));
+            if (_preview.Texture != null) GUI.DrawTexture(preview, _preview.Texture, ScaleMode.ScaleAndCrop, false);
+            Game.Client.UI.UiTheme.Frame(preview);
+            GUILayout.Label(caption, _small, GUILayout.Width(300 * scale));
+        }
+
+        private void DrawCharacterList(float scale)
+        {
+            GUILayout.Label(Loc.T("login.your_characters", _characters.Count, AccountRules.MaxCharactersPerAccount), _label);
+            for (var i = 0; i < _characters.Count; i++)
+            {
+                var character = _characters[i];
                 var text = Loc.T("login.character_row", character.Name, AccountRules.ClassDisplayName((CharacterClass)character.ClassId), character.Level);
                 if (GUILayout.Button(text, GUILayout.Height(44 * scale))) Play(character);
+                // Com o mouse em cima, a prévia mostra este personagem.
+                if (Event.current.type == EventType.Repaint && GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition)) _previewed = i;
             }
             GUILayout.Space(10 * scale);
             if (_characters.Count < AccountRules.MaxCharactersPerAccount && GUILayout.Button(Loc.T("login.create_character"), GUILayout.Height(30 * scale)))
@@ -549,10 +594,7 @@ namespace Game.Client.Net
             GUILayout.EndVertical();
             GUILayout.Space(12 * scale);
             GUILayout.BeginVertical();
-            var preview = GUILayoutUtility.GetRect(300 * scale, 366 * scale, GUILayout.ExpandWidth(false));
-            if (_preview.Texture != null) GUI.DrawTexture(preview, _preview.Texture, ScaleMode.ScaleAndCrop, false);
-            Game.Client.UI.UiTheme.Frame(preview);
-            GUILayout.Label(Loc.T("login.preview_hint"), _small, GUILayout.Width(300 * scale));
+            DrawPreview(scale, Loc.T("login.preview_hint"));
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
         }
