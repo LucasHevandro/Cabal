@@ -100,11 +100,21 @@ namespace Game.Server.Persistence.Migrations
                     b.Property<int>("ClassId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Cloth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Dexterity")
                         .HasColumnType("integer");
+
+                    b.Property<int>("Hair")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("Hotbar")
                         .IsRequired()

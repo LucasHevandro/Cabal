@@ -93,6 +93,9 @@ public sealed partial class GameWorld
             Id = id,
             Name = cleanName.Length > 20 ? cleanName[..20] : cleanName,
             CharacterId = character?.Id ?? 0,
+            // Convidados (testes e bots) variam as cores pelo id, para a multidão não sair toda igual.
+            Hair = character != null ? Appearance.Hair(character.Hair) : id % Appearance.HairColors,
+            Cloth = character != null ? Appearance.Cloth(character.Cloth) : id / 2 % Appearance.ClothColors,
             Movement = new MovementValidator(spawnX, spawnZ, now),
         };
         if (character != null)
@@ -321,9 +324,12 @@ public sealed partial class GameWorld
             }
             else if (!player.KnownLooks.TryGetValue(other.Id, out var known) || known != look)
             {
-                // Trocou de arma ou melhorou: quem já o via atualiza o modelo e o brilho.
+                // Trocou de arma ou de armadura, ou melhorou: quem já o via atualiza o modelo, o brilho e o metal.
                 player.KnownLooks[other.Id] = look;
-                _outbox.Send(player.Id, new EntityLook { Id = other.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade });
+                _outbox.Send(player.Id, new EntityLook
+                {
+                    Id = other.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade, ArmorGrade = (byte)look.ArmorGrade,
+                });
             }
             snapshot.Entities.Add(new EntityState
             {
@@ -553,7 +559,8 @@ public sealed partial class GameWorld
         // Jogadores levam a classe no TypeId ("blade"/"arcanist"): o cliente escolhe o modelo por ela.
         Id = player.Id, Kind = EntityKind.Player, TypeId = player.Class == CharacterClass.Arcanist ? "arcanist" : "blade",
         Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
-        WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade,
+        WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade, ArmorGrade = (byte)player.Look.ArmorGrade,
+        Hair = (byte)player.Hair, Cloth = (byte)player.Cloth,
     };
 
     private static EntitySpawned SpawnMessage(ServerMonster monster) => new()

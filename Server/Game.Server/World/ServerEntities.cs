@@ -26,6 +26,10 @@ public sealed class ServerPlayer
     /// <summary>Id do personagem no banco; 0 = convidado (testes e bots, não é salvo).</summary>
     public int CharacterId { get; init; }
 
+    /// <summary>Cores de cabelo e roupa escolhidas na criação (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
+    public int Hair { get; init; }
+    public int Cloth { get; init; }
+
     /// <summary>
     /// Convidado é para testes e bots: tem tudo liberado (skills e combo) sem precisar das missões, e não é salvo.
     /// </summary>
@@ -108,12 +112,16 @@ public sealed class ServerPlayer
     /// <summary>Entidades e itens que este jogador já conhece (recebeu EntitySpawned/LootSpawned).</summary>
     public HashSet<int> KnownEntities { get; } = new();
 
-    /// <summary>A aparência (arma e melhoria) que este jogador já recebeu de cada outro jogador que vê.</summary>
-    public Dictionary<int, (string WeaponId, int Upgrade)> KnownLooks { get; } = new();
+    /// <summary>A aparência (arma, melhoria e armadura) que este jogador já recebeu de cada outro jogador que vê.</summary>
+    public Dictionary<int, (string WeaponId, int Upgrade, int ArmorGrade)> KnownLooks { get; } = new();
 
-    /// <summary>Arma na mão e o nível de melhoria dela (o que os outros veem).</summary>
-    public (string WeaponId, int Upgrade) Look =>
-        Equipment[Game.Shared.Items.EquipSlot.Weapon] is { } weapon ? (weapon.ItemId, weapon.Upgrade) : ("", 0);
+    /// <summary>Arma na mão, o nível de melhoria dela e o grau da armadura vestida (o que os outros veem).</summary>
+    public (string WeaponId, int Upgrade, int ArmorGrade) Look =>
+    (
+        Equipment[Game.Shared.Items.EquipSlot.Weapon]?.ItemId ?? "",
+        Equipment[Game.Shared.Items.EquipSlot.Weapon]?.Upgrade ?? 0,
+        Game.Shared.Items.Appearance.ArmorGrade(Equipment[Game.Shared.Items.EquipSlot.Armor]?.ItemId)
+    );
     public HashSet<int> KnownLoot { get; } = new();
 
     /// <summary>Precisa reenviar a mensagem correspondente no próximo tick.</summary>

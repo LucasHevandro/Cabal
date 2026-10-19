@@ -92,6 +92,23 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Criar_personagem_guarda_cabelo_e_roupa_e_corrige_cor_fora_da_paleta()
+    {
+        var (auth, _, _, _) = Create();
+        await auth.RegisterAsync(Creds());
+        var token = (await auth.LoginAsync(Creds())).Value!.Token;
+
+        var ana = (await auth.CreateCharacterAsync(token, new CreateCharacterRequest { Name = "Ana", Hair = 3, Cloth = 5 })).Value!;
+        await auth.CreateCharacterAsync(token, new CreateCharacterRequest { Name = "Bia", Hair = 99, Cloth = -2 });
+
+        Assert.Equal((3, 5), (ana.Hair, ana.Cloth));
+        var list = (await auth.ListCharactersAsync(token)).Value!;
+        Assert.Equal(new[] { (3, 5), (0, 0) }, list.Characters.Select(c => (c.Hair, c.Cloth)));
+        var loaded = (await auth.ResolveCharacterAsync(token, ana.Id)).Value!;
+        Assert.Equal((3, 5), (loaded.Hair, loaded.Cloth));
+    }
+
+    [Fact]
     public async Task Nao_entra_com_personagem_de_outra_conta_nem_sem_sessao()
     {
         var (auth, _, _, _) = Create();

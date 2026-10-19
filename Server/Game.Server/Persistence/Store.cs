@@ -60,7 +60,7 @@ public sealed record ReportRecord(
 /// <summary>Uma dungeon concluída: tempo, medalha, combo máximo e quem estava no grupo (para o ranking).</summary>
 public sealed record DungeonRunRecord(string DungeonId, double Seconds, int Medal, int MaxCombo, string Members, DateTimeOffset At);
 
-public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level);
+public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level, int Hair = 0, int Cloth = 0);
 
 /// <summary>Personagem como está no banco.</summary>
 public sealed record CharacterRecord(
@@ -70,6 +70,10 @@ public sealed record CharacterRecord(
 {
     public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
     public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
+
+    /// <summary>Cores de cabelo e roupa escolhidas na criação (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
+    public int Hair { get; init; }
+    public int Cloth { get; init; }
 
     /// <summary>Skills aprendidas com o mestre (vazio = personagem de antes do mestre: vale o que o nível liberava).</summary>
     public IReadOnlyList<string> LearnedSkills { get; init; } = Array.Empty<string>();

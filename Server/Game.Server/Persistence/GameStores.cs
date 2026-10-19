@@ -168,7 +168,7 @@ public sealed class EfGameStore : IGameStore
         return await db.Characters.AsNoTracking()
             .Where(c => c.AccountId == accountId)
             .OrderBy(c => c.Id)
-            .Select(c => new CharacterSummaryRecord(c.Id, c.Name, (CharacterClass)c.ClassId, c.Level))
+            .Select(c => new CharacterSummaryRecord(c.Id, c.Name, (CharacterClass)c.ClassId, c.Level, c.Hair, c.Cloth))
             .ToListAsync();
     }
 
@@ -189,6 +189,7 @@ public sealed class EfGameStore : IGameStore
             Hp = initial.Hp, Mp = initial.Mp, Sp = initial.Sp, CreatedAt = now, SavedAt = now,
             Strength = initial.Attributes.Strength, Dexterity = initial.Attributes.Dexterity,
             Intelligence = initial.Attributes.Intelligence, AwakeningGauge = initial.AwakeningGauge,
+            Hair = initial.Hair, Cloth = initial.Cloth,
         };
         foreach (var item in initial.Items) character.Items.Add(ToEntity(item, 0));
         db.Characters.Add(character);
@@ -363,6 +364,7 @@ public sealed class EfGameStore : IGameStore
             .Select(r => new RelationRecord((RelationKind)r.Kind, r.OtherId, r.OtherName)).ToList(),
         LearnedSkills = string.IsNullOrEmpty(c.LearnedSkills) ? Array.Empty<string>() : c.LearnedSkills.Split(',', StringSplitOptions.RemoveEmptyEntries),
         Hotbar = string.IsNullOrEmpty(c.Hotbar) ? Array.Empty<string>() : c.Hotbar.Split(','),
+        Hair = c.Hair, Cloth = c.Cloth,
     };
 
     private static int[] ParseCounts(string counts) => string.IsNullOrEmpty(counts)
@@ -531,7 +533,7 @@ public sealed class InMemoryGameStore : IGameStore
         lock (_lock)
         {
             IReadOnlyList<CharacterSummaryRecord> list = _characters.Values.Where(c => c.AccountId == accountId).OrderBy(c => c.Id)
-                .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level)).ToList();
+                .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level, c.Hair, c.Cloth)).ToList();
             return Task.FromResult(list);
         }
     }

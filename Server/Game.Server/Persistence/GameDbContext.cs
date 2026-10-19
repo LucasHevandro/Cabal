@@ -70,6 +70,10 @@ public sealed class CharacterEntity
 
     /// <summary>Barra de atalhos: o id da skill de cada casa, por vírgula (casa vazia = nada entre as vírgulas).</summary>
     public string Hotbar { get; set; } = "";
+
+    /// <summary>Cores de cabelo e roupa escolhidas na criação.</summary>
+    public int Hair { get; set; }
+    public int Cloth { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset SavedAt { get; set; }
     public List<ItemInstanceEntity> Items { get; set; } = new();
@@ -204,6 +208,8 @@ public sealed class GameDbContext : DbContext
             e.Property(c => c.NameKey).HasMaxLength(32).IsRequired();
             e.Property(c => c.LearnedSkills).HasMaxLength(1024).IsRequired().HasDefaultValue("");
             e.Property(c => c.Hotbar).HasMaxLength(1024).IsRequired().HasDefaultValue("");
+            e.Property(c => c.Hair).HasDefaultValue(0);
+            e.Property(c => c.Cloth).HasDefaultValue(0);
             e.HasIndex(c => c.NameKey).IsUnique();
             e.HasIndex(c => c.AccountId);
             e.HasOne(c => c.Account).WithMany(a => a.Characters).HasForeignKey(c => c.AccountId).OnDelete(DeleteBehavior.Cascade);

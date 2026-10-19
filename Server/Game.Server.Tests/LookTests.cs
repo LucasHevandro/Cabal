@@ -1,4 +1,5 @@
 using Game.Server.Accounts;
+using Game.Server.Persistence;
 using Game.Server.World;
 using Game.Shared.Items;
 using Game.Shared.Net;
@@ -39,5 +40,25 @@ public class LookTests
         Assert.Equal((ana.Id, "espada_ferro", (byte)7), (look.Id, look.WeaponId, look.WeaponUpgrade));
         // A própria Ana também recebe (o modelo dela no cliente usa o mesmo caminho).
         Assert.Contains(outbox.Sent, s => s.PlayerId == ana.Id && s.Message is EntityLook { Id: var id } && id == ana.Id);
+    }
+
+    [Fact]
+    public void Quem_aparece_leva_o_grau_da_armadura_e_as_cores_da_criacao()
+    {
+        var outbox = new FakeOutbox();
+        var world = new GameWorld(outbox, Array.Empty<SpawnDefinition>());
+        var uid = 1000L;
+        var initial = AuthService.InitialCharacter(newUid: () => uid++);
+        var armored = initial with
+        {
+            Id = 1, AccountId = 1, Name = "Ana", Hair = 4, Cloth = 2,
+            Items = initial.Items.Append(new ItemRecord(uid++, ItemContainerKind.Equipment, (int)EquipSlot.Armor, "armadura_aco_negro", 1)).ToList(),
+        };
+        var ana = world.AddPlayer("Ana", 0, character: armored);
+        var bia = world.AddPlayer("Bia", 0, character: AuthService.InitialCharacter(newUid: () => uid++) with { Id = 2, AccountId = 2, Name = "Bia" });
+        world.Tick(0.05);
+
+        var spawned = outbox.Sent.Where(s => s.PlayerId == bia.Id).Select(s => s.Message).OfType<EntitySpawned>().Single(m => m.Id == ana.Id);
+        Assert.Equal(((byte)2, (byte)4, (byte)2), (spawned.ArmorGrade, spawned.Hair, spawned.Cloth));
     }
 }

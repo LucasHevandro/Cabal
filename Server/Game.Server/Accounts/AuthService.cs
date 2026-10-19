@@ -120,7 +120,7 @@ public sealed class AuthService
         if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterList>.Fail(new LocalText("auth.session_expired"), 401);
         var list = new CharacterList();
         foreach (var c in await _store.ListCharactersAsync(accountId))
-            list.Characters.Add(new CharacterSummary { Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level });
+            list.Characters.Add(new CharacterSummary { Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level, Hair = c.Hair, Cloth = c.Cloth });
         return AuthResult<CharacterList>.Success(list);
     }
 
@@ -134,10 +134,14 @@ public sealed class AuthService
         try
         {
             var created = await _store.CreateCharacterAsync(accountId, request.Name, (CharacterClass)request.ClassId,
-                InitialCharacter((CharacterClass)request.ClassId, Uids.Next));
+                InitialCharacter((CharacterClass)request.ClassId, Uids.Next) with
+                {
+                    Hair = Game.Shared.Items.Appearance.Hair(request.Hair), Cloth = Game.Shared.Items.Appearance.Cloth(request.Cloth),
+                });
             return AuthResult<CharacterSummary>.Success(new CharacterSummary
             {
                 Id = created.Id, Name = created.Name, ClassId = (int)created.Class, Level = created.Level,
+                Hair = created.Hair, Cloth = created.Cloth,
             });
         }
         catch (StoreConflictException ex)
