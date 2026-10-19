@@ -267,7 +267,7 @@ namespace Game.Client.UI
             var now = Time.unscaledTime;
 
             // Sem digitar, as linhas antigas somem; o fundo só aparece enquanto digita.
-            if (typing) Box(rect, Panel);
+            if (typing) UiTheme.Panel(rect);
             // De baixo para cima: linhas longas quebram em várias e ocupam mais altura.
             var width = rect.width - 24;
             var bottom = rect.yMax - 44;
@@ -355,7 +355,7 @@ namespace Game.Client.UI
         private void DrawFriends()
         {
             var rect = new Rect(460, 140, 500, 440); // à direita da ajuda
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             AddRect(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30),
                 Loc.T("friends.title", _lists.Friends.Count, RelationRules.MaxFriends, KeyBindings.Label(GameAction.Friends)), _label);
@@ -432,7 +432,7 @@ namespace Game.Client.UI
         {
             var invite = PendingInvite;
             var rect = new Rect(VirtualWidth / 2 - 230, 300, 460, 130);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             AddRect(rect);
             var seconds = Mathf.CeilToInt(_inviteUntil - Time.unscaledTime);
             GUI.Label(new Rect(rect.x, rect.y + 14, rect.width, 30), Loc.T("party.invite_title", Escape(invite.InviterName)), _label.WithCenter());
@@ -545,6 +545,7 @@ namespace Game.Client.UI
         private void EnsureStyles()
         {
             if (_label != null) return;
+            UiTheme.Ensure();
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, wordWrap = false };
             _label.normal.textColor = Color.white;
             _small = new GUIStyle(_label) { fontSize = 16, clipping = TextClipping.Clip };

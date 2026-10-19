@@ -248,8 +248,9 @@ namespace Game.Client.UI
         private Rect Window(Rect rect, string title)
         {
             OpenRects.Add(rect);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30), $"<b>{title}</b>", _label);
+            UiTheme.Divider(new Rect(rect.x + 10, rect.y + 40, rect.width - 20, 2));
             return rect;
         }
 
@@ -309,7 +310,7 @@ namespace Game.Client.UI
             var e = Event.current;
             var hover = rect.Contains(e.mousePosition);
             var dragged = _dragging && _dragFrom == kind && _dragSlot == slot;
-            Box(rect, hover ? SlotHover : SlotBack);
+            UiTheme.Slot(rect, hover);
             if (item != null && !dragged) DrawItemIcon(rect, item);
             if (item != null && item.Uid == _smithItemUid && _smithItemUid != 0) Outline(rect, Accent);
 
@@ -343,9 +344,21 @@ namespace Game.Client.UI
             var definition = ItemCatalog.Find(item.ItemId);
             if (definition == null) return;
             var color = LootPickup.ColorFor(definition.Rarity);
-            Box(new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6), new Color(color.r * 0.35f, color.g * 0.35f, color.b * 0.35f, 1f));
-            Outline(new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6), color);
-            GUI.Label(new Rect(rect.x + 2, rect.y + 4, rect.width - 4, rect.height - 18), ShortName(definition), _tiny.WithCenter());
+            var inner = new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6);
+            var icon = ItemIcons.Get(definition.Id);
+            if (icon != null)
+            {
+                // Foto do modelo sobre um fundo na cor da raridade.
+                Box(inner, new Color(color.r * 0.22f, color.g * 0.22f, color.b * 0.22f, 0.95f));
+                GUI.DrawTexture(inner, icon, ScaleMode.ScaleToFit);
+                Outline(inner, new Color(color.r, color.g, color.b, 0.85f));
+            }
+            else
+            {
+                Box(inner, new Color(color.r * 0.35f, color.g * 0.35f, color.b * 0.35f, 1f));
+                Outline(inner, color);
+                GUI.Label(new Rect(rect.x + 2, rect.y + 4, rect.width - 4, rect.height - 18), ShortName(definition), _tiny.WithCenter());
+            }
             if (item.Upgrade > 0) GUI.Label(new Rect(rect.x + 4, rect.yMax - 20, rect.width, 18), $"<b>+{item.Upgrade}</b>", _tiny);
             if (item.Quantity > 1)
                 GUI.Label(new Rect(rect.x, rect.yMax - 20, rect.width - 5, 18), item.Quantity.ToString(), _tiny.WithAlignment(TextAnchor.UpperRight));
@@ -1025,6 +1038,7 @@ namespace Game.Client.UI
         private void EnsureStyles()
         {
             if (_label != null) return;
+            UiTheme.Ensure();
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, wordWrap = true };
             _label.normal.textColor = Color.white;
             _small = new GUIStyle(_label) { fontSize = 16 };

@@ -97,7 +97,7 @@ namespace Game.Client.UI
             // À direita, embaixo da zona (o rastreador de missões some na dungeon e os anúncios ficam no centro).
             var rect = new Rect(VirtualWidth - 480, Minimap.PanelsTop, 460, 64);
             OpenRects.Add(rect);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 6, 300, 26), Loc.T("dungeon.hud_room", state.Room + 1, state.Rooms, room.Name), _small);
             var info = state.Completed ? Loc.T("dungeon.hud_victory") : state.BossShield ? Loc.T("dungeon.hud_shield")
                 : room.IsBossRoom ? Loc.T("dungeon.hud_boss", Mathf.Max(0, state.MonstersLeft - 1)) : Loc.T("dungeon.hud_monsters", state.MonstersLeft);

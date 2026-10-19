@@ -141,7 +141,7 @@ namespace Game.Client.UI
             if (target == null) return;
 
             var rect = new Rect(VirtualWidth / 2 - 220, 24, 440, 74);
-            Box(rect, Panel);
+            UiTheme.Panel(rect, 0.78f);
             GUI.Label(new Rect(rect.x, rect.y + 6, rect.width, 24), target.DisplayName, _center);
             var hp = target.Hp;
             Bar(new Rect(rect.x + 16, rect.y + 34, rect.width - 32, 16), (float)hp.Current / Mathf.Max(1, hp.Max), HpColor);
@@ -168,7 +168,7 @@ namespace Game.Client.UI
             }
 
             var now = Time.time;
-            Box(new Rect(rect.x - 6, rect.y - 6, rect.width + 12, rect.height + 12), Panel);
+            UiTheme.Panel(new Rect(rect.x - 6, rect.y - 6, rect.width + 12, rect.height + 12), 0.78f);
             Box(rect, BarBack);
 
             // Janela-alvo e zona Excellent.
@@ -222,7 +222,7 @@ namespace Game.Client.UI
             var arena = Net.CharacterState.Pvp != null && Net.CharacterState.Pvp.Mode == Game.Shared.Net.PvpMode.Arena;
             var text = arena ? Loc.T("hud.zone_arena") : dungeon != null ? Loc.T("hud.zone_dungeon", dungeon.Name) : zone == null ? Loc.T("hud.zone_road") : Loc.T("hud.zone", zone.DisplayName, levels);
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
-            Box(rect, Panel);
+            UiTheme.Panel(rect, 0.78f);
             GUI.Label(rect, text, _center);
         }
 
@@ -243,7 +243,7 @@ namespace Game.Client.UI
             else text = Loc.T("hud.online", GameMode.PlayerName, session.Clock.LastRtt * 1000);
 
             var rect = new Rect(VirtualWidth - 460, 64, 440, 30);
-            Box(rect, Panel);
+            UiTheme.Panel(rect, 0.78f);
             GUI.color = color;
             GUI.Label(rect, text, _small.WithCenter());
             GUI.color = Color.white;
@@ -270,7 +270,7 @@ namespace Game.Client.UI
         private void DrawInventory()
         {
             var rect = new Rect(VirtualWidth - 440, Minimap.PanelsTop, 400, 500);
-            Box(rect, Panel);
+            UiTheme.Panel(rect, 0.78f);
             GUI.Label(new Rect(rect.x + 16, rect.y + 10, rect.width, 30), Loc.T("hud.inventory_title", KeyBindings.Label(GameAction.Inventory)), _label);
             if (_loot == null || _loot.Inventory.Count == 0)
             {
@@ -332,7 +332,7 @@ namespace Game.Client.UI
         private void DrawPlayerFrame()
         {
             var rect = new Rect(40, VirtualHeight - 150, 380, 96);
-            Box(rect, Panel);
+            UiTheme.Panel(rect, 0.78f);
             GUI.Label(new Rect(rect.x + 16, rect.y + 6, rect.width, 26), Loc.T("hud.you", combat.Level), _label);
             if (_loot != null)
                 GUI.Label(new Rect(rect.x, rect.y + 6, rect.width - 16, 26), Loc.T("hud.alz", _loot.Alz), _label.WithAlignment(TextAnchor.UpperRight));
@@ -379,9 +379,12 @@ namespace Game.Client.UI
             {
                 var rect = new Rect(x + i * (size + gap), y, size, 120);
                 var skill = skills[i];
-                Box(rect, Panel);
+                UiTheme.Panel(rect, 0.78f);
+                var iconSize = skills.Count > 4 ? 40f : 46f;
+                var icon = SkillIcons.Get(skill);
+                if (icon != null) GUI.DrawTexture(new Rect(rect.xMax - iconSize - 6, rect.y + 6, iconSize, iconSize), icon);
                 GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(i), _big);
-                GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 44), skill.Name, _small.WithCenter());
+                GUI.Label(new Rect(rect.x + 8, rect.y + 50, rect.width - 16, 38), skill.Name, _small.WithCenter());
                 var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
                 if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
                 if (skills.Count > 4) _small.fontSize = 13; // com 8 skills a caixa é estreita: "mágico · 25 MP" cabe menor
@@ -467,15 +470,12 @@ namespace Game.Client.UI
             GUI.color = previous;
         }
 
-        private static void Bar(Rect rect, float fraction, Color color)
-        {
-            Box(rect, BarBack);
-            Box(new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fraction), rect.height), color);
-        }
+        private static void Bar(Rect rect, float fraction, Color color) => UiTheme.Bar(rect, fraction, color);
 
         private void EnsureStyles()
         {
             if (_label != null) return;
+            UiTheme.Ensure();
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true };
             _label.normal.textColor = Color.white;
             _center = new GUIStyle(_label) { alignment = TextAnchor.MiddleCenter };

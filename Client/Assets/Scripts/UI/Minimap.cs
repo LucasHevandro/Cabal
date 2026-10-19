@@ -159,7 +159,7 @@ namespace Game.Client.UI
 
             var me = ToMap(player.position.x, player.position.z) + rect.position;
             GUI.EndGroup();
-            Outline(rect, Border);
+            UiTheme.Frame(rect);
 
             // O jogador: seta virada para onde ele olha. Desenhada fora do grupo (a rotação usa a tela virtual inteira).
             if (!rect.Contains(me)) return;
@@ -300,6 +300,7 @@ namespace Game.Client.UI
             }
             if (_label == null)
             {
+                UiTheme.Ensure();
                 _label = new GUIStyle(GUI.skin.label) { fontSize = 15, richText = true, wordWrap = false };
                 _label.normal.textColor = Color.white;
                 _arrow = new GUIStyle(_label) { alignment = TextAnchor.MiddleCenter, fontSize = 24 };

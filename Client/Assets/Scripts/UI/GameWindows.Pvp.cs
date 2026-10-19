@@ -44,7 +44,7 @@ namespace Game.Client.UI
         {
             var rect = new Rect(VirtualWidth - 480, Minimap.PanelsTop, 460, 44);
             OpenRects.Add(rect);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             GUI.Label(new Rect(rect.x + 14, rect.y + 10, 300, 26), Loc.T("arena.queue_title", pvp.QueueSize, pvp.QueueNeeded), _small);
             if (GUI.Button(new Rect(rect.xMax - 124, rect.y + 8, 110, 28), Loc.T("arena.leave_queue"), _button))
                 Send(new Msg.ArenaCommand { Action = Msg.ArenaActionKind.LeaveQueue });
@@ -54,7 +54,7 @@ namespace Game.Client.UI
         {
             var rect = new Rect(VirtualWidth / 2 - 220, 106, 440, 52);
             OpenRects.Add(rect);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             var now = ServerNow;
             var text = now < pvp.StartsAt
                 ? Loc.T("duel.countdown", pvp.OpponentName, Mathf.CeilToInt((float)(pvp.StartsAt - now)))
@@ -69,7 +69,7 @@ namespace Game.Client.UI
             var now = ServerNow;
             var rect = new Rect(VirtualWidth / 2 - 260, 106, 520, 92);
             OpenRects.Add(rect);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             GUI.color = ArenaView.Blue;
             GUI.Label(new Rect(rect.x + 14, rect.y + 6, 200, 40), Loc.T("arena.score_blue", pvp.ScoreBlue), _label);
             GUI.color = ArenaView.Red;

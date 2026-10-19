@@ -201,7 +201,7 @@ namespace Game.Client.UI
                 Quaternion.identity, new Vector3(scale, scale, 1));
 
             var rect = new Rect(VirtualWidth / 2 - 330, 108, 660, 118);
-            Box(rect, Panel);
+            UiTheme.Panel(rect);
             Box(new Rect(rect.x, rect.y, 4, rect.height), Accent);
             var title = done ? Loc.T("tutorial.title_done") : Loc.T("tutorial.title", StepNumber, StepCount);
             GUI.Label(new Rect(rect.x + 18, rect.y + 8, rect.width - 200, 26), title, _title);
@@ -279,6 +279,7 @@ namespace Game.Client.UI
         private void EnsureStyles()
         {
             if (_text != null) return;
+            UiTheme.Ensure();
             _text = new GUIStyle(GUI.skin.label) { fontSize = 18, richText = true, wordWrap = true };
             _text.normal.textColor = Color.white;
             _title = new GUIStyle(_text) { fontSize = 16, fontStyle = FontStyle.Bold };

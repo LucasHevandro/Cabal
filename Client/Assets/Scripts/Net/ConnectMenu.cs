@@ -249,6 +249,7 @@ namespace Game.Client.Net
         private void OnGUI()
         {
             if (GameMode.ChoiceMade) return;
+            Game.Client.UI.UiTheme.Ensure();
             _title ??= new GUIStyle(GUI.skin.label) { fontSize = 28, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             _label ??= new GUIStyle(GUI.skin.label) { fontSize = 17 };
             _small ??= new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true };

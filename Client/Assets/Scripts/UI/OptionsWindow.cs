@@ -25,7 +25,6 @@ namespace Game.Client.UI
         private GUIStyle _label;
         private GUIStyle _small;
         private GUIStyle _button;
-        private GUIStyle _toggle;
         private GUIStyle _tab;
         private GUIStyle _keyButton;
 
@@ -156,7 +155,7 @@ namespace Game.Client.UI
 
             _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 380, 660, 760);
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0, 0, 0, 0.35f));
-            Box(_rect, Panel);
+            UiTheme.Panel(_rect);
             var x = _rect.x + 28;
             var y = _rect.y + 18;
             var width = _rect.width - 56;
@@ -184,7 +183,7 @@ namespace Game.Client.UI
             var size = _resolutions.Count > 0 ? _resolutions[_resolutionIndex] : new Vector2Int(Screen.width, Screen.height);
             y = Chooser(x, y, Loc.T("options.resolution"), $"{size.x} x {size.y}", step =>
                 _resolutionIndex = Mathf.Clamp(_resolutionIndex + step, 0, Mathf.Max(0, _resolutions.Count - 1)));
-            _fullscreen = GUI.Toggle(new Rect(x + 230, y, 220, 28), _fullscreen, " " + Loc.T("options.fullscreen"), _toggle);
+            _fullscreen = UiTheme.Toggle(new Rect(x + 230, y, 220, 28), _fullscreen, " " + Loc.T("options.fullscreen"), _label);
             var changed = size.x != Screen.width || size.y != Screen.height || _fullscreen != Screen.fullScreen;
             GUI.enabled = changed;
             if (GUI.Button(new Rect(_rect.xMax - 28 - 150, y - 4, 150, 34), Loc.T("options.apply"), _button))
@@ -208,7 +207,7 @@ namespace Game.Client.UI
                 GameSettings.Apply();
             });
             GUI.enabled = true;
-            var vsync = GUI.Toggle(new Rect(x + 230, y, 400, 28), GameSettings.VSync, " " + Loc.T("options.vsync"), _toggle);
+            var vsync = UiTheme.Toggle(new Rect(x + 230, y, 400, 28), GameSettings.VSync, " " + Loc.T("options.vsync"), _label);
             if (vsync != GameSettings.VSync)
             {
                 GameSettings.VSync = vsync;
@@ -249,7 +248,7 @@ namespace Game.Client.UI
             GUI.enabled = true;
 
             // Métricas do cliente (tutorial, FPS, erros): ligadas por padrão, explicado na política de privacidade.
-            var metrics = GUI.Toggle(new Rect(x, y + 4, width, 28), GameSettings.ClientMetrics, " " + Loc.T("options.client_metrics"), _toggle);
+            var metrics = UiTheme.Toggle(new Rect(x, y + 4, width, 28), GameSettings.ClientMetrics, " " + Loc.T("options.client_metrics"), _label);
             if (metrics != GameSettings.ClientMetrics)
             {
                 GameSettings.ClientMetrics = metrics;
@@ -392,16 +391,15 @@ namespace Game.Client.UI
         private void EnsureStyles()
         {
             if (_label != null) return;
+            UiTheme.Ensure();
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, wordWrap = true };
             _label.normal.textColor = Color.white;
             _title = new GUIStyle(_label) { fontSize = 28, fontStyle = FontStyle.Bold };
             _small = new GUIStyle(_label) { fontSize = 14 };
             _button = new GUIStyle(GUI.skin.button) { fontSize = 18, richText = true };
-            _toggle = new GUIStyle(GUI.skin.toggle) { fontSize = 20, richText = true };
             _tab = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, alignment = TextAnchor.MiddleCenter };
             _tab.normal.textColor = _tab.hover.textColor = Color.white;
             _keyButton = new GUIStyle(GUI.skin.button) { fontSize = 15, richText = true };
-            _toggle.normal.textColor = _toggle.onNormal.textColor = _toggle.hover.textColor = _toggle.onHover.textColor = Color.white;
         }
     }
 }
