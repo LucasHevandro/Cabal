@@ -71,6 +71,12 @@ public sealed record CharacterRecord(
     public IReadOnlyList<QuestRecord> Quests { get; init; } = Quests ?? Array.Empty<QuestRecord>();
     public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
 
+    /// <summary>Skills aprendidas com o mestre (vazio = personagem de antes do mestre: vale o que o nível liberava).</summary>
+    public IReadOnlyList<string> LearnedSkills { get; init; } = Array.Empty<string>();
+
+    /// <summary>Barra de atalhos: o id da skill em cada casa ("" = vazia; lista vazia = barra padrão).</summary>
+    public IReadOnlyList<string> Hotbar { get; init; } = Array.Empty<string>();
+
     /// <summary>Da conta (preenchidos ao entrar no jogo): GM e silêncio no chat.</summary>
     public bool IsGm { get; init; }
 
@@ -87,6 +93,9 @@ public sealed record CharacterSnapshot(
 
     /// <summary>Amigos e bloqueados (o banco fica igual a esta lista).</summary>
     public IReadOnlyList<RelationRecord> Relations { get; init; } = Array.Empty<RelationRecord>();
+
+    public IReadOnlyList<string> LearnedSkills { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Hotbar { get; init; } = Array.Empty<string>();
 
     /// <summary>Denúncias feitas desde o último salvamento (só acrescenta).</summary>
     public IReadOnlyList<ReportRecord> Reports { get; init; } = Array.Empty<ReportRecord>();

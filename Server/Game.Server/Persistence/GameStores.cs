@@ -236,6 +236,8 @@ public sealed class EfGameStore : IGameStore
         character.Dexterity = snapshot.Attributes.Dexterity;
         character.Intelligence = snapshot.Attributes.Intelligence;
         character.AwakeningGauge = snapshot.AwakeningGauge;
+        character.LearnedSkills = string.Join(",", snapshot.LearnedSkills);
+        character.Hotbar = snapshot.Hotbar.Count == 0 ? "" : string.Join(",", snapshot.Hotbar);
         character.SavedAt = DateTimeOffset.UtcNow;
 
         // Itens e missões: o servidor é a fonte da verdade; o banco fica igual ao que está na memória.
@@ -359,6 +361,8 @@ public sealed class EfGameStore : IGameStore
     {
         Relations = c.Relations.OrderBy(r => r.Kind).ThenBy(r => r.OtherName)
             .Select(r => new RelationRecord((RelationKind)r.Kind, r.OtherId, r.OtherName)).ToList(),
+        LearnedSkills = string.IsNullOrEmpty(c.LearnedSkills) ? Array.Empty<string>() : c.LearnedSkills.Split(',', StringSplitOptions.RemoveEmptyEntries),
+        Hotbar = string.IsNullOrEmpty(c.Hotbar) ? Array.Empty<string>() : c.Hotbar.Split(','),
     };
 
     private static int[] ParseCounts(string counts) => string.IsNullOrEmpty(counts)
@@ -562,6 +566,7 @@ public sealed class InMemoryGameStore : IGameStore
                 Items = s.Items.ToList(), Attributes = s.Attributes, AwakeningGauge = s.AwakeningGauge,
                 Quests = s.Quests.Select(q => q with { Counts = q.Counts.ToArray() }).ToList(),
                 Relations = s.Relations.ToList(),
+                LearnedSkills = s.LearnedSkills.ToList(), Hotbar = s.Hotbar.ToList(),
             };
             _log.AddRange(logs);
             _reports.AddRange(s.Reports);

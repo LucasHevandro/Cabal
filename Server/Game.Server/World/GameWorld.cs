@@ -143,6 +143,8 @@ public sealed partial class GameWorld
             items, player.Attributes, player.Awakening.Gauge, quests)
         {
             Relations = player.Relations.ToList(),
+            LearnedSkills = player.ClassSkills.Select(s => s.Skill.Id).Where(player.LearnedSkills.Contains).ToList(),
+            Hotbar = SkillTraining.ToIds(player.Hotbar, player.ClassSkills),
             Reports = player.PendingReports.ToList(),
             Metrics = player.PendingMetrics.ToList(),
         };
@@ -218,6 +220,12 @@ public sealed partial class GameWorld
                 break;
             case AllocateAttributes allocate:
                 HandleAllocate(player, allocate);
+                break;
+            case LearnSkill learn:
+                HandleLearnSkill(player, learn);
+                break;
+            case SetHotbar hotbar:
+                HandleSetHotbar(player, hotbar);
                 break;
             case TalkToNpc talk:
                 HandleTalk(player, talk);
@@ -479,6 +487,16 @@ public sealed partial class GameWorld
             player.Relations.Add(relation);
         }
 
+        // Skills: as aprendidas no mestre; personagem de antes do mestre fica com o que o nível e as missões liberavam.
+        var learned = character.LearnedSkills.Count > 0
+            ? character.LearnedSkills
+            : SkillTraining.FromOldRules(player.Class, player.Progress.Level, player.QuestCompleted);
+        foreach (var skillId in learned.Concat(SkillTraining.Starting(player.Class)))
+            if (player.ClassSkills.Any(s => s.Skill.Id == skillId)) player.LearnedSkills.Add(skillId);
+        player.Hotbar = character.Hotbar.Count > 0
+            ? SkillTraining.Sanitize(SkillTraining.FromIds(character.Hotbar, player.ClassSkills), player.ClassSkills, player.LearnedSkills)
+            : SkillTraining.DefaultHotbar(player.ClassSkills, player.LearnedSkills);
+
         player.RecalculateStats();
         player.Hp.Add(Math.Clamp(character.Hp, 1, player.Hp.Max) - player.Hp.Current);
         player.Mp.Add(Math.Clamp(character.Mp, 0, player.Mp.Max) - player.Mp.Current);
@@ -497,6 +515,8 @@ public sealed partial class GameWorld
         var weapon = player.Class == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
         player.Equipment.Put(EquipSlot.Weapon, new ItemInstance { Uid = _uids.Next(), ItemId = weapon });
         player.Bag.TryAdd("pocao_hp_p", 5, _uids.Next);
+        foreach (var skill in player.ClassSkills) player.LearnedSkills.Add(skill.Skill.Id);
+        player.Hotbar = SkillTraining.DefaultHotbar(player.ClassSkills, player.LearnedSkills);
         player.Bag.TryAdd(Game.Shared.Dungeon.DungeonCatalog.CryptKey, 3, _uids.Next); // bots e testes entram na cripta
         player.RecalculateStats();
         player.Hp.Add(player.Hp.Max);
@@ -587,6 +607,7 @@ public sealed partial class GameWorld
             AwakeningUntil = double.IsInfinity(player.Awakening.ActiveUntil) ? 0 : player.Awakening.ActiveUntil,
         };
         for (var i = 0; i < player.ClassSkills.Count; i++) sheet.SkillUnlocked.Add(player.SkillUnlocked(i));
+        sheet.Hotbar.AddRange(player.Hotbar);
         return sheet;
     }
 

@@ -27,6 +27,7 @@ public class FuzzTests
     private static readonly string[] Ids = ItemCatalog.All.Select(i => i.Id)
         .Concat(Game.Shared.Progression.NpcCatalog.All.Select(n => n.Id))
         .Concat(Game.Shared.Progression.QuestCatalog.All.Select(q => q.Id))
+        .Concat(Game.Shared.Progression.ClassCatalog.SkillsFor(Game.Shared.Accounts.CharacterClass.Blade).Select(s => s.Skill.Id))
         .Concat(new[] { "cripta_esquecida", "", "nao_existe", new string('x', 300), "Bot01", "Ana", "Bia" })
         .ToArray();
 
@@ -164,6 +165,6 @@ public class FuzzTests
         Assert.Contains("ShopCommand", names);
         Assert.Contains("TradeCommand", names);
         Assert.Contains("ItemCommand", names);
-        Assert.Equal(23, names.Count); // todos do 2 ao 24 (o Hello é tratado à parte, pelo ServerHost)
+        Assert.Equal(25, names.Count); // todos do 2 ao 26 (o Hello é tratado à parte, pelo ServerHost)
     }
 }

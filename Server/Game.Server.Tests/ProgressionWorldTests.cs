@@ -90,7 +90,7 @@ public class ProgressionWorldTests
         world.Handle(player.Id, new StartCombo { TargetId = monster.Id }, now: 2);
 
         Assert.Empty(outbox.To<CombatEvent>(player.Id));
-        Assert.Contains(outbox.Notices(player.Id), n => n.Contains("ainda não foi liberada"));
+        Assert.Contains(outbox.Notices(player.Id), n => n.Contains("ainda não foi aprendida"));
         Assert.Contains(outbox.Notices(player.Id), n => n.Contains("liberar o combo"));
         Assert.Equal(PlayerRules.StartingSp, player.Sp.Current); // não gastou SP
 

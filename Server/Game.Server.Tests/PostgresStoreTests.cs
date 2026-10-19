@@ -120,7 +120,11 @@ public class PostgresStoreTests
                     new ItemRecord(uid, ItemContainerKind.Bag, 5, "pelo_macio", 5),
                     new ItemRecord(uid + 2, ItemContainerKind.Equipment, 0, "espada_ferro", 1, Upgrade: 7),
                 },
-                Quests: new[] { new QuestRecord("primeiros_passos", true, Array.Empty<int>()), new QuestRecord("arte_do_combo", false, new[] { 9 }) }),
+                Quests: new[] { new QuestRecord("primeiros_passos", true, Array.Empty<int>()), new QuestRecord("arte_do_combo", false, new[] { 9 }) })
+            {
+                LearnedSkills = new[] { "corte", "giro_de_lamina" },
+                Hotbar = new[] { "giro_de_lamina", "", "corte", "", "", "", "", "" },
+            },
             new[] { new ItemLogEntry(character.Id, DateTimeOffset.UtcNow, "alz_monstro", null, 0, 100, "teste") });
 
         var loaded = await store.LoadCharacterAsync(character.Id);
@@ -131,6 +135,8 @@ public class PostgresStoreTests
         Assert.Equal(7, loaded.Items.Single(i => i.Uid == uid + 2).Upgrade);
         Assert.Equal(9, loaded.Quests.Single(q => q.QuestId == "arte_do_combo").Counts[0]);
         Assert.True(loaded.Quests.Single(q => q.QuestId == "primeiros_passos").Completed);
+        Assert.Equal(new[] { "corte", "giro_de_lamina" }, loaded.LearnedSkills);
+        Assert.Equal(new[] { "giro_de_lamina", "", "corte", "", "", "", "", "" }, loaded.Hotbar);
         Assert.True(await store.MaxItemUidAsync() >= uid + 2);
         Assert.Equal(2, (await store.ItemLogAsync(character.Id)).Count);
     }

@@ -106,11 +106,25 @@ namespace Game.Server.Persistence.Migrations
                     b.Property<int>("Dexterity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Hotbar")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasDefaultValue("");
+
                     b.Property<int>("Hp")
                         .HasColumnType("integer");
 
                     b.Property<int>("Intelligence")
                         .HasColumnType("integer");
+
+                    b.Property<string>("LearnedSkills")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasDefaultValue("");
 
                     b.Property<int>("Level")
                         .HasColumnType("integer");

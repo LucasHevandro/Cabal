@@ -73,6 +73,12 @@ public sealed class ServerPlayer
     public IReadOnlyList<ClassSkill> ClassSkills { get; }
     public IReadOnlyList<SkillData> Skills { get; }
     public SkillCooldowns Cooldowns { get; }
+
+    /// <summary>Skills aprendidas com o mestre (ids). Convidado sabe todas.</summary>
+    public HashSet<string> LearnedSkills { get; } = new();
+
+    /// <summary>Barra de atalhos: índice em <see cref="ClassSkills"/> de cada casa (<see cref="SkillTraining.Empty"/> = vazia).</summary>
+    public byte[] Hotbar { get; set; } = Enumerable.Repeat(SkillTraining.Empty, SkillTraining.HotbarSize).ToArray();
     public ComboSession Combo { get; }
     public AwakeningState Awakening { get; } = new();
     public long Alz { get; set; }
@@ -186,8 +192,13 @@ public sealed class ServerPlayer
     /// <summary>Missão concluída (convidado conta tudo como concluído).</summary>
     public bool QuestCompleted(string questId) => IsGuest || Quests.IsCompleted(questId);
 
+    /// <summary>Ids das skills que pode usar (convidado: todas).</summary>
+    public ICollection<string> SkillUnlockedIds() =>
+        IsGuest ? ClassSkills.Select(s => s.Skill.Id).ToHashSet() : LearnedSkills;
+
+    /// <summary>A skill (índice da classe) já foi aprendida com o mestre.</summary>
     public bool SkillUnlocked(int slot) =>
-        IsGuest || (slot >= 0 && slot < ClassSkills.Count && ClassSkills[slot].IsUnlocked(Progress.Level, QuestCompleted));
+        IsGuest || (slot >= 0 && slot < ClassSkills.Count && LearnedSkills.Contains(ClassSkills[slot].Skill.Id));
 
     public bool ComboUnlocked => ClassCatalog.ComboUnlocked(QuestCompleted);
 
