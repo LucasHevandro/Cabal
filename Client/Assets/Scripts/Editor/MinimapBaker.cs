@@ -7,9 +7,10 @@ using UnityEngine;
 namespace Game.Client.Editor
 {
     /// <summary>
-    /// Fotografa o mundo de cima (câmera ortográfica, norte para cima) depois de montar a cena e guarda em
-    /// <c>Resources/Visuals/mapa_mundo.png</c>: é o fundo do minimapa e do mapa grande. A área é a de
-    /// <see cref="Minimap.WorldMapCenter"/> e <see cref="Minimap.WorldMapHalf"/>.
+    /// Fotografa o mundo de cima (câmera ortográfica, norte para cima) e guarda em <c>Resources/Visuals/mapa_mundo.png</c>:
+    /// é o fundo do minimapa e do mapa grande. A área é a de <see cref="Minimap.WorldMapCenter"/> e
+    /// <see cref="Minimap.WorldMapHalf"/>. Tem de rodar com a cena já salva e reaberta: na cena recém-montada, com os
+    /// materiais ainda só na memória, pedras e colunas cinza saíam azul forte na foto.
     /// </summary>
     public static class MinimapBaker
     {
@@ -44,20 +45,6 @@ namespace Game.Client.Editor
             RenderTexture.active = target;
             var picture = new Texture2D(Resolution, Resolution, TextureFormat.RGB24, false);
             picture.ReadPixels(new Rect(0, 0, Resolution, Resolution), 0, 0);
-            // Vistas da câmera de cima em lote, as pedras e colunas (cinza) saem azul forte; a causa não está na luz
-            // ambiente, nas sondas nem nos mipmaps. Esses pixels voltam para cinza pelo brilho (a água é verde-azulada
-            // e não entra na regra).
-            var pixels = picture.GetPixels32();
-            for (var i = 0; i < pixels.Length; i++)
-            {
-                var c = pixels[i];
-                if (c.b > c.g * 1.3f + 10 && c.b > c.r * 1.6f + 10)
-                {
-                    var gray = (byte)Mathf.Clamp((c.r + c.g + c.b) / 3 + 40, 0, 255);
-                    pixels[i] = new Color32(gray, gray, (byte)Mathf.Min(255, gray + 4), 255);
-                }
-            }
-            picture.SetPixels32(pixels);
             picture.Apply();
             RenderTexture.active = previous;
             var bytes = picture.EncodeToPNG();

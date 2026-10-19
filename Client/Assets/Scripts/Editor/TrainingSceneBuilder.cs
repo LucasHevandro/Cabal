@@ -64,12 +64,14 @@ namespace Game.Client.Editor
             hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());
             hud.AddComponent<DamageNumbers>();
 
-            MinimapBaker.Bake();
-
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath)!);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddToBuildSettings(ScenePath);
             AssetDatabase.SaveAssets();
+
+            // A foto do mapa sai da cena salva e reaberta (com os materiais lidos do disco).
+            EditorSceneManager.OpenScene(ScenePath);
+            MinimapBaker.Bake();
             Debug.Log($"[Protótipo] Cena criada em {ScenePath}");
         }
 
