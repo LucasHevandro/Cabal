@@ -63,11 +63,11 @@ A cena `Treino.unity` é gerada por código. Depois de mudar o mapa, gere de nov
 | Parte | Onde | O que faz |
 |---|---|---|
 | Altura do chão | `Scripts/World/Ground.cs` | Fórmula única do relevo. O construtor do terreno usa a fórmula, e o jogo a usa para pôr no chão o que o servidor manda só em X e Z (jogadores, monstros, NPCs, itens e avisos de golpe). |
-| Terreno | `Scripts/Editor/TerrainBuilder.cs` | Relevo, chão pintado por zona (grama, folhas da mata, pedra das ruínas, cascalho da arena, terra nas estradas, rocha nas encostas) e tufos de grama e flores low-poly (malhas paradas, só até 45 m da câmera). As texturas são geradas e ficam em `Assets/Art/Mundo`. |
+| Terreno | `Scripts/Editor/TerrainBuilder.cs` | Relevo, chão pintado por zona (grama, folhas da mata, pedra das ruínas, cascalho da arena, terra nas estradas, rocha nas encostas) e tufos de grama e flores low-poly (malhas paradas, só até 45 m da câmera). As texturas são geradas e ficam em `Assets/Art/Mundo`. O chão é fosco: a suavidade das camadas é a constante 0 (`ConstantOnly`). Com o padrão (alfa da textura), ele espelhava o céu e ficava com um véu branco, forte à noite. |
 | Cenário | `Scripts/Editor/PropBuilder.cs` + `MeshKit.cs` | Árvores, pinheiros, arbustos, pedras, colunas, muros, casas, cercas, poço e braseiros em low-poly, gerados por código. As malhas ficam em `Assets/Art/Mundo/Malhas`. |
 | Clima | `Scripts/World/Atmosphere.cs` | Névoa, luz ambiente, cor do sol e filtro de cor por zona, misturados aos poucos. A dungeon e a arena PvP têm o próprio clima. |
 | Pós-processamento | `Assets/Materials/Prototipo/PosProcessamento.asset` | Bloom suave, tonemapping neutro, contraste, vinheta e sombras levemente azuladas. Na qualidade **Baixa** ele é desligado. |
-| Céu | `Assets/Materials/Prototipo/Ceu.mat` | Céu procedural do Unity, com o sol da cena. |
+| Céu | `Assets/Materials/Prototipo/Ceu.mat` | Céu procedural do Unity, com o sol da cena. À noite, `World/NightSky` põe por cima uma cúpula de 1.800 estrelas que cintilam e a lua com halo (`Shaders/CeuNoturno.shader`, sem neblina), na direção da luz da noite. |
 
 **Regras do relevo**
 - **Planos:** a praça da vila, as estradas, os grupos de monstros (o raio deles + 3 m), os NPCs e a arena do chefe. Assim os avisos de golpe no chão ficam retos.
@@ -216,12 +216,22 @@ nas pernas.
 
 - **Peças** em `Visuals/dungeon/<id>`, geradas pelo `DungeonKitBuilder`: parede de tijolo, pilar, portão de ferro, tocha, caixão, ossos, velas, estandarte, trono, baú; na arena, muro, rochas, bandeira, arquibancada e braseiro. Pisos com textura própria (lajes da cripta, areia da arena, tapete).
 - **Montagem:** o `DungeonView` e o `ArenaView` põem as peças sobre os blocos de sempre, que ficam invisíveis e continuam sendo os colisores. As bandeiras da arena pegam a cor do time que domina o ponto.
+- **Clima da cripta:** poeira clara flutuando e névoa roxa rente ao chão no corredor inteiro (`Kit.Haze`). Um círculo
+  rúnico roxo brilha no meio da sala do chefe.
+- **Runas da arena** (`Kit.Rune`, o shader das marcas das skills parado):
+  - cada ponto tem um círculo rúnico na cor do dono;
+  - cada base tem três círculos na cor do time, com piso escuro puxado para ela e as bandeiras do time nos cantos.
 - **Conferir:** teste online com `-onlinedungeon` (cripta inteira) e `-onlinearena`.
 
 # Polimento do combate
 
 - **Clarão no acerto** (`HitFlash`): o modelo atingido clareia por 0,12 s.
-- **Poeira** nos passos correndo e na esquiva; **volta à vida** com coluna de luz; monstros **surgem** com um anel de poeira e brilho.
+- **Poeira nos pés** (`Fx/FootDust`): uma nuvenzinha a cada passada de quem corre e um punhado na arrancada (esquiva,
+  investida). Vale para o jogador, os outros jogadores e os monstros, maior nos monstros grandes.
+- **Lascas no impacto:** junto das faíscas, riscos curtos e quentes esticados na direção do voo, como metal batendo.
+- **Números de dano** com contorno escuro nos oito lados. O crítico entra bem maior, treme um instante, sobe mais e tem
+  um brilho claro por cima.
+- **Volta à vida** com coluna de luz; monstros **surgem** com um anel de poeira e brilho.
 - **Projéteis rápidos** ficam alongados e apontados para o destino.
 
 # Vida no mundo
@@ -327,7 +337,13 @@ centro da sua região (cheia até 80% do raio, some até 130%), então o clima m
 | Ruínas Esquecidas | partículas mágicas roxas subindo e brilhos ciano (mais fortes à noite) |
 
 - Usam o material `Resources/Visuals/fx/particula_suave` e acendem e apagam devagar.
-- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa também a mata e as ruínas, de dia, no pôr do sol e à noite.
+- **Tempo que muda** (segue o relógio de verdade, UTC, então quem está online vê mais ou menos o mesmo):
+  - **Chuva** na Mata Sombria: pancadas de alguns minutos com intervalos maiores (`RegionAmbience.Rain`). Gotas
+    esticadas caindo rápido; enquanto chove, o tempo fecha (`Atmosphere.Overcast`): sol fraco, neblina cinza mais densa,
+    cores apagadas e céu mais escuro e cinza.
+  - **Rajadas** nos Campos do Vento: o pólen e as folhas aumentam e correm mais rápido quando o vento aperta.
+- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa também a mata (com chuva) e as ruínas, de dia, no pôr do
+  sol e à noite, e o céu olhando para a lua (`ceu-noite`).
 
 # Água
 
@@ -343,11 +359,11 @@ centro da sua região (cheia até 80% do raio, some até 130%), então o clima m
 # Minimapa
 
 Ao montar a cena, o `Editor/MinimapBaker` fotografa o mundo de cima (câmera ortográfica, norte para cima, sem neblina) e
-guarda em `Resources/Visuals/mapa_mundo.png` (1024×1024, 256 m de lado, centro em `Minimap.WorldMapCenter`).
+guarda em `Resources/Visuals/mapa_mundo.png` (1024×1024, 256 m de lado, centro em `Minimap.WorldMapCenter`). A foto é
+tirada com a cena já salva e reaberta: na cena recém-montada, com os materiais ainda só na memória, pedras e colunas
+saíam azul forte e as casas cinza-escuras.
 
 - O minimapa e o mapa grande (tecla M) desenham essa foto por baixo das zonas, dos pontos e da seta do jogador.
 - Os discos das zonas ficam bem fracos por cima da foto e os nomes ganham sombra.
 - Sem a foto (ou na dungeon e na arena), o mapa volta aos discos coloridos.
-- **Peculiaridade:** vistas por essa câmera, pedras e colunas cinza saem azul forte. Não é a luz ambiente, as sondas
-  nem os mipmaps. O baker devolve esses pixels a cinza pelo brilho.
 - **Conferir:** abrir `mapa_mundo.png`; a vista `9c-mapa` do teste online (`-onlineui`).
