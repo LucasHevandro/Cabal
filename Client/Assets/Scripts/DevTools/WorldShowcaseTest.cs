@@ -45,6 +45,8 @@ namespace Game.Client.DevTools
                 ("praca", new Vector3(-3f, 6f, -17f), new Vector3(1f, 1f, 2f)),
                 ("ponte", new Vector3(9f, 4.5f, Ground.RiverZ(9f) - 9f), new Vector3(0f, 0f, Ground.RiverZ(0f))),
                 ("campos", new Vector3(-14f, 7f, 20f), new Vector3(2f, 1f, 44f)),
+                ("mata", new Vector3(34f, 3.5f, 72f), new Vector3(46f, 1.5f, 86f)),
+                ("ruinas", new Vector3(-34f, 4f, 112f), new Vector3(-46f, 1.5f, 126f)),
             };
             var times = new[] { ("dia", 0.3f), ("por_do_sol", 0.645f), ("noite", 0.8f) };
             foreach (var (name, eye, look) in shots)
@@ -54,12 +56,12 @@ namespace Game.Client.DevTools
                 foreach (var (label, hour) in times)
                 {
                     Atmosphere.ForcedTime = hour;
-                    yield return new WaitForSeconds(0.7f);
+                    yield return new WaitForSeconds(1.5f); // tempo para o clima da região aparecer
                     ScreenCapture.CaptureScreenshot(Path.Combine(_folder, $"{name}-{label}.png"));
                     yield return new WaitForSeconds(0.3f);
                 }
             }
-            File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), "SUCESSO: 9 vistas\n");
+            File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), $"SUCESSO: {shots.Length * times.Length} vistas\n");
             Application.Quit();
         }
     }
