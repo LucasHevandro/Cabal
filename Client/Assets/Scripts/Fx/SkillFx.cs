@@ -100,6 +100,8 @@ namespace Game.Client.Fx
             if (feel.AroundCaster)
             {
                 Ring(caster.position + Vector3.up * 0.9f, Mathf.Max(1f, skill.AreaRadius), feel.Color, 36);
+                MagicFx.Mark(GroundMarkStyle.Rune, new Vector3(caster.position.x, GroundAt(caster.position) - 0.1f, caster.position.z),
+                    Mathf.Max(1f, skill.AreaRadius), feel.Color * 1.15f, 0.9f);
                 return;
             }
             if (skill.Kind != SkillKind.Physical) return;
@@ -217,6 +219,10 @@ namespace Game.Client.Fx
             var fx = CombatFx.Instance;
             if (fx == null) return;
             var ground = new Vector3(center.x, GroundAt(center), center.z);
+            var floor = ground - Vector3.up * 0.1f;
+            // Marcas e cúpulas na cor própria da skill (o dourado do Excellent fica nas faíscas e no clarão).
+            var tone = For(skill).Color;
+            var area = Mathf.Max(1.2f, skill.AreaRadius);
             switch (skill.Id)
             {
                 case "golpe_runico":
@@ -228,6 +234,7 @@ namespace Game.Client.Fx
                     }
                     for (var i = 0; i < 6; i++) GlowBig(center + UnityEngine.Random.insideUnitSphere * 0.4f, Vector3.up * 1.5f, color, 0.25f, 0.6f);
                     fx.Flash(center, color, 2f, 5f, 0.15f);
+                    MagicFx.Mark(GroundMarkStyle.Rune, floor, 1.5f, tone * 1.3f, 1.3f);
                     break;
                 case "fenda_sismica":
                     // A terra racha: três linhas de pedra saindo do ponto e poeira.
@@ -240,12 +247,15 @@ namespace Game.Client.Fx
                     }
                     Dust(ground, 2.5f, 18);
                     fx.Flash(center, new Color(1f, 0.8f, 0.5f), 2f, 6f, 0.15f);
+                    MagicFx.Mark(GroundMarkStyle.Crack, floor, area * 0.9f, new Color(2.2f, 1.1f, 0.35f), 2.6f);
                     break;
                 case "lamina_flamejante":
                     for (var i = 0; i < 26; i++)
                         EmitBig(center, UnityEngine.Random.insideUnitSphere * 2.5f + Vector3.up * 3f, new Color(1f, 0.35f + UnityEngine.Random.value * 0.4f, 0.08f), 0.2f, 0.55f);
                     for (var i = 0; i < 10; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 1.2f + Vector3.up, new Color(1f, 0.55f, 0.15f), 0.45f, 0.35f);
                     fx.Flash(center, new Color(1f, 0.55f, 0.2f), 3f, 6f, 0.2f);
+                    MagicFx.Mark(GroundMarkStyle.Scorch, floor, 1.3f, new Color(2.5f, 0.9f, 0.2f), 2.2f);
+                    MagicFx.Burst(center, 1.1f, new Color(1f, 0.45f, 0.1f), 0.4f);
                     break;
                 case "execucao":
                     // Um X vermelho no ar e um clarão.
@@ -254,6 +264,7 @@ namespace Game.Client.Fx
                             GlowBig(center + new Vector3(i * 0.12f, i * 0.12f * tilt, 0), Vector3.zero, new Color(1f, 0.2f, 0.15f), 0.3f, 0.3f);
                     fx.Flash(center, new Color(1f, 0.25f, 0.2f), 4f, 7f, 0.25f);
                     Dust(ground, 1.8f, 12);
+                    MagicFx.Mark(GroundMarkStyle.Crack, floor, 1.7f, new Color(2.4f, 0.3f, 0.25f), 2f);
                     break;
                 case "tempestade_de_aco":
                     for (var i = 0; i < 30; i++)
@@ -262,6 +273,7 @@ namespace Game.Client.Fx
                         var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
                         GlowBig(center + dir * 0.8f, new Vector3(-dir.z, 0.3f, dir.x) * 5f, color, 0.14f, 0.3f);
                     }
+                    MagicFx.Mark(GroundMarkStyle.Rune, floor, area, tone * 1.15f, 1.1f);
                     break;
                 case "corrente_gelida":
                     // Cristais de gelo brotando e uma geada que fica um pouco no chão.
@@ -278,21 +290,30 @@ namespace Game.Client.Fx
                             new Color(0.8f, 0.97f, 1f), 0.2f, 1.1f);
                     }
                     fx.Flash(center, color, 3f, 6f, 0.25f);
+                    MagicFx.Mark(GroundMarkStyle.Frost, floor, 2f, new Color(0.7f, 0.95f, 1.2f), 3.2f);
                     break;
                 case "explosao_arcana":
                     fx.StartCoroutine(Implode(center, color, Mathf.Max(1.5f, skill.AreaRadius)));
+                    MagicFx.Mark(GroundMarkStyle.Rune, floor, area, tone * 1.25f, 1.4f);
+                    MagicFx.Burst(center, area * 0.8f, tone, 0.55f);
                     break;
                 case "meteoro":
                     Explosion(center, ground, color, Mathf.Max(2f, skill.AreaRadius), 1f);
+                    MagicFx.Mark(GroundMarkStyle.Scorch, floor, area, new Color(2.6f, 0.9f, 0.2f), 3f);
+                    MagicFx.Burst(center, area * 0.9f, new Color(1f, 0.5f, 0.15f), 0.6f);
                     break;
                 case "cataclismo":
                     fx.StartCoroutine(Shockwaves(center, ground, color, Mathf.Max(2f, skill.AreaRadius)));
+                    MagicFx.Mark(GroundMarkStyle.Scorch, floor, area * 1.15f, new Color(2.4f, 0.8f, 0.25f), 3.5f);
+                    MagicFx.Mark(GroundMarkStyle.Rune, floor, area * 1.3f, tone * 1.2f, 1.6f);
+                    MagicFx.Burst(center, area, tone, 0.8f);
                     break;
                 case "raio_duplo":
                 case "faisca":
                 case "lanca_de_forca":
                     fx.Flash(center, color, heavy ? 3f : 2f, 4f, 0.1f);
                     for (var i = 0; i < 8; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 2f, Color.white, 0.12f, 0.2f);
+                    MagicFx.Burst(center, heavy ? 0.9f : 0.6f, tone, 0.3f);
                     break;
             }
         }

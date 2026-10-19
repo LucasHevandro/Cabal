@@ -131,6 +131,21 @@ namespace Game.Client.Fx
             }
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
+            // Aura de energia em volta do miolo: brilho na borda e ondulando (shader Jogo/Energia).
+            if (MagicFx.EnergyMaterial != null)
+            {
+                var aura = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Destroy(aura.GetComponent<Collider>());
+                aura.name = "Aura";
+                aura.transform.SetParent(orb.transform, false);
+                aura.transform.localScale = Vector3.one * 1.9f;
+                var auraRenderer = aura.GetComponent<MeshRenderer>();
+                auraRenderer.sharedMaterial = MagicFx.EnergyMaterial;
+                auraRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                var auraBlock = new MaterialPropertyBlock();
+                auraBlock.SetColor("_Color", color);
+                auraRenderer.SetPropertyBlock(auraBlock);
+            }
             var projectile = orb.AddComponent<Projectile>();
             projectile.Launch(target, targetOffset, projectileSpeed * speedMultiplier, () =>
             {

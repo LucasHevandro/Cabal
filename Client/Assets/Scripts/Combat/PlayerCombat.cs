@@ -298,6 +298,7 @@ namespace Game.Client.Combat
             BestChain = Mathf.Max(BestChain, chain);
             HitStop.Trigger(0.12f);
             if (_camera != null) _camera.Shake(shakeAmplitude * 4f, 0.3f);
+            MagicFx.ScreenImpact(1f, new Color(1f, 0.55f, 0.2f), Target != null ? Target.CenterPosition : transform.position);
             ShowMessage(Loc.T("combo.finisher", multiplier, chain));
         }
 
@@ -474,6 +475,9 @@ namespace Game.Client.Combat
             SoundPlayer.Play(heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
             if (skill != null && skill.Kind == SkillKind.Magical) SoundPlayer.Play(SoundId.MagicImpact, 0.35f + 0.25f * Mathf.Min(1f, weight));
             HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f) + weight * 0.04f);
+            // Excellent e golpes grandes: um leve borrão radial com clarão dourado (o finalizador é bem mais forte).
+            if (excellent || weight >= 1.2f)
+                MagicFx.ScreenImpact(excellent ? 0.4f : 0.25f, new Color(1f, 0.85f, 0.4f), Target != null ? Target.CenterPosition : transform.position);
             if (_camera != null) _camera.Shake(shakeAmplitude * ((excellent ? 2f : 1f) + weight * 1.5f), 0.12f + weight * 0.1f);
         }
 
@@ -745,6 +749,7 @@ namespace Game.Client.Combat
                 SoundPlayer.Play(SoundId.Finisher, 0.9f);
                 HitStop.Trigger(0.12f);
                 if (_camera != null) _camera.Shake(shakeAmplitude * 4f, 0.3f);
+                MagicFx.ScreenImpact(1f, new Color(1f, 0.55f, 0.2f), target.CenterPosition);
                 return;
             }
             ImpactFeedback(skill, grade == ComboGrade.Excellent, weight);

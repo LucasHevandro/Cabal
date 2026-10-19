@@ -65,8 +65,36 @@ namespace Game.Client.Editor
             feature.SetActive(true);
             data.SetDirty();
             EditorUtility.SetDirty(data);
+            // Materiais dos efeitos com shader das skills (carregados do Resources pelo Fx/MagicFx).
+            EffectMaterial("Jogo/Energia", "Assets/Resources/Visuals/fx/energia.mat");
+            EffectMaterial("Jogo/MarcaChao", "Assets/Resources/Visuals/fx/marca_chao.mat");
             AssetDatabase.SaveAssets();
             Debug.Log("[Contorno] Ligado no renderizador do PC.");
+        }
+
+        private static void EffectMaterial(string shaderName, string path)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogWarning($"[Efeitos] Shader {shaderName} não encontrado.");
+                return;
+            }
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) };
+                AssetWrite.Create(material, path);
+            }
+            material.shader = shader;
+            // Energia: borda fina e brilho contido (com o bloom, mais que isso estoura para branco).
+            if (shaderName == "Jogo/Energia")
+            {
+                material.SetFloat("_Intensity", 1.2f);
+                material.SetFloat("_Rim", 3.2f);
+            }
+            EditorUtility.SetDirty(material);
         }
     }
 }

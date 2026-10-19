@@ -1,6 +1,7 @@
 // Contorno de desenho animado em tela cheia: acha as bordas pela profundidade e pelas normais da cena e escurece a cor
 // ali (mantendo o tom, como traço de nanquim colorido). Some com a distância, para o fundo não virar rabisco.
 // Ligado pelo Full Screen Pass Renderer Feature do URP (Editor/RenderLook.cs), antes do pós-processamento.
+// No mesmo passo fica o impacto de tela (Fx/MagicFx.ScreenImpact): borrão radial e clarão no finalizador e no Excellent.
 Shader "Jogo/Contorno"
 {
     Properties
@@ -35,6 +36,26 @@ Shader "Jogo/Contorno"
             float _NormalThreshold;
             float _MaxDistance;
 
+            // Impacto de tela (globais, definidos pelo MagicFx a cada quadro).
+            float _ImpactStrength;
+            float4 _ImpactColor;
+            float4 _ImpactCenter;
+
+            /// Borrão radial: puxa a imagem para fora a partir do ponto do golpe, mais forte longe dele.
+            half4 Impact(float2 uv, half4 color)
+            {
+                if (_ImpactStrength <= 0.001) return color;
+                float2 toCenter = _ImpactCenter.xy - uv;
+                half4 sum = color;
+                [unroll]
+                for (int i = 1; i < 8; i++)
+                    sum += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + toCenter * (i / 8.0) * 0.06 * _ImpactStrength);
+                color = sum / 8.0;
+                float flash = _ImpactStrength * _ImpactStrength * 0.35;
+                color.rgb = lerp(color.rgb, color.rgb + _ImpactColor.rgb, flash);
+                return color;
+            }
+
             float Depth(float2 uv)
             {
                 return LinearEyeDepth(SampleSceneDepth(uv), _ZBufferParams);
@@ -44,7 +65,7 @@ Shader "Jogo/Contorno"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 uv = input.texcoord;
-                half4 color = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
+                half4 color = Impact(uv, SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv));
 
                 float depth = Depth(uv);
                 if (depth > _MaxDistance || _Strength <= 0) return color;
