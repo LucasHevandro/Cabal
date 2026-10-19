@@ -218,7 +218,10 @@ Todos são CC0 (domínio público): uso livre, inclusive comercial, sem precisar
   - cada um tem Animator próprio: parado, andando e correndo pela velocidade, golpe, dano e morte.
   - **Bichos de enfeite:** cervos, veados e raposas pastam nos campos e na mata. Não lutam e não bloqueiam; cada um
     começa a animação num ponto diferente.
-  - O javali, a aranha e o golem continuam feitos em código, porque os pacotes não têm um equivalente. O espectro
+  - O Javali Furioso virou o **Touro Furioso**, com o Bull do Quaternius. Os ids do jogo continuam os mesmos e só os
+    textos mudaram.
+  - O golem é montado com as pedras do KayKit Forest (tronco, cabeça, braços e pernas) e anima por código.
+  - A aranha continua feita em código, porque nenhum pacote tem uma. O espectro
     continua sendo o esqueleto-fantasma do KayKit.
 - **Conferir um pacote novo:** `-executeMethod Game.Client.Editor.AssetSheet.Run -sheetFolder Assets/Art/... -sheetOut pasta`
   monta uma folha de fotos e lista tamanho, materiais e animações de cada modelo.
