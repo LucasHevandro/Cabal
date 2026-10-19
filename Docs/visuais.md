@@ -171,3 +171,28 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
 - **Outros jogadores:** o servidor manda a arma e a melhoria de cada jogador no `EntitySpawned` e, quando mudam, no `EntityLook` (protocolo v13). Assim todo mundo vê o brilho de todo mundo.
 - **Itens no chão:** os 37 itens têm modelo em `Visuals/item/<id>`: as armas, armadura, luvas, botas e anel por nível, cristais dos núcleos, gemas, poções, materiais e a chave da cripta. Giram e flutuam com o feixe da raridade.
 - **Conferir:** `Prototipo.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, e depois todos os itens.
+
+# Cripta e arena PvP
+
+- **Peças** em `Visuals/dungeon/<id>`, geradas pelo `DungeonKitBuilder`: parede de tijolo, pilar, portão de ferro, tocha, caixão, ossos, velas, estandarte, trono, baú; na arena, muro, rochas, bandeira, arquibancada e braseiro. Pisos com textura própria (lajes da cripta, areia da arena, tapete).
+- **Montagem:** o `DungeonView` e o `ArenaView` põem as peças sobre os blocos de sempre, que ficam invisíveis e continuam sendo os colisores. As bandeiras da arena pegam a cor do time que domina o ponto.
+- **Conferir:** teste online com `-onlinedungeon` (cripta inteira) e `-onlinearena`.
+
+# Polimento do combate
+
+- **Clarão no acerto** (`HitFlash`): o modelo atingido clareia por 0,12 s.
+- **Poeira** nos passos correndo e na esquiva; **volta à vida** com coluna de luz; monstros **surgem** com um anel de poeira e brilho.
+- **Projéteis rápidos** ficam alongados e apontados para o destino.
+
+# Vida no mundo
+
+- **Rio** (`Ground.RiverZ`) cavado no terreno entre a vila e os Campos do Vento, com água correndo e **ponte de madeira** na estrada. Árvores, pedras, cercas e grama ficam fora da água.
+- **Dia e noite:** um dia dura 40 minutos (`Atmosphere.DayMinutes`). Online, a hora vem do relógio do servidor, então todos veem o mesmo céu. Há pôr do sol e amanhecer alaranjados e uma noite azulada. As lanternas da vila (`NightLight`) acendem à noite. Na cripta e na arena o clima é fixo.
+- **Vila:** praça calçada, e cada NPC ganhou o seu canto: forja e bigorna, banca do mercador, estante e tapete, e o arco do portal. Há postes de lanterna na praça, e o treino usa bonecos de palha.
+- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa a praça, a ponte e os campos de dia, no pôr do sol e à noite.
+
+# Interface
+
+- **Tema** (`UiTheme`): painéis com degradê escuro, cantos arredondados e moldura bronze. Barras de vida, mana, SP e XP com brilho. Botões, campos, casas de item e caixas de marcar próprios. Fonte Segoe UI do sistema, com Arial de reserva. Tudo é gerado em código.
+- **Ícones de skill** (`SkillIcons`): um medalhão na cor do tipo com o símbolo de cada uma das 16 skills (corte, giro, runa, chama, floco de gelo, raio...).
+- **Ícones de item** (`ItemIcons`): uma câmera escondida fotografa o modelo do item na primeira vez que ele aparece numa janela, com luz própria e fundo transparente. Sem modelo, fica o quadradinho com o nome.
