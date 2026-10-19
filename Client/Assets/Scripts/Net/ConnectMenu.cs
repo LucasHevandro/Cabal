@@ -50,6 +50,61 @@ namespace Game.Client.Net
 
         public static bool IsOpen => !GameMode.ChoiceMade;
 
+        // Fundo da tela de entrada: uma foto do mundo (a ponte no fim da tarde), tirada uma vez. Depois a câmera do
+        // jogo fica desligada até escolher como jogar: nada se mexe atrás do menu e a placa de vídeo descansa.
+        private RenderTexture _backdrop;
+        private bool _backdropReady;
+        private Camera _backdropCamera;
+
+        private System.Collections.IEnumerator Start()
+        {
+            if (GameMode.ChoiceMade) yield break;
+            World.Atmosphere.ForcedTime = 0.62f;
+            // Espera o céu, a névoa e a luz chegarem no fim da tarde (a atmosfera muda aos poucos).
+            yield return new WaitForSecondsRealtime(0.8f);
+            if (!GameMode.ChoiceMade) CaptureBackdrop();
+        }
+
+        private void CaptureBackdrop()
+        {
+            var camera = Camera.main;
+            if (camera == null) return;
+            // O personagem não entra na foto.
+            var hidden = new List<Renderer>();
+            foreach (var motor in FindObjectsByType<Player.PlayerMotor>(FindObjectsSortMode.None))
+            foreach (var renderer in motor.GetComponentsInChildren<Renderer>())
+                if (renderer.enabled)
+                {
+                    renderer.enabled = false;
+                    hidden.Add(renderer);
+                }
+
+            var riverAt = World.Ground.RiverZ(0f);
+            camera.transform.position = World.Ground.Point(9f, World.Ground.RiverZ(9f) - 9f) + Vector3.up * 4.5f;
+            camera.transform.LookAt(World.Ground.Point(0f, riverAt));
+            _backdrop = new RenderTexture(UnityEngine.Screen.width, UnityEngine.Screen.height, 24, RenderTextureFormat.ARGB32);
+            camera.targetTexture = _backdrop;
+            camera.Render();
+            camera.targetTexture = null;
+            camera.enabled = false;
+            _backdropCamera = camera;
+            _backdropReady = true;
+            foreach (var renderer in hidden) renderer.enabled = true;
+        }
+
+        /// <summary>Saiu da tela de entrada: o jogo volta a ser desenhado e a hora volta ao relógio.</summary>
+        private void ReleaseBackdrop()
+        {
+            World.Atmosphere.ForcedTime = null;
+            if (_backdropCamera != null) _backdropCamera.enabled = true;
+            _backdropCamera = null;
+            if (_backdrop != null) _backdrop.Release();
+            _backdrop = null;
+            _backdropReady = false;
+        }
+
+        private void OnDestroy() => ReleaseBackdrop();
+
         private void Awake()
         {
             if (GameMode.ChoiceMade)
@@ -248,14 +303,21 @@ namespace Game.Client.Net
 
         private void OnGUI()
         {
-            if (GameMode.ChoiceMade) return;
+            if (GameMode.ChoiceMade)
+            {
+                if (_backdrop != null || World.Atmosphere.ForcedTime != null) ReleaseBackdrop();
+                return;
+            }
             Game.Client.UI.UiTheme.Ensure();
             _title ??= new GUIStyle(GUI.skin.label) { fontSize = 28, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             _label ??= new GUIStyle(GUI.skin.label) { fontSize = 17 };
             _small ??= new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true };
 
-            GUI.color = new Color(0, 0, 0, 0.82f);
-            GUI.DrawTexture(new Rect(0, 0, UnityEngine.Screen.width, UnityEngine.Screen.height), Texture2D.whiteTexture);
+            // Foto do mundo ao fundo, escurecida para o menu ler bem (preto até a foto ficar pronta).
+            var screen = new Rect(0, 0, UnityEngine.Screen.width, UnityEngine.Screen.height);
+            if (_backdropReady && Event.current.type == EventType.Repaint) GUI.DrawTexture(screen, _backdrop, ScaleMode.ScaleAndCrop, false);
+            GUI.color = new Color(0, 0, 0, _backdropReady ? 0.45f : 1f);
+            GUI.DrawTexture(screen, Texture2D.whiteTexture);
             GUI.color = Color.white;
 
             var scale = Mathf.Max(1f, UnityEngine.Screen.height / 900f);

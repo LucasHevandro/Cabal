@@ -43,7 +43,8 @@ namespace Game.Client.UI
             Style(skin.textField, field, field, fieldFocus);
             skin.textField.focused.background = fieldFocus;
             skin.textField.border = new RectOffset(6, 6, 6, 6);
-            skin.textField.padding = new RectOffset(8, 8, 4, 4);
+            skin.textField.padding = new RectOffset(8, 8, 1, 1);
+            skin.textField.alignment = TextAnchor.MiddleLeft;
             skin.textField.normal.textColor = skin.textField.focused.textColor = skin.textField.hover.textColor = Color.white;
         }
 
