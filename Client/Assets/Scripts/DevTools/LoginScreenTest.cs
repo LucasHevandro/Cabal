@@ -32,14 +32,15 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.5f);
             // Câmera desligada não conta como Camera.main.
             var stopped = ConnectMenu.IsOpen && Camera.main == null;
+            var servers = string.Join("; ", ServerList.Entries.ConvertAll(e => $"{e.Name} {e.Address} = {e.Status} ({e.Players} jogadores, {e.PingMs} ms)"));
             // Escolheu jogar (offline): o jogo volta a ser desenhado.
             GameMode.SetOffline();
             yield return new WaitForSecondsRealtime(0.5f);
             var back = Camera.main != null;
             var ok = stopped && back;
             File.WriteAllText(Path.Combine(_folder, "relatorio.txt"),
-                ok ? "SUCESSO: tela de entrada com a foto do mundo ao fundo e a câmera parada; ao jogar, a câmera volta\n"
-                    : $"FALHA: câmera parada no menu = {stopped}, câmera de volta ao jogar = {back}\n");
+                (ok ? "SUCESSO: tela de entrada com a foto do mundo ao fundo e a câmera parada; ao jogar, a câmera volta\n"
+                    : $"FALHA: câmera parada no menu = {stopped}, câmera de volta ao jogar = {back}\n") + "Servidores: " + servers + "\n");
             Application.Quit(ok ? 0 : 1);
         }
     }

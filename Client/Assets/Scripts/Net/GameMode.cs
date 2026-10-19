@@ -23,6 +23,8 @@ namespace Game.Client.Net
         /// <summary>URL da API de login no lugar da regra padrão (<see cref="ServerAddress.ApiUrl"/>); vazio = regra.</summary>
         public static string ApiOverride { get; private set; } = "";
 
+        private static bool _explicitServer;
+
         /// <summary>Nome do arquivo com o servidor padrão, ao lado do executável (na pasta Client/ no Editor).</summary>
         public const string ServerFileName = "servidor.txt";
 
@@ -67,6 +69,13 @@ namespace Game.Client.Net
             Port = port;
         }
 
+        /// <summary>O servidor escolhido na lista da tela de entrada (com a API dele, se for fora da regra).</summary>
+        public static void SetServer(ServerEntry entry)
+        {
+            SetServer(entry.Host, entry.Port);
+            ApiOverride = entry.Api;
+        }
+
         /// <summary>Tenta ler "host:porta" (porta opcional).</summary>
         public static bool TryParseAddress(string address, out string host, out int port)
         {
@@ -92,9 +101,15 @@ namespace Game.Client.Net
                     if (line.StartsWith("#") || equals <= 0) continue;
                     var key = line.Substring(0, equals).Trim().ToLowerInvariant();
                     var value = line.Substring(equals + 1).Trim();
-                    if (key == "jogo" && TryParseAddress(value, out var host, out var port)) SetServer(host, port);
+                    if (key == "jogo" && TryParseAddress(value, out var host, out var port))
+                    {
+                        SetServer(host, port);
+                        _explicitServer = true;
+                    }
                     if (key == "api") ApiOverride = value;
+                    if (key == "lista") ServerList.RemoteListUrl = value;
                 }
+                ServerList.AddFromText(File.ReadAllText(path));
             }
             catch (Exception ex)
             {
@@ -120,11 +135,25 @@ namespace Game.Client.Net
                     AutoLoginPassword = args[i + 2];
                 }
                 if (args[i] == "-server" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var serverHost, out var serverPort))
+                {
                     SetServer(serverHost, serverPort);
+                    _explicitServer = true;
+                }
                 if (args[i] == "-api" && i + 1 < args.Length) ApiOverride = args[i + 1];
                 if (args[i] == "-offline") SetOffline();
                 if (args[i] == "-connect" && i + 1 < args.Length && TryParseAddress(args[i + 1], out var host, out var port))
                     SetOnline(host, port, name);
+            }
+            // O endereço do "jogo =" (ou do -server) entra na lista como o servidor principal, na frente. Sem nenhum
+            // servidor configurado, fica o deste PC (desenvolvimento).
+            if (_explicitServer || ServerList.Entries.Count == 0)
+            {
+                var main = ServerList.Add(new ServerEntry
+                {
+                    Name = _explicitServer ? "Servidor principal" : "Este computador", Host = Host, Port = Port, Api = ApiOverride,
+                });
+                ServerList.Entries.Remove(main);
+                ServerList.Entries.Insert(0, main);
             }
             // A demo automática offline não deve parar no menu.
             if (!ChoiceMade && Array.IndexOf(args, "-autodemo") >= 0) SetOffline();

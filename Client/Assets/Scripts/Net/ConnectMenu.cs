@@ -26,6 +26,14 @@ namespace Game.Client.Net
 
         private Screen _screen = Screen.Login;
         private string _address = "127.0.0.1:7777";
+
+        // Servidor escolhido na lista (o último fica salvo); "outro endereço" é para testes e servidores fora da lista.
+        private const string ChosenServerKey = "servidor.escolhido";
+        private const float StatusEverySeconds = 15f;
+        private int _selected;
+        private bool _customAddress;
+        private string _apiFor = "";
+        private GUIStyle _serverRow;
         private string _account = "";
         private string _password = "";
         private string _passwordAgain = "";
@@ -113,6 +121,10 @@ namespace Game.Client.Net
                 return;
             }
             _address = $"{GameMode.Host}:{GameMode.Port}";
+            var chosen = "";
+            try { chosen = PlayerPrefs.GetString(ChosenServerKey, ""); } catch { }
+            _selected = Mathf.Max(0, ServerList.Entries.FindIndex(e => e.Address == chosen));
+            _ = ServerList.LoadRemoteAsync();
             if (!string.IsNullOrEmpty(GameMode.AutoLoginAccount)) _ = AutoLoginAsync();
         }
 
@@ -250,15 +262,30 @@ namespace Game.Client.Net
             Play(characters[0]);
         }
 
+        /// <summary>O servidor escolhido na lista (nulo com "outro endereço" ou lista vazia).</summary>
+        private ServerEntry Chosen => !_customAddress && _selected < ServerList.Entries.Count ? ServerList.Entries[_selected] : null;
+
         private bool PrepareApi()
         {
-            if (!GameMode.TryParseAddress(_address, out var host, out var port))
+            var entry = Chosen;
+            if (entry == null)
             {
-                ShowError(Loc.T("login.bad_address"));
-                return false;
+                if (!GameMode.TryParseAddress(_address, out var host, out var port))
+                {
+                    ShowError(Loc.T("login.bad_address"));
+                    return false;
+                }
+                entry = new ServerEntry { Host = host, Port = port };
             }
-            if (_api == null || GameMode.Host != host || GameMode.Port != port) _api = new AccountClient(host, port);
-            GameMode.SetServer(host, port);
+            GameMode.SetServer(entry);
+            if (_api == null || _apiFor != entry.ApiUrl) _api = new AccountClient(entry.Host, entry.Port);
+            _apiFor = entry.ApiUrl;
+            try
+            {
+                PlayerPrefs.SetString(ChosenServerKey, entry.Address);
+                PlayerPrefs.Save();
+            }
+            catch { }
             return true;
         }
 
@@ -350,10 +377,53 @@ namespace Game.Client.Net
             GUILayout.EndArea();
         }
 
+        private void Update()
+        {
+            // Status dos servidores enquanto a lista está na tela.
+            if (GameMode.ChoiceMade || _screen != Screen.Login) return;
+            foreach (var entry in ServerList.Entries)
+                if (!entry.Checking && Time.unscaledTime - entry.CheckedAt > (entry.Checks < 2 ? 0.5f : StatusEverySeconds))
+                    _ = ServerList.RefreshAsync(entry);
+        }
+
+        private static string StatusText(ServerEntry entry) => entry.Status switch
+        {
+            ServerStatus.Online => Loc.T("servers.online", entry.Players, entry.PingMs),
+            ServerStatus.Unstable => Loc.T("servers.unstable"),
+            ServerStatus.OtherVersion => Loc.T("servers.other_version"),
+            ServerStatus.Offline => Loc.T("servers.offline"),
+            _ => Loc.T("servers.checking"),
+        };
+
+        private void DrawServers(float scale)
+        {
+            GUILayout.Label(Loc.T("login.server_choose"), _label);
+            if (_serverRow == null)
+            {
+                _serverRow = new GUIStyle(GUI.skin.button) { alignment = TextAnchor.MiddleLeft, richText = true, fontSize = 15 };
+                _serverRow.padding = new RectOffset(12, 12, 2, 2);
+            }
+            for (var i = 0; i < ServerList.Entries.Count; i++)
+            {
+                var entry = ServerList.Entries[i];
+                var selected = !_customAddress && i == _selected;
+                var text = (selected ? "▶  " : "     ") + $"<b>{entry.Name}</b>     {StatusText(entry)}";
+                if (GUILayout.Toggle(selected, text, _serverRow, GUILayout.Height(32 * scale)) && !selected)
+                {
+                    _selected = i;
+                    _customAddress = false;
+                    _message = "";
+                }
+            }
+            if (GUILayout.Toggle(_customAddress, (_customAddress ? "▶  " : "     ") + Loc.T("login.server_other"), _serverRow, GUILayout.Height(28 * scale)) != _customAddress)
+                _customAddress = !_customAddress;
+            if (_customAddress) _address = GUILayout.TextField(_address, 60, GUILayout.Height(26 * scale));
+            GUILayout.Space(6 * scale);
+        }
+
         private void DrawLogin(float scale)
         {
-            GUILayout.Label(Loc.T("login.server"), _label);
-            _address = GUILayout.TextField(_address, 60, GUILayout.Height(26 * scale));
+            DrawServers(scale);
             GUILayout.Label(Loc.T("login.account"), _label);
             _account = GUILayout.TextField(_account, AccountRules.MaxAccountLength, GUILayout.Height(26 * scale));
             GUILayout.Label(Loc.T("login.password"), _label);
