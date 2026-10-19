@@ -141,6 +141,10 @@ namespace Game.Shared.Accounts
         public string Name = "";
         public int ClassId;
         public int Level;
+
+        /// <summary>Cores de cabelo e roupa (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
+        public int Hair;
+        public int Cloth;
     }
 
     [Serializable]
@@ -154,5 +158,7 @@ namespace Game.Shared.Accounts
     {
         public string Name = "";
         public int ClassId;
+        public int Hair;
+        public int Cloth;
     }
 }

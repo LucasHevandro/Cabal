@@ -77,7 +77,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 14;
+        public const int Version = 15;
         public const int DefaultPort = 7777;
     }
 
@@ -282,6 +282,11 @@ namespace Game.Shared.Net
 
         public byte WeaponUpgrade;
 
+        /// <summary>Jogadores: grau da armadura vestida (cor do metal) e as cores de cabelo e roupa da criação.</summary>
+        public byte ArmorGrade;
+        public byte Hair;
+        public byte Cloth;
+
         public void Write(PacketWriter w)
         {
             w.WriteInt(Id);
@@ -294,18 +299,22 @@ namespace Game.Shared.Net
             w.WriteFloat(Z);
             w.WriteString(WeaponId);
             w.WriteByte(WeaponUpgrade);
+            w.WriteByte(ArmorGrade);
+            w.WriteByte(Hair);
+            w.WriteByte(Cloth);
         }
 
         public static EntitySpawned Read(PacketReader r) => new EntitySpawned
         {
             Id = r.ReadInt(), Kind = (EntityKind)r.ReadByte(), TypeId = r.ReadString(), Name = r.ReadString(),
             Level = r.ReadInt(), MaxHp = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
-            WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
+            WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(), ArmorGrade = r.ReadByte(), Hair = r.ReadByte(), Cloth = r.ReadByte(),
         };
     }
 
     /// <summary>
-    /// A aparência de um jogador mudou (trocou de arma ou melhorou a arma): quem o vê troca o modelo e o brilho.
+    /// A aparência de um jogador mudou (trocou de arma ou de armadura, ou melhorou a arma): quem o vê troca o modelo, o
+    /// brilho e a cor do metal.
     /// Mandado a quem já conhece o jogador (o EntitySpawned leva a aparência de quem acaba de aparecer).
     /// </summary>
     public sealed class EntityLook : INetMessage
@@ -314,15 +323,18 @@ namespace Game.Shared.Net
         public int Id;
         public string WeaponId = "";
         public byte WeaponUpgrade;
+        public byte ArmorGrade;
 
         public void Write(PacketWriter w)
         {
             w.WriteInt(Id);
             w.WriteString(WeaponId);
             w.WriteByte(WeaponUpgrade);
+            w.WriteByte(ArmorGrade);
         }
 
-        public static EntityLook Read(PacketReader r) => new EntityLook { Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte() };
+        public static EntityLook Read(PacketReader r) =>
+            new EntityLook { Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(), ArmorGrade = r.ReadByte() };
     }
 
     public sealed class EntityDespawned : INetMessage
