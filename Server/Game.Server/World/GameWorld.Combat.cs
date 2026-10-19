@@ -31,6 +31,7 @@ public sealed partial class GameWorld
     private void TickPlayer(ServerPlayer player, double now, float dt)
     {
         TrackSuspicion(player, now);
+        ReleaseQueuedSkill(player, now);
         if (player.IsDead)
         {
             if (now >= player.RespawnAt) Respawn(player, now);
@@ -77,6 +78,21 @@ public sealed partial class GameWorld
         player.StatsDirty = true;
     }
 
+    /// <summary>A conjuração acabou: a skill da fila é usada agora (se não esperou demais).</summary>
+    private void ReleaseQueuedSkill(ServerPlayer player, double now)
+    {
+        if (player.QueuedSkill is not { } queued || now < player.CastUntil - CastSlackSeconds) return;
+        player.QueuedSkill = null;
+        if (player.IsDead || now - player.QueuedAt > SkillQueueSeconds) return;
+        HandleUseSkill(player, new UseSkill { Slot = queued.Slot, TargetId = queued.TargetId, ClientTime = double.NaN }, now);
+    }
+
+    /// <summary>Folga para o atraso da rede: o cliente pede a próxima skill quando a conjuração acaba no relógio dele.</summary>
+    public const double CastSlackSeconds = 0.12;
+
+    /// <summary>Quanto tempo uma skill pode esperar na fila antes de ser esquecida.</summary>
+    public const double SkillQueueSeconds = 1.5;
+
     private void HandleUseSkill(ServerPlayer player, UseSkill message, double now)
     {
         if (player.IsDead || message.Slot >= player.Skills.Count) return;
@@ -84,6 +100,14 @@ public sealed partial class GameWorld
         if (!player.SkillUnlocked(message.Slot))
         {
             Notify(player, LT("skill.locked", Loc.Ref("skill." + skill.Id)));
+            return;
+        }
+        // Conjurando outra skill (fora do combo): esta entra na fila e sai quando a atual acabar.
+        var press = PressTime(message.ClientTime, now);
+        if (player.Combo.State != ComboPhase.Active && press < player.CastUntil - CastSlackSeconds)
+        {
+            player.QueuedSkill = message;
+            player.QueuedAt = now;
             return;
         }
         var target = FindMonster(message.TargetId);
@@ -146,6 +170,7 @@ public sealed partial class GameWorld
 
         SkillRules.TryUse(skill, message.Slot, player.Cooldowns, player.Mp, distance, now);
         player.StatsDirty = true;
+        if (!inCombo) player.CastUntil = press + skill.CastSeconds;
 
         var power = ClassCatalog.PowerFor(skill.Kind, player.Stats);
         var hits = 0;

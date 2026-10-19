@@ -54,7 +54,8 @@ public class CombatTests
         var (world, outbox, player, monster) = Setup(Dummy());
 
         world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id, ClientTime = 1 }, now: 1);
-        world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id, ClientTime = 1.1 }, now: 1.1);
+        // Depois da conjuração (0,45 s) e antes da recarga (0,5 s).
+        world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id, ClientTime = 1.4 }, now: 1.4);
 
         var hit = Assert.Single(outbox.To<CombatEvent>(player.Id));
         Assert.Equal((player.Id, monster.Id, (byte)0), (hit.AttackerId, hit.TargetId, hit.Source));
@@ -63,6 +64,34 @@ public class CombatTests
         Assert.Equal(expected, hit.Damage);
         Assert.Equal(5000 - expected, monster.Hp.Current);
         Assert.Contains("Corte em recarga", outbox.Notices(player.Id));
+    }
+
+    [Fact]
+    public void Skill_pedida_durante_a_conjuracao_espera_na_fila()
+    {
+        var (world, outbox, player, monster) = Setup(Dummy());
+
+        world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id, ClientTime = 1 }, now: 1);
+        // Giro de Lâmina pedido no meio do Corte (0,45 s de conjuração): espera.
+        world.Handle(player.Id, new UseSkill { Slot = 1, TargetId = monster.Id, ClientTime = 1.1 }, now: 1.1);
+        Assert.Single(outbox.To<CombatEvent>(player.Id));
+        Assert.NotNull(player.QueuedSkill);
+
+        world.Tick(1.2);
+        Assert.Single(outbox.To<CombatEvent>(player.Id)); // ainda conjurando
+        world.Tick(1.45);
+        Assert.Equal(new byte[] { 0, 1 }, outbox.To<CombatEvent>(player.Id).Select(e => e.Source).ToArray());
+        Assert.Null(player.QueuedSkill);
+    }
+
+    [Fact]
+    public void Skill_esquecida_na_fila_nao_sai_depois()
+    {
+        var (world, outbox, player, monster) = Setup(Dummy());
+        player.CastUntil = 10; // conjurando algo longo
+        world.Handle(player.Id, new UseSkill { Slot = 1, TargetId = monster.Id, ClientTime = 1 }, now: 1);
+        world.Tick(10);
+        Assert.Empty(outbox.To<CombatEvent>(player.Id));
     }
 
     [Fact]

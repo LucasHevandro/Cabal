@@ -93,6 +93,13 @@ public sealed class ServerPlayer
     public double DodgeUntil { get; set; }
     public double NextDodgeAt { get; set; }
     public double NextPotionAt { get; set; }
+
+    /// <summary>Conjurando uma skill até este instante (fora do combo): outra skill pedida antes espera na fila.</summary>
+    public double CastUntil { get; set; }
+
+    /// <summary>A skill que espera a conjuração atual acabar (só a última pedida) e quando foi pedida.</summary>
+    public Game.Shared.Net.UseSkill? QueuedSkill { get; set; }
+    public double QueuedAt { get; set; }
     public float MpRegenCarry { get; set; }
 
     /// <summary>Movimentos de item e Alz desde o último salvamento (vão junto no próximo).</summary>
