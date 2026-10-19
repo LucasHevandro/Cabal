@@ -8,6 +8,7 @@ namespace Game.Client.Fx
     /// a cor de uma parte é repintar a célula dela. O metal segue o grau da peça vestida (Ferro, Aço Negro, Astralita):
     /// a couraça no corpo, as luvas nos braços e as botas nas pernas (cada uma é uma malha do modelo). O cabelo e a
     /// roupa seguem o que o jogador escolheu na criação. Índice 0 mantém a cor original do modelo.
+    /// O metal de Astralita brilha (emissão, que o bloom espalha) e a couraça de Astralita solta faíscas azuis.
     /// Só o corpo (malhas com esqueleto) é repintado: a arma na mão tem o próprio brilho.
     /// </summary>
     public static class CharacterPaint
@@ -78,6 +79,10 @@ namespace Game.Client.Fx
             },
         };
 
+        private const int AstralGrade = 3;
+        private static readonly Color AstralGlow = new Color(0.25f, 0.6f, 1f);
+        private const string AuraName = "Aura de Astralita";
+
         private const int Size = 256; // a paleta reduzida: cada célula vira 32×64 pixels, o degradê continua liso
         private static readonly Dictionary<(Material, Part, int, int, int), Material> Painted = new Dictionary<(Material, Part, int, int, int), Material>();
         private static readonly Dictionary<Texture, Color32[]> Originals = new Dictionary<Texture, Color32[]>();
@@ -123,6 +128,57 @@ namespace Game.Client.Fx
                 }
                 if (changed) renderer.sharedMaterials = materials;
             }
+            SetAura(root, gear.Armor >= AstralGrade);
+        }
+
+        /// <summary>Faíscas azuis subindo devagar em volta do corpo (só com a couraça de Astralita).</summary>
+        private static void SetAura(Transform root, bool on)
+        {
+            var existing = root.Find(AuraName);
+            if (!on)
+            {
+                if (existing != null) Object.Destroy(existing.gameObject);
+                return;
+            }
+            if (existing != null) return;
+            var material = Resources.Load<Material>("Visuals/fx/particula_suave");
+            if (material == null) return;
+
+            var obj = new GameObject(AuraName);
+            obj.transform.SetParent(root, false);
+            obj.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            var ps = obj.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.1f, 1.8f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.11f);
+            main.startColor = new Color(AstralGlow.r * 1.8f, AstralGlow.g * 1.8f, AstralGlow.b * 2f, 0.9f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World; // ficam para trás quando o personagem anda
+            main.maxParticles = 40;
+            var emission = ps.emission;
+            emission.rateOverTime = 9f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(0.75f, 1.3f, 0.75f);
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.45f, 0.85f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f);
+            var fade = ps.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+            var renderer = obj.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            ps.Play();
         }
 
         private static Material PaintedFor(Material material, Part part, int armorGrade, int hair, int cloth)
@@ -154,6 +210,22 @@ namespace Game.Client.Fx
             var painted = new Material(material) { name = material.name + " (pintado)" };
             if (painted.HasProperty("_BaseMap")) painted.SetTexture("_BaseMap", result);
             painted.mainTexture = result;
+            if (armorGrade >= AstralGrade && painted.HasProperty("_EmissionMap"))
+            {
+                // Só as células de metal brilham: a emissão é preta no resto da paleta.
+                var glow = new Color32[Size * Size];
+                for (var i = 0; i < glow.Length; i++) glow[i] = new Color32(0, 0, 0, 255);
+                Fill(glow, layout.Metal, AstralGlow);
+                if (part == Part.Arm) Fill(glow, layout.ArmMetal, AstralGlow);
+                if (part == Part.Leg) Fill(glow, layout.LegMetal, AstralGlow);
+                var emission = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = texture.name + "_brilho", wrapMode = TextureWrapMode.Clamp };
+                emission.SetPixels32(glow);
+                emission.Apply(true, true);
+                painted.SetTexture("_EmissionMap", emission);
+                painted.SetColor("_EmissionColor", Color.white * 0.45f);
+                painted.EnableKeyword("_EMISSION");
+                painted.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            }
             Painted[key] = painted;
             OriginalOf[painted] = material;
             return painted;
@@ -205,6 +277,22 @@ namespace Game.Client.Fx
                     var c = color * shade;
                     pixels[index] = new Color32(ToByte(c.r), ToByte(c.g), ToByte(c.b), pixels[index].a);
                 }
+            }
+        }
+
+        /// <summary>Células inteiras numa cor só (a máscara de brilho).</summary>
+        private static void Fill(Color32[] pixels, Vector2Int[] cells, Color color)
+        {
+            const int cellWidth = Size / 8;
+            const int cellHeight = Size / 4;
+            var c = new Color32(ToByte(color.r), ToByte(color.g), ToByte(color.b), 255);
+            foreach (var cell in cells)
+            {
+                var x0 = cell.x * cellWidth;
+                var y0 = Size - (cell.y + 1) * cellHeight;
+                for (var y = y0; y < y0 + cellHeight; y++)
+                for (var x = x0; x < x0 + cellWidth; x++)
+                    pixels[y * Size + x] = c;
             }
         }
 
