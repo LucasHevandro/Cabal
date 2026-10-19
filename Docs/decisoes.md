@@ -188,3 +188,15 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   personagem nas colunas `LearnedSkills` e `Hotbar` (migração `SkillsAprendidas`). O `UseSkill` continua mandando o
   índice da skill na classe; a barra só diz qual tecla usa qual skill.
 - Convidados continuam sabendo todas as skills, para os bots e os testes.
+
+## 2026-10-19 — Conjuração de skill, fila e Esc para as opções
+
+- **Tempo de conjuração** (`SkillData.CastSeconds`, igual à duração do golpe: 0,45 s no Corte, 1,5 s no
+  Cataclismo). Enquanto uma skill é conjurada, outra pedida **entra na fila** e sai quando a atual acaba. A fila
+  guarda só a última pedida e esquece depois de 1,5 s. O servidor confere o mesmo, com 0,12 s de folga para o atraso
+  da rede. No HUD aparece a barra de conjuração e a casa da skill na fila pisca em dourado.
+- **No combo não há fila:** o ritmo é o da barra do combo (apertar fora da janela já erra), então a conjuração não
+  segura a próxima skill.
+- **Esc:** fecha primeiro o que estiver aberto (janela, conversa com NPC, mapa grande, amigos, alvo). Sem nada aberto,
+  abre as opções. O F1 saiu, e os controles continuam na aba Controles. O F10 segue como atalho alternativo.
+- **Sair do jogo** pelas opções, com confirmação. Online, o servidor salva o personagem quando a conexão cai.
