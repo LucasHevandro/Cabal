@@ -470,6 +470,20 @@ namespace Game.Client.DevTools
             NetworkSession.Instance.Send(new SetHotbar { Slots = original });
             yield return WaitFor(() => CharacterState.HotbarSkill(7) == original[7], 3f);
 
+            // O caçador do acampamento nos Campos do Vento (missões da região).
+            yield return WalkTo(NpcCatalog.Hunter);
+            windows.TalkToNearestNpc();
+            yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.Hunter, 3f);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("8d-cacador");
+            yield return new WaitForEndOfFrame();
+            if (CharacterState.Dialog == null || CharacterState.Dialog.NpcId != NpcCatalog.Hunter)
+            {
+                outcome.Message = "o Caçador Rurik não abriu a conversa";
+                yield break;
+            }
+            CharacterState.CloseDialog();
+
             // Janela de opções (F10) por cima do jogo.
             OptionsWindow.Open();
             yield return new WaitForSecondsRealtime(0.4f);

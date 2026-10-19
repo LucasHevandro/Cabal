@@ -52,6 +52,9 @@ namespace Game.Client.Editor
             ["ferreira_ilsa"] = new Look { Model = "Barbarian", RightHand = "axe_1handed" },
             ["guarda_volumes_bento"] = new Look { Model = "Ranger", RightHand = "mug_full" },
             ["mercadora_lia"] = new Look { Model = "Rogue", RightHand = "dagger" },
+            ["cacador_rurik"] = new Look { Model = "Ranger", RightHand = "dagger" },
+            ["batedora_nara"] = new Look { Model = "Rogue_Hooded", RightHand = "dagger" },
+            ["erudita_veska"] = new Look { Model = "Mage", LeftHand = "spellbook_open", RightHand = "staff" },
             ["mestre_aldric"] = new Look { Model = "Mage", RightHand = "sword_1handed", LeftHand = "spellbook_open" },
             ["guardia_selene"] = new Look { Model = "Knight", RightHand = "sword_2handed", Hide = new[] { "Knight_HelmetVisor" } },
         };

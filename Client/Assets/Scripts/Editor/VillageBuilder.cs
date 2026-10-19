@@ -214,6 +214,16 @@ namespace Game.Client.Editor
                             k.Frustum(0, new Vector3(1.0f, 0, 0.75f), Quaternion.identity, 0.36f, 0.36f, 0.9f, 8, null);
                         }, collider: true);
                         break;
+                    case NpcRole.QuestGiver when at.magnitude > 25f:
+                        // NPC de região: acampamento com barraca e fogueira.
+                        Part(corner, "Barraca", clothBlue, k => k.Roof(0, new Vector3(0.6f, 0, 0.6f), Quaternion.identity, 1.6f, 2.2f, 1.5f, 0.05f), collider: true);
+                        Part(corner, "Lenha", darkWood, k =>
+                        {
+                            k.Box(0, new Vector3(-1.4f, 0, -0.9f), Quaternion.Euler(0, 30, 0), new Vector3(0.8f, 0.12f, 0.12f));
+                            k.Box(0, new Vector3(-1.4f, 0, -0.9f), Quaternion.Euler(0, -30, 0), new Vector3(0.8f, 0.12f, 0.12f));
+                        });
+                        PropBuilder.Fire(corner, new Vector3(-1.4f, 0.1f, -0.9f), withLight: true);
+                        break;
                     case NpcRole.QuestGiver:
                         Part(corner, "Estante", darkWood, k =>
                         {

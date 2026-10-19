@@ -775,9 +775,10 @@ namespace Game.Client.UI
 
             if (dialog.Offered.Count == 0 && dialog.ReadyToTurnIn.Count == 0)
             {
-                var next = QuestCatalog.All.FirstOrDefault(q => q.GiverNpcId == npc.Id && !CharacterState.QuestCompleted(q.Id)
-                    && CharacterState.CountsOf(q.Id) == null);
-                var active = CharacterState.Quests.Active.Count > 0;
+                var next = QuestCatalog.All.Where(q => q.GiverNpcId == npc.Id && !CharacterState.QuestCompleted(q.Id)
+                    && CharacterState.CountsOf(q.Id) == null).OrderBy(q => q.MinLevel).FirstOrDefault();
+                // "Termine o que pedi" só se a missão aberta é deste NPC.
+                var active = CharacterState.Quests.Active.Any(q => QuestCatalog.Find(q.QuestId)?.GiverNpcId == npc.Id);
                 var text = active ? Loc.T("dialog.finish_first")
                     : next != null ? Loc.T("dialog.come_back_level", next.MinLevel)
                     : Loc.T("dialog.all_done");
