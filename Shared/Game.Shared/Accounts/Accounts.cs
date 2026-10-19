@@ -145,6 +145,9 @@ namespace Game.Shared.Accounts
         /// <summary>Cores de cabelo e roupa (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
         public int Hair;
         public int Cloth;
+
+        /// <summary>Grau da couraça vestida (0 = sem), para a prévia da seleção.</summary>
+        public int ArmorGrade;
     }
 
     [Serializable]
