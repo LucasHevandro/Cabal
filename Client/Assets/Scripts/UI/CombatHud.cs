@@ -209,14 +209,14 @@ namespace Game.Client.UI
             if (_progression == null) return;
             var progress = _progression.Progress;
             // Online o Despertar fica embaixo, na mesma linha fina; a XP sobe uma linha.
-            var rect = new Rect(0, GameMode.IsOnline ? VirtualHeight - 34 : VirtualHeight - 18, VirtualWidth, 14);
+            var rect = new Rect(0, GameMode.IsOnline ? VirtualHeight - 30 : VirtualHeight - 16, VirtualWidth, 12);
             var toNext = progress.XpToNext;
             var fraction = toNext == 0 ? 1f : (float)progress.Xp / toNext;
             Bar(rect, fraction, new Color(0.65f, 0.45f, 0.95f));
             var text = progress.Level >= LevelCurve.MaxLevel
                 ? Loc.T("hud.max_level")
                 : Loc.T("hud.xp", progress.Xp, toNext, fraction * 100);
-            GUI.Label(new Rect(0, rect.y - 3, VirtualWidth, 20), text, _small.WithCenter());
+            GUI.Label(new Rect(0, rect.y - 2, VirtualWidth, 16), text, _key.WithCenter());
         }
 
         private void DrawZone()
@@ -356,19 +356,19 @@ namespace Game.Client.UI
         {
             var sheet = CharacterState.Sheet;
             if (!GameMode.IsOnline || sheet == null) return;
-            var rect = new Rect(0, VirtualHeight - 18, VirtualWidth, 14); // embaixo da XP, no mesmo estilo
+            var rect = new Rect(0, VirtualHeight - 16, VirtualWidth, 12); // embaixo da XP, no mesmo estilo
             var session = NetworkSession.Instance;
             var remaining = session != null ? sheet.AwakeningUntil - session.ServerNow : 0;
             if (remaining > 0)
             {
                 var pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 8f);
                 Bar(rect, (float)(remaining / AwakeningState.DurationSeconds), new Color(1f, 0.35f * pulse, 0.9f * pulse));
-                GUI.Label(new Rect(rect.x, rect.y - 3, rect.width, 20), Loc.T("hud.awakening_active", remaining), _small.WithCenter());
+                GUI.Label(new Rect(rect.x, rect.y - 2, rect.width, 16), Loc.T("hud.awakening_active", remaining), _key.WithCenter());
                 return;
             }
             var full = sheet.AwakeningGauge >= AwakeningState.MaxGauge;
             Bar(rect, sheet.AwakeningGauge / (float)AwakeningState.MaxGauge, full ? new Color(1f, 0.4f, 0.95f) : new Color(0.6f, 0.3f, 0.6f));
-            GUI.Label(new Rect(rect.x, rect.y - 3, rect.width, 20), full ? Loc.T("hud.awakening_ready", KeyBindings.Label(GameAction.Awakening)) : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
+            GUI.Label(new Rect(rect.x, rect.y - 2, rect.width, 16), full ? Loc.T("hud.awakening_ready", KeyBindings.Label(GameAction.Awakening)) : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _key.WithCenter());
         }
 
         /// <summary>Casas da barra de atalhos: online sempre 20 (o jogador arruma); offline, uma por skill.</summary>
@@ -391,7 +391,7 @@ namespace Game.Client.UI
                 SlotSize, SlotSize);
         }
 
-        private const float BarBottom = VirtualHeight - 44f;
+        private const float BarBottom = VirtualHeight - 40f;
 
         /// <summary>Topo da barra de atalhos (o SP e o Despertar ficam logo acima).</summary>
         private float BarTop
