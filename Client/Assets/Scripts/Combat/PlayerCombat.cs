@@ -155,6 +155,7 @@ namespace Game.Client.Combat
         private void Start()
         {
             if (Camera.main != null) _camera = Camera.main.GetComponent<OrbitCamera>();
+            if (GetComponent<FootDust>() == null) gameObject.AddComponent<FootDust>();
             if (!Online) ApplyClassModel(CharacterClass.Blade);
         }
 

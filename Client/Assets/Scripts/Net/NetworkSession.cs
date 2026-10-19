@@ -269,6 +269,7 @@ namespace Game.Client.Net
 
             var view = root.AddComponent<NetEntityView>();
             view.Initialize(spawned, parts.Body, parts.Ring, parts.Telegraph, target, data);
+            root.AddComponent<Fx.FootDust>().Scale = Mathf.Clamp(parts.Radius / 0.5f, 0.8f, 2.5f);
             if (spawned.Kind == EntityKind.Player)
             {
                 Fx.WeaponFx.SetLook(root.transform, spawned.WeaponId, spawned.WeaponUpgrade);

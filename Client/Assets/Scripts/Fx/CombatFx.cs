@@ -24,6 +24,7 @@ namespace Game.Client.Fx
         [SerializeField] private float projectileSize = 0.35f;
 
         private ParticleSystem _sparks;
+        private ParticleSystem _shards;
         private ParticleSystem _glow;
 
         public static CombatFx Instance => _instance;
@@ -52,6 +53,12 @@ namespace Game.Client.Fx
             }
             _sparks = CreateSparkSystem();
             _glow = CreateSparkSystem(0f, "Brilho");
+            // Lascas: riscos curtos e claros esticados na direção do voo (o metal batendo), caindo rápido.
+            _shards = CreateSparkSystem(2.2f, "Lascas");
+            var stretched = _shards.GetComponent<ParticleSystemRenderer>();
+            stretched.renderMode = ParticleSystemRenderMode.Stretch;
+            stretched.velocityScale = 0.045f;
+            stretched.lengthScale = 1.2f;
         }
 
         /// <summary>Partícula sem gravidade (brilho, energia, fumaça leve): flutua e some.</summary>
@@ -81,9 +88,21 @@ namespace Game.Client.Fx
             if (_instance == this) _instance = null;
         }
 
-        /// <summary>Explosão de faíscas em <paramref name="position"/>.</summary>
+        /// <summary>Explosão de faíscas em <paramref name="position"/>, com algumas lascas esticadas e quentes.</summary>
         public void Sparks(Vector3 position, Color color, int count)
         {
+            var hot = Color.Lerp(color, new Color(1f, 0.92f, 0.7f), 0.6f) * 2f;
+            var shard = new ParticleSystem.EmitParams { startColor = hot, applyShapeToPosition = false };
+            for (var i = 0; i < Mathf.Max(3, count / 2); i++)
+            {
+                var direction = UnityEngine.Random.onUnitSphere;
+                direction.y = Mathf.Abs(direction.y) * 0.9f + 0.15f;
+                shard.position = position;
+                shard.velocity = direction * (sparkSpeed * UnityEngine.Random.Range(1.1f, 2f));
+                shard.startSize = sparkSize * UnityEngine.Random.Range(0.35f, 0.55f);
+                shard.startLifetime = sparkLifetime * UnityEngine.Random.Range(0.6f, 1f);
+                _shards.Emit(shard, 1);
+            }
             var emit = new ParticleSystem.EmitParams { startColor = color, applyShapeToPosition = false };
             for (var i = 0; i < count; i++)
             {
