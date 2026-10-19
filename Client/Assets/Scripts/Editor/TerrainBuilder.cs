@@ -14,7 +14,7 @@ namespace Game.Client.Editor
     {
         public const string Folder = "Assets/Art/Mundo";
 
-        private const int Grass = 0, ForestFloor = 1, Dirt = 2, Stone = 3, Gravel = 4, Rock = 5;
+        private const int Grass = 0, ForestFloor = 1, Dirt = 2, Stone = 3, Gravel = 4, Rock = 5, Cobble = 6;
 
         public static Terrain Build(Transform parent)
         {
@@ -27,6 +27,9 @@ namespace Game.Client.Editor
                 Layer("pedra", new Color(0.46f, 0.45f, 0.47f), new Color(0.6f, 0.58f, 0.56f), 4f, 0.14f, 14),
                 Layer("cascalho", new Color(0.5f, 0.34f, 0.27f), new Color(0.64f, 0.48f, 0.38f), 4f, 0.16f, 15),
                 Layer("rocha", new Color(0.4f, 0.38f, 0.37f), new Color(0.56f, 0.53f, 0.5f), 10f, 0.12f, 16),
+                // Praça da vila calçada (lajotas de pedra clara).
+                LayerWith("calcamento", DungeonKitBuilder.TileTexture("calcamento", new Color(0.55f, 0.52f, 0.47f),
+                    new Color(0.7f, 0.66f, 0.58f), new Color(0.32f, 0.3f, 0.27f), 17), 3f),
             };
 
             var dataPath = $"{Folder}/Terreno.asset";
@@ -49,7 +52,8 @@ namespace Game.Client.Editor
             var terrainObject = Terrain.CreateTerrainGameObject(data);
             terrainObject.name = "Terreno";
             terrainObject.transform.SetParent(parent, false);
-            terrainObject.transform.position = new Vector3(Ground.MinX, 0, Ground.MinZ);
+            // O terreno começa abaixo do zero, para o leito do rio poder descer.
+            terrainObject.transform.position = new Vector3(Ground.MinX, -Ground.Base, Ground.MinZ);
             GameObjectUtility.SetStaticEditorFlags(terrainObject, StaticEditorFlags.ContributeGI | StaticEditorFlags.OccluderStatic);
             var terrain = terrainObject.GetComponent<Terrain>();
             terrain.materialTemplate = TerrainMaterial();
@@ -72,7 +76,7 @@ namespace Game.Client.Editor
                 {
                     var x = Ground.MinX + xi / (float)(res - 1) * Ground.SizeX;
                     var z = Ground.MinZ + zi / (float)(res - 1) * Ground.SizeZ;
-                    heights[zi, xi] = Ground.Shape(x, z) / Ground.MaxHeight;
+                    heights[zi, xi] = (Ground.Shape(x, z) + Ground.Base) / Ground.MaxHeight;
                 }
             }
             data.SetHeights(0, 0, heights);
@@ -103,7 +107,8 @@ namespace Game.Client.Editor
                     weights[Gravel] = Ground.ZoneWeight("arena_do_guardiao", x, z) * 3.5f;
                     var village = Ground.ZoneWeight("vila", x, z);
                     var plaza = 1f - Mathf.Clamp01((Mathf.Sqrt(x * x + z * z) - 9f) / 8f);
-                    weights[Dirt] = village * 0.8f + plaza * 3f;
+                    weights[Dirt] = village * 0.8f;
+                    weights[Cobble] = plaza * 4f;
                     // Manchas de terra nos campos, para o verde não ficar liso.
                     weights[Dirt] += Mathf.Clamp01((patches - 0.62f) * 4f) * 0.8f * (1f - ruins);
 
@@ -111,9 +116,14 @@ namespace Game.Client.Editor
                     var road = Ground.DistanceToRoad(x, z) + (patches - 0.5f) * 1.6f;
                     weights[Dirt] += (1f - Mathf.Clamp01((road - 2f) / 1.6f)) * 6f;
 
+                    // Margens e leito do rio: terra molhada e pedra.
+                    var river = Ground.RiverDepth(x, z);
+                    weights[Dirt] += river * 5f;
+                    weights[Stone] += Mathf.Clamp01(river - 0.6f) * 6f;
+
                     // Encostas e montanhas: rocha nas partes íngremes ou altas, mato escuro no pé.
                     var steep = data.GetSteepness(u, v);
-                    var height = data.GetInterpolatedHeight(u, v);
+                    var height = data.GetInterpolatedHeight(u, v) - Ground.Base;
                     var rock = Mathf.Clamp01((steep - 24f) / 12f) + Mathf.Clamp01((height - 14f) / 8f);
                     weights[Rock] = rock * 8f;
                     var foothill = Mathf.Clamp01((Ground.OutsideDistance(x, z) + 10f) / 25f);
@@ -155,12 +165,29 @@ namespace Game.Client.Editor
                     var z = Ground.MinZ + v * Ground.SizeZ;
                     var noise = Ground.Fbm(x * 0.09f + 3f, z * 0.09f + 77f, 2);
                     var amount = green * (0.4f + noise);
+                    if (Ground.RiverDepth(x, z) > 0.15f) amount = 0f; // nada de grama dentro do rio
                     grass[zi, xi] = amount > 0.95f ? 2 : amount > 0.62f ? 1 : 0;
                     flowers[zi, xi] = maps[aj, ai, Grass] > 0.7f && noise > 0.66f && ((xi * 7 + zi * 13) % 5 == 0) ? 1 : 0;
                 }
             }
             data.SetDetailLayer(0, 0, 0, grass);
             data.SetDetailLayer(0, 0, 1, flowers);
+        }
+
+        private static TerrainLayer LayerWith(string name, Texture2D texture, float tile)
+        {
+            var path = $"{Folder}/Camada_{name}.terrainlayer";
+            var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
+            if (layer == null)
+            {
+                layer = new TerrainLayer();
+                AssetDatabase.CreateAsset(layer, path);
+            }
+            layer.diffuseTexture = texture;
+            layer.tileSize = new Vector2(tile, tile);
+            layer.smoothness = 0f;
+            EditorUtility.SetDirty(layer);
+            return layer;
         }
 
         private static TerrainLayer Layer(string name, Color dark, Color light, float tile, float speckle, int seed)

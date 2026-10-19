@@ -20,6 +20,7 @@ namespace Game.Client.Editor
             // Terreno com relevo e chão pintado por zona, e o cenário em volta (Ground decide onde é plano).
             TerrainBuilder.Build(world);
             PropBuilder.Build(world);
+            VillageBuilder.Build(world);
             foreach (var zone in WorldContent.Zones())
                 Zone(world, "zone." + zone.Id, zone.MinLevel, zone.MaxLevel, new Vector3(zone.CenterX, 0, zone.CenterZ), zone.Radius);
 

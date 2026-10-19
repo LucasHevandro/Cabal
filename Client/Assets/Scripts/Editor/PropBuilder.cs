@@ -91,7 +91,7 @@ namespace Game.Client.Editor
                 if (a > 66 && a < 114) continue; // passagem da estrada
                 var angle = a * Mathf.Deg2Rad;
                 var position = new Vector3(Mathf.Cos(angle) * 29f, 0, Mathf.Sin(angle) * 29f);
-                if (Ground.DistanceToRoad(position.x, position.z) < 4f) continue;
+                if (Ground.DistanceToRoad(position.x, position.z) < 4f || Ground.InRiver(position.x, position.z, 2f)) continue;
                 Place(village, "Cerca", fence, new[] { wood }, position, Quaternion.LookRotation(position.normalized), 1f);
             }
             Place(village, "Poço", Variants("poco", 1, Well)[0], new[] { stoneLight, wood, roof }, new Vector3(-11f, 0, -11f),
@@ -216,6 +216,7 @@ namespace Game.Client.Editor
         private static bool Free(float x, float z, float keepOut, bool solid)
         {
             if (Ground.OutsideDistance(x, z) > -4f) return false;
+            if (Ground.InRiver(x, z)) return false;
             // Árvores e pedras mais longe dos lugares de luta: não tampam a câmera nem o monstro.
             if (Ground.IsKeepOut(x, z, solid ? keepOut + 3f : keepOut)) return false;
             if (!solid) return true;

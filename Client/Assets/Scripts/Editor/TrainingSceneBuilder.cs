@@ -196,9 +196,8 @@ namespace Game.Client.Editor
             collider.height = 2;
             collider.radius = 0.6f;
 
-            var body = VisualPrimitive(PrimitiveType.Capsule, "Corpo", root.transform, material);
-            body.transform.localPosition = new Vector3(0, 1, 0);
-            body.transform.localScale = new Vector3(1.1f, 1, 1.1f);
+            // Boneco de palha (poste, corpo amarrado, cabeça de saco).
+            VillageBuilder.StrawDummy(root.transform);
 
             var ring = VisualPrimitive(PrimitiveType.Cylinder, "Anel de seleção", root.transform, ringMaterial);
             ring.transform.localPosition = new Vector3(0, 0.02f, 0);

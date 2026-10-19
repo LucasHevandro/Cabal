@@ -108,7 +108,7 @@ namespace Game.Client.Editor
         }
 
         /// <summary>Lajotas de pedra (ou o tapete com borda), 512x512, que repetem sem emenda.</summary>
-        private static Texture2D TileTexture(string name, Color dark, Color light, Color grout, int seed, bool stripes = false)
+        internal static Texture2D TileTexture(string name, Color dark, Color light, Color grout, int seed, bool stripes = false)
         {
             const int size = 512;
             var pixels = new Color32[size * size];

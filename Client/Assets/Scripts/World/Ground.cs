@@ -21,6 +21,14 @@ namespace Game.Client.World
         public const float SizeZ = 460f;
         public const float MaxHeight = 45f;
 
+        /// <summary>O terreno começa este tanto abaixo do zero (o leito do rio fica abaixo do chão normal).</summary>
+        public const float Base = 3f;
+
+        /// <summary>Altura da água do rio (o leito chega a -1,4 m; a margem fica no zero).</summary>
+        public const float WaterLevel = -0.45f;
+
+        private const float RiverHalfWidth = 2.6f;
+
         // Área jogável (igual ao limite do servidor, GameWorld.IsInsideWorld).
         private const float PlayMinX = -130f, PlayMaxX = 130f, PlayMinZ = -70f, PlayMaxZ = 230f;
 
@@ -75,8 +83,29 @@ namespace Game.Client.World
                 var peaks = 22f + 20f * Fbm(x * 0.012f + 3.1f, z * 0.012f + 8.9f, 4);
                 height += t * t * (3f - 2f * t) * peaks;
             }
-            return Mathf.Clamp(height, 0f, MaxHeight - 1f);
+            // Rio entre a vila e os Campos do Vento: cava o leito (a estrada passa por cima, na ponte).
+            height -= RiverDepth(x, z);
+            return Mathf.Clamp(height, -Base + 0.5f, MaxHeight - Base - 1f);
         }
+
+        /// <summary>Centro do rio (em Z) na posição X: uma curva suave de leste a oeste.</summary>
+        public static float RiverZ(float x) => 25f + 2.2f * Mathf.Sin(x * 0.045f + 1.2f) + 1.2f * Mathf.Sin(x * 0.11f);
+
+        /// <summary>Quanto o leito do rio está abaixo do chão no ponto (0 fora do rio e na estrada).</summary>
+        public static float RiverDepth(float x, float z)
+        {
+            if (OutsideDistance(x, z) > -6f) return 0f;
+            var d = Mathf.Abs(z - RiverZ(x));
+            var t = Mathf.Clamp01((RiverHalfWidth + 2.2f - d) / 2.6f);
+            var depth = t * t * (3f - 2f * t) * 1.4f;
+            // A estrada continua no chão (é onde fica a ponte).
+            var road = Mathf.Clamp01((DistanceToRoad(x, z) - 2.6f) / 2.5f);
+            return depth * road;
+        }
+
+        /// <summary>Dentro da água (para não pôr árvore, pedra nem casa no rio).</summary>
+        public static bool InRiver(float x, float z, float margin = 1.5f) =>
+            OutsideDistance(x, z) < -6f && Mathf.Abs(z - RiverZ(x)) < RiverHalfWidth + margin;
 
         /// <summary>Quanto o ponto está fora da área jogável (negativo = dentro, em metros até a borda).</summary>
         public static float OutsideDistance(float x, float z)

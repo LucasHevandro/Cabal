@@ -77,6 +77,15 @@ namespace Game.Client.World
         public static readonly Look PvpArena = Make(new Color(0.55f, 0.6f, 0.7f), 0.006f, new Color(0.55f, 0.62f, 0.8f),
             new Color(0.5f, 0.5f, 0.52f), new Color(0.22f, 0.22f, 0.24f), new Color(1f, 0.95f, 0.88f), 1.25f, Color.white, 10f, 0f);
 
+        /// <summary>Duração de um dia inteiro (manhã, tarde, pôr do sol, noite e amanhecer), em minutos.</summary>
+        public const float DayMinutes = 40f;
+
+        /// <summary>0 = dia, 1 = noite cheia (lanternas e tochas acompanham).</summary>
+        public static float Night { get; private set; }
+
+        /// <summary>Hora do dia de 0 a 1 (0,25 = meio da manhã, 0,62 = pôr do sol, 0,8 = meia-noite). Para os testes.</summary>
+        public static float? ForcedTime { get; set; }
+
         [SerializeField] private Light sun;
         [SerializeField] private Volume volume;
 
@@ -116,6 +125,8 @@ namespace Game.Client.World
 
         private void Start()
         {
+            // Cópia do céu: o ciclo do dia mexe nele sem alterar o arquivo do projeto.
+            if (RenderSettings.skybox != null) RenderSettings.skybox = Instantiate(RenderSettings.skybox);
             if (volume != null && volume.profile != null)
             {
                 // Cópia do perfil: mexer nele não altera o arquivo do projeto.
@@ -129,12 +140,84 @@ namespace Game.Client.World
             var focus = PlayerCombat.Local != null ? PlayerCombat.Local.transform.position
                 : Camera.main != null ? Camera.main.transform.position : Vector3.zero;
             var target = At(focus);
+            // Ciclo do dia só no mapa aberto (a dungeon e a arena têm o próprio clima).
+            var outdoors = focus.z > -500f && focus.z < 500f;
+            var hour = DayTime();
+            if (outdoors) target = WithTimeOfDay(target, hour, out _sunsetGlow);
+            Night = outdoors ? NightAmount(hour) : 0f;
             // Entrar na dungeon ou na arena é um corte (teleporte); andando pelo mapa a troca é suave.
             var jump = !_started || Mathf.Abs(target.FogDensity - _current.FogDensity) > 0.012f;
             _current = jump ? target : Look.Lerp(_current, target, 1f - Mathf.Exp(-Time.deltaTime * 1.5f));
             _started = true;
             Apply(_current);
+            ApplySun(outdoors ? hour : 0.3f);
             ApplyQuality();
+        }
+
+        private float _sunsetGlow;
+        private Quaternion _sunRotation;
+        private bool _sunCaptured;
+
+        /// <summary>Hora do dia (0 a 1). No online vem do relógio do servidor: todos veem o mesmo céu.</summary>
+        private static float DayTime()
+        {
+            if (ForcedTime is { } forced) return forced;
+            var session = Net.NetworkSession.Instance;
+            var seconds = session != null && session.IsWelcomed ? session.ServerNow : Time.timeSinceLevelLoad + DayMinutes * 60f * 0.2f;
+            return (float)(seconds / (DayMinutes * 60.0) % 1.0);
+        }
+
+        /// <summary>Noite: entre 0,7 e 0,9, com meia hora de transição no pôr do sol e no amanhecer.</summary>
+        private static float NightAmount(float hour)
+        {
+            if (hour < 0.62f) return 0f;
+            if (hour < 0.7f) return Mathf.SmoothStep(0f, 1f, (hour - 0.62f) / 0.08f);
+            if (hour < 0.9f) return 1f;
+            return 1f - Mathf.SmoothStep(0f, 1f, (hour - 0.9f) / 0.1f);
+        }
+
+        private static readonly Look NightLook = Make(new Color(0.1f, 0.13f, 0.22f), 0.008f, new Color(0.16f, 0.2f, 0.34f),
+            new Color(0.12f, 0.14f, 0.22f), new Color(0.06f, 0.06f, 0.09f), new Color(0.55f, 0.65f, 0.95f), 0.35f, new Color(0.75f, 0.82f, 1f), -18f, -0.25f);
+
+        private static Look WithTimeOfDay(Look look, float hour, out float sunset)
+        {
+            // Pôr do sol (0,55 a 0,7) e amanhecer (0,88 a 0,98): tudo puxa para o laranja e rosa.
+            sunset = Mathf.Max(Bump(hour, 0.55f, 0.64f, 0.71f), Bump(hour, 0.87f, 0.92f, 0.99f));
+            var warm = look;
+            warm.Fog = Color.Lerp(look.Fog, new Color(0.9f, 0.6f, 0.45f), 0.6f);
+            warm.Sun = new Color(1f, 0.6f, 0.35f);
+            warm.Sky = Color.Lerp(look.Sky, new Color(0.75f, 0.5f, 0.45f), 0.5f);
+            warm.Filter = Color.Lerp(look.Filter, new Color(1f, 0.85f, 0.75f), 0.6f);
+            var result = Look.Lerp(look, warm, sunset);
+            return Look.Lerp(result, NightLook, NightAmount(hour) * 0.85f);
+        }
+
+        private static float Bump(float x, float start, float peak, float end)
+        {
+            if (x <= start || x >= end) return 0f;
+            return x < peak ? Mathf.SmoothStep(0f, 1f, (x - start) / (peak - start)) : 1f - Mathf.SmoothStep(0f, 1f, (x - peak) / (end - peak));
+        }
+
+        /// <summary>O sol (de noite, a lua) percorre o céu: alto ao meio-dia, rente no pôr do sol, e o céu escurece.</summary>
+        private void ApplySun(float hour)
+        {
+            if (sun == null) return;
+            if (!_sunCaptured)
+            {
+                _sunRotation = sun.transform.rotation;
+                _sunCaptured = true;
+            }
+            var night = NightAmount(hour);
+            var dayArc = Mathf.Clamp01(hour / 0.7f);
+            var elevation = Mathf.Lerp(Mathf.Sin(dayArc * Mathf.PI) * 52f + 6f, 38f, night);
+            var heading = Mathf.Lerp(-80f, 80f, dayArc) + night * 140f;
+            sun.transform.rotation = Quaternion.Euler(elevation, _sunRotation.eulerAngles.y + heading * 0.5f, 0f);
+            if (RenderSettings.skybox != null)
+            {
+                if (RenderSettings.skybox.HasProperty("_Exposure")) RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(1.25f, 0.18f, night));
+                if (RenderSettings.skybox.HasProperty("_SkyTint"))
+                    RenderSettings.skybox.SetColor("_SkyTint", Color.Lerp(new Color(0.48f, 0.56f, 0.7f), new Color(0.75f, 0.45f, 0.4f), _sunsetGlow));
+            }
         }
 
         private void Apply(in Look look)
