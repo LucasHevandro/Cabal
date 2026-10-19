@@ -68,6 +68,7 @@ namespace Game.Client.Editor
             // Materiais dos efeitos com shader das skills (carregados do Resources pelo Fx/MagicFx).
             EffectMaterial("Jogo/Energia", "Assets/Resources/Visuals/fx/energia.mat");
             EffectMaterial("Jogo/MarcaChao", "Assets/Resources/Visuals/fx/marca_chao.mat");
+            EffectMaterial("Jogo/CeuNoturno", "Assets/Resources/Visuals/fx/ceu_noturno.mat");
             AssetDatabase.SaveAssets();
             Debug.Log("[Contorno] Ligado no renderizador do PC.");
         }

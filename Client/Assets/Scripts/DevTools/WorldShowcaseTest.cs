@@ -47,6 +47,7 @@ namespace Game.Client.DevTools
                 ("campos", new Vector3(-14f, 7f, 20f), new Vector3(2f, 1f, 44f)),
                 ("mata", new Vector3(34f, 3.5f, 72f), new Vector3(46f, 1.5f, 86f)),
                 ("ruinas", new Vector3(-34f, 4f, 112f), new Vector3(-46f, 1.5f, 126f)),
+                ("ceu", new Vector3(0f, 2f, 30f), Vector3.zero), // olha para onde vem a luz (de noite, a lua)
             };
             var times = new[] { ("dia", 0.3f), ("por_do_sol", 0.645f), ("noite", 0.8f) };
             foreach (var (name, eye, look) in shots)
@@ -57,6 +58,12 @@ namespace Game.Client.DevTools
                 {
                     Atmosphere.ForcedTime = hour;
                     yield return new WaitForSeconds(1.5f); // tempo para o clima da região aparecer
+                    if (name == "ceu" && RenderSettings.sun != null)
+                    {
+                        var toLight = -RenderSettings.sun.transform.forward;
+                        camera.transform.rotation = Quaternion.LookRotation(new Vector3(toLight.x, Mathf.Max(0.12f, toLight.y) * 0.8f, toLight.z));
+                        yield return null;
+                    }
                     ScreenCapture.CaptureScreenshot(Path.Combine(_folder, $"{name}-{label}.png"));
                     yield return new WaitForSeconds(0.3f);
                 }
