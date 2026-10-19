@@ -58,7 +58,7 @@ namespace Game.Client.Editor
             if (material == null)
             {
                 material = new Material(baseMaterial);
-                AssetDatabase.CreateAsset(material, path);
+                AssetWrite.Create(material, path);
             }
             material.CopyPropertiesFromMaterial(baseMaterial);
             material.SetColor("_BaseColor", tint);
@@ -107,7 +107,7 @@ namespace Game.Client.Editor
             var mesh = kit.Build($"{parent.root.name}_{++_parts}");
             var path = $"{MeshFolder}/{mesh.name}.asset";
             AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(mesh, path);
+            AssetWrite.Create(mesh, path);
             var obj = new GameObject(name);
             obj.transform.SetParent(parent, false);
             obj.AddComponent<MeshFilter>().sharedMesh = mesh;

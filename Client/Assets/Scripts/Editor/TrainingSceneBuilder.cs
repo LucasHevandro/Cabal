@@ -28,6 +28,7 @@ namespace Game.Client.Editor
         [MenuItem("Protótipo/Criar cena de treino")]
         public static void Build()
         {
+            RenderLook.Setup();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var player = MaterialFor("Jogador", new Color(0.25f, 0.5f, 0.95f));
@@ -103,7 +104,7 @@ namespace Game.Client.Editor
             var profilePath = $"{MaterialsFolder}/PosProcessamento.asset";
             AssetDatabase.DeleteAsset(profilePath);
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            AssetDatabase.CreateAsset(profile, profilePath);
+            AssetWrite.Create(profile, profilePath);
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.Override(1.05f);
             bloom.intensity.Override(0.45f);
@@ -229,7 +230,7 @@ namespace Game.Client.Editor
             if (material == null)
             {
                 material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
+                AssetWrite.Create(material, path);
             }
             else if (material.shader != shader)
             {

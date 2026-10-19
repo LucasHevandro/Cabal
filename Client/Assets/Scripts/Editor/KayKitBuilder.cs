@@ -136,7 +136,7 @@ namespace Game.Client.Editor
                 if (material == null)
                 {
                     material = new Material(shader);
-                    AssetDatabase.CreateAsset(material, path);
+                    AssetWrite.Create(material, path);
                 }
                 material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath.Replace('\\', '/')));
                 material.SetColor("_BaseColor", Color.white);
@@ -151,7 +151,7 @@ namespace Game.Client.Editor
             if (glow == null)
             {
                 glow = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-                AssetDatabase.CreateAsset(glow, glowPath);
+                AssetWrite.Create(glow, glowPath);
             }
             glow.SetColor("_BaseColor", new Color(0.45f, 0.95f, 1f) * 2f);
             result["glow"] = glow;
@@ -198,7 +198,7 @@ namespace Game.Client.Editor
             if (material == null)
             {
                 material = new Material(Shader.Find(shader));
-                AssetDatabase.CreateAsset(material, path);
+                AssetWrite.Create(material, path);
             }
             if (material.shader != Shader.Find(shader)) material.shader = Shader.Find(shader);
             material.SetColor("_BaseColor", color);

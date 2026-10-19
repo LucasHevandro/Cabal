@@ -27,6 +27,8 @@ namespace Game.Client.Editor
             Spider();
             Golem();
             AssetDatabase.SaveAssets();
+            // Com os modelos do Quaternius no projeto, o coelho e o lobo animados ficam no lugar dos feitos em código.
+            QuaterniusBuilder.Build();
             Debug.Log("[Bichos] coelho, lobo, javali, aranha e golem montados.");
         }
 
@@ -62,7 +64,7 @@ namespace Game.Client.Editor
                 var mesh = kit.Build($"{_id}_{++_parts}");
                 var path = $"{MeshFolder}/{mesh.name}.asset";
                 AssetDatabase.DeleteAsset(path);
-                AssetDatabase.CreateAsset(mesh, path);
+                AssetWrite.Create(mesh, path);
                 var obj = new GameObject(name);
                 obj.transform.SetParent(parent, false);
                 obj.transform.localPosition = position;

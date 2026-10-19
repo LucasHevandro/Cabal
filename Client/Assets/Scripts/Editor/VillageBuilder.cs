@@ -40,7 +40,7 @@ namespace Game.Client.Editor
             var mesh = kit.Build($"vila_{name}_{++_parts}");
             var path = $"{MeshFolder}/{mesh.name}.asset";
             AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(mesh, path);
+            AssetWrite.Create(mesh, path);
             var obj = new GameObject(name);
             obj.transform.SetParent(parent, false);
             obj.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -53,6 +53,28 @@ namespace Game.Client.Editor
             }
             GameObjectUtility.SetStaticEditorFlags(obj, StaticEditorFlags.BatchingStatic);
             return obj;
+        }
+
+        /// <summary>Objeto do KayKit Medieval (barril, caixote, barraca...) no canto; falso se o pacote não está no projeto.</summary>
+        private static bool PackProp(Transform parent, string model, Vector3 position, float yaw, float scale, bool collider = false)
+        {
+            var meshes = PackMeshes.Load(PackMeshes.Village, model);
+            if (meshes.Length == 0) return false;
+            var obj = new GameObject(model);
+            obj.transform.SetParent(parent, false);
+            obj.transform.localPosition = position;
+            obj.transform.localRotation = Quaternion.Euler(0, yaw, 0);
+            obj.transform.localScale = Vector3.one * scale;
+            obj.AddComponent<MeshFilter>().sharedMesh = meshes[0];
+            obj.AddComponent<MeshRenderer>().sharedMaterial = PackMeshes.Atlas(PackMeshes.Village, "hexagons_medieval.png", "vila");
+            if (collider)
+            {
+                var box = obj.AddComponent<BoxCollider>();
+                box.center = meshes[0].bounds.center;
+                box.size = meshes[0].bounds.size;
+            }
+            GameObjectUtility.SetStaticEditorFlags(obj, StaticEditorFlags.BatchingStatic);
+            return true;
         }
 
         private static Transform Group(Transform parent, string name, Vector3 position, Quaternion rotation)
@@ -96,7 +118,7 @@ namespace Game.Client.Editor
             mesh.RecalculateBounds();
             var path = $"{MeshFolder}/rio_agua.asset";
             AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(mesh, path);
+            AssetWrite.Create(mesh, path);
 
             var water = TrainingSceneBuilder.MaterialFor("Agua", new Color(0.25f, 0.5f, 0.62f, 0.72f), "Universal Render Pipeline/Unlit");
             water.SetFloat("_Surface", 1f);
@@ -195,11 +217,22 @@ namespace Game.Client.Editor
                                 k.Box(0, new Vector3(x, 0, z), Quaternion.identity, new Vector3(0.1f, 2.3f, 0.1f));
                         });
                         Part(corner, "Toldo", clothRed, k => k.Roof(0, new Vector3(0, 2.3f, 0.38f), Quaternion.Euler(0, 90, 0), 1.3f, 2.6f, 0.45f, 0.15f));
-                        Part(corner, "Mercadorias", books, k =>
+                        if (!PackProp(corner, "crate_long_A", new Vector3(-0.55f, 0.9f, 0.2f), 0f, 2.4f))
+                            Part(corner, "Mercadorias", books, k =>
                         {
                             for (var i = 0; i < 5; i++)
                                 k.Blob(0, new Vector3(-0.9f + i * 0.45f, 1f, 0.15f), Vector3.one * 0.13f, r, 0.15f);
                         });
+                        PackProp(corner, "crate_long_B", new Vector3(0.55f, 0.9f, 0.2f), 0f, 2.4f);
+                        PackProp(corner, "crate_open", new Vector3(1.6f, 0, -0.3f), 25f, 3.5f, true);
+                        break;
+                    case NpcRole.Warehouse when PackMeshes.Has(PackMeshes.Village):
+                        PackProp(corner, "crate_A_big", new Vector3(-0.7f, 0, 0), 10f, 4f, true);
+                        PackProp(corner, "crate_B_big", new Vector3(0.2f, 0, 0.1f), -15f, 3.8f, true);
+                        PackProp(corner, "crate_A_small", new Vector3(-0.6f, 0.82f, 0.05f), 30f, 4f);
+                        PackProp(corner, "barrel", new Vector3(1.1f, 0, -0.1f), 0f, 4.5f, true);
+                        PackProp(corner, "barrel", new Vector3(1.0f, 0, 0.8f), 40f, 4.3f, true);
+                        PackProp(corner, "sack", new Vector3(0.4f, 0, -0.8f), 70f, 5f);
                         break;
                     case NpcRole.Warehouse:
                         Part(corner, "Caixotes", wood, k =>
@@ -216,7 +249,9 @@ namespace Game.Client.Editor
                         break;
                     case NpcRole.QuestGiver when at.magnitude > 25f:
                         // NPC de região: acampamento com barraca e fogueira.
-                        Part(corner, "Barraca", clothBlue, k => k.Roof(0, new Vector3(0.6f, 0, 0.6f), Quaternion.identity, 1.6f, 2.2f, 1.5f, 0.05f), collider: true);
+                        if (!PackProp(corner, "tent", new Vector3(0.6f, 0, 0.6f), 180f, 5f, true))
+                            Part(corner, "Barraca", clothBlue, k => k.Roof(0, new Vector3(0.6f, 0, 0.6f), Quaternion.identity, 1.6f, 2.2f, 1.5f, 0.05f), collider: true);
+                        PackProp(corner, "resource_lumber", new Vector3(1.6f, 0, -0.6f), 20f, 3f);
                         Part(corner, "Lenha", darkWood, k =>
                         {
                             k.Box(0, new Vector3(-1.4f, 0, -0.9f), Quaternion.Euler(0, 30, 0), new Vector3(0.8f, 0.12f, 0.12f));
@@ -258,14 +293,16 @@ namespace Game.Client.Editor
                         break;
                     case NpcRole.Trainer:
                         // Mestre de skills: armeiro com espadas e cajados, e um boneco de palha para as aulas.
-                        Part(corner, "Armeiro", darkWood, k =>
+                        PackProp(corner, "weaponrack", new Vector3(-0.2f, 0, 0.7f), 0f, 5f, true);
+                        PackProp(corner, "target", new Vector3(-1.9f, 0, 0.4f), 20f, 5f, true);
+                        if (!PackMeshes.Has(PackMeshes.Village)) Part(corner, "Armeiro", darkWood, k =>
                         {
                             foreach (var x in new[] { -1f, 1f })
                                 k.Box(0, new Vector3(x, 0, 0.3f), Quaternion.identity, new Vector3(0.12f, 1.6f, 0.12f));
                             k.Box(0, new Vector3(0, 1.35f, 0.3f), Quaternion.identity, new Vector3(2.2f, 0.1f, 0.14f));
                             k.Box(0, new Vector3(0, 0.25f, 0.3f), Quaternion.identity, new Vector3(2.2f, 0.1f, 0.3f));
                         }, collider: true);
-                        Part(corner, "Armas", iron, k =>
+                        if (!PackMeshes.Has(PackMeshes.Village)) Part(corner, "Armas", iron, k =>
                         {
                             for (var i = 0; i < 4; i++)
                                 k.Box(0, new Vector3(-0.66f + i * 0.44f, 0.3f, 0.36f), Quaternion.Euler(-8f, 0, 0), new Vector3(0.07f, 1.25f, 0.03f));

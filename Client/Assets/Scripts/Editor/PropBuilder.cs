@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Game.Client.World;
 using Game.Shared.Progression;
 using UnityEditor;
@@ -69,6 +70,39 @@ namespace Game.Client.Editor
                 Variants = Variants("muro", 3, RuinWall), MinScale = 0.9f, MaxScale = 1.2f };
             var mountainPine = new Kind { Name = "pinheiro_montanha", Materials = pine.Materials, Variants = pine.Variants, MinScale = 1.2f, MaxScale = 2f };
 
+            // Com o KayKit Forest Nature no projeto, árvores, arbustos e pedras vêm do pacote (mesmo estilo dos personagens).
+            if (PackMeshes.Has(PackMeshes.Nature))
+            {
+                var forestAtlas = PackMeshes.Atlas(PackMeshes.Nature, "forest_texture.png", "floresta");
+                var forestDark = PackMeshes.Atlas(PackMeshes.Nature, "forest_texture.png", "floresta_escura", new Color(0.62f, 0.78f, 0.66f));
+                var forestDry = PackMeshes.Atlas(PackMeshes.Nature, "forest_texture.png", "floresta_seca", new Color(0.86f, 0.82f, 0.74f));
+                void Use(Kind kind, Mesh[] meshes, Material material, float min, float max)
+                {
+                    if (meshes.Length == 0) return;
+                    kind.Variants = meshes;
+                    kind.Materials = new[] { material };
+                    kind.MinScale = min;
+                    kind.MaxScale = max;
+                }
+                const string N = PackMeshes.Nature;
+                Use(tree, PackMeshes.Load(N, "Tree_1_A_Color1", "Tree_1_B_Color1", "Tree_1_C_Color1", "Tree_3_A_Color1", "Tree_3_B_Color1", "Tree_3_C_Color1"),
+                    forestAtlas, 0.85f, 1.15f);
+                Use(autumnTree, PackMeshes.Load(N, PackMeshes.Range("Tree_2_", 'A', 'E')), forestAtlas, 0.8f, 1.1f);
+                Use(darkTree, PackMeshes.Load(N, PackMeshes.Range("Tree_2_", 'B', 'E')), forestDark, 0.9f, 1.3f);
+                Use(pine, PackMeshes.Load(N, PackMeshes.Range("Tree_4_", 'A', 'C')), forestDark, 0.85f, 1.25f);
+                Use(mountainPine, PackMeshes.Load(N, PackMeshes.Range("Tree_4_", 'B', 'C')), forestDark, 1.1f, 1.6f);
+                Use(deadTree, PackMeshes.Load(N, PackMeshes.Range("Tree_Bare_1_", 'A', 'C').Concat(PackMeshes.Range("Tree_Bare_2_", 'A', 'C')).ToArray()),
+                    forestDry, 0.9f, 1.2f);
+                Use(shrub, PackMeshes.Load(N, PackMeshes.Range("Bush_1_", 'C', 'F').Concat(PackMeshes.Range("Bush_2_", 'C', 'E'))
+                    .Concat(PackMeshes.Range("Bush_3_", 'B', 'C')).Concat(PackMeshes.Range("Bush_4_", 'C', 'E')).ToArray()), forestAtlas, 0.7f, 1.1f);
+                Use(rock, PackMeshes.Load(N, PackMeshes.Range("Rock_1_", 'D', 'I').Concat(PackMeshes.Range("Rock_2_", 'C', 'D'))
+                    .Concat(PackMeshes.Range("Rock_3_", 'E', 'L')).ToArray()), forestAtlas, 0.8f, 1.3f);
+                Use(bigRock, PackMeshes.Load(N, PackMeshes.Range("Rock_1_", 'J', 'Q').Concat(PackMeshes.Range("Rock_2_", 'E', 'H'))
+                    .Concat(PackMeshes.Range("Rock_3_", 'M', 'R')).ToArray()), forestAtlas, 1.3f, 2.4f);
+            }
+            var villagePack = PackMeshes.Has(PackMeshes.Village);
+            var villageAtlas = villagePack ? PackMeshes.Atlas(PackMeshes.Village, "hexagons_medieval.png", "vila") : null;
+
             var props = new GameObject("Cenário").transform;
             props.SetParent(parent, false);
 
@@ -76,26 +110,54 @@ namespace Game.Client.Editor
             var village = Group(props, "Vila");
             var house = Variants("casa", 2, House);
             var houseAngles = new[] { 200f, 238f, 272f, 306f, 340f, 18f, 150f };
+            // Do KayKit Medieval: casas, taverna, igreja e serraria (a escala do pacote é a do tabuleiro: ×6 vira tamanho real).
+            var buildings = villagePack
+                ? PackMeshes.Load(PackMeshes.Village, "building_home_A_red", "building_tavern_red", "building_home_B_blue", "building_church_red",
+                    "building_home_A_blue", "building_lumbermill_blue", "building_home_B_red")
+                : System.Array.Empty<Mesh>();
+            var buildingScale = new[] { 6.5f, 5.5f, 6f, 5.5f, 6.5f, 5f, 6f };
             for (var i = 0; i < houseAngles.Length; i++)
             {
                 var angle = houseAngles[i] * Mathf.Deg2Rad;
                 var radius = 21f + (i % 2) * 2.5f;
                 var position = new Vector3(Mathf.Cos(angle) * radius, 0, Mathf.Sin(angle) * radius);
                 var facing = Quaternion.LookRotation(-position.normalized);
-                Place(village, "Casa", house[i % house.Length], new[] { wall, i % 3 == 0 ? roofBlue : roof, wood },
-                    position, facing, 1f, box: true);
+                if (buildings.Length == houseAngles.Length)
+                    Place(village, "Casa", buildings[i], new[] { villageAtlas }, position, facing, buildingScale[i], box: true);
+                else
+                    Place(village, "Casa", house[i % house.Length], new[] { wall, i % 3 == 0 ? roofBlue : roof, wood },
+                        position, facing, 1f, box: true);
             }
-            var fence = Variants("cerca", 1, Fence)[0];
+            if (villagePack)
+            {
+                // Moinho de vento nos campos e moinho de água na beira do rio, a oeste da ponte.
+                var windmill = PackMeshes.Load(PackMeshes.Village, "building_windmill_red");
+                if (windmill.Length > 0)
+                    Place(village, "Moinho", windmill[0], new[] { villageAtlas }, new Vector3(26f, 0, 44f), Quaternion.Euler(0, 210, 0), 6.5f, box: true);
+                var watermill = PackMeshes.Load(PackMeshes.Village, "building_watermill_blue");
+                if (watermill.Length > 0)
+                    Place(village, "Moinho de água", watermill[0], new[] { villageAtlas }, new Vector3(-30f, 0, Ground.RiverZ(-30f) - 4f),
+                        Quaternion.Euler(0, 180, 0), 5.5f, box: true);
+            }
+            var fence = villagePack && PackMeshes.Load(PackMeshes.Village, "fence_wood_straight") is { Length: > 0 } woodFence
+                ? woodFence[0] : Variants("cerca", 1, Fence)[0];
+            var fenceMaterials = villagePack ? new[] { villageAtlas } : new[] { wood };
+            var fenceScale = villagePack ? 2.9f : 1f;
             for (var a = 0f; a < 360f; a += 6.5f)
             {
                 if (a > 66 && a < 114) continue; // passagem da estrada
                 var angle = a * Mathf.Deg2Rad;
                 var position = new Vector3(Mathf.Cos(angle) * 29f, 0, Mathf.Sin(angle) * 29f);
                 if (Ground.DistanceToRoad(position.x, position.z) < 4f || Ground.InRiver(position.x, position.z, 2f)) continue;
-                Place(village, "Cerca", fence, new[] { wood }, position, Quaternion.LookRotation(position.normalized), 1f);
+                // A cerca do pacote corre no eixo Z: gira 90° para seguir o anel.
+                var along = villagePack ? Quaternion.LookRotation(new Vector3(-position.z, 0, position.x)) : Quaternion.LookRotation(position.normalized);
+                Place(village, "Cerca", fence, fenceMaterials, position, along, fenceScale);
             }
-            Place(village, "Poço", Variants("poco", 1, Well)[0], new[] { stoneLight, wood, roof }, new Vector3(-11f, 0, -11f),
-                Quaternion.Euler(0, 30, 0), 1f, collider: 1.3f);
+            if (villagePack && PackMeshes.Load(PackMeshes.Village, "building_well_red") is { Length: > 0 } well)
+                Place(village, "Poço", well[0], new[] { villageAtlas }, new Vector3(-11f, 0, -11f), Quaternion.Euler(0, 30, 0), 4.5f, collider: 1.5f);
+            else
+                Place(village, "Poço", Variants("poco", 1, Well)[0], new[] { stoneLight, wood, roof }, new Vector3(-11f, 0, -11f),
+                    Quaternion.Euler(0, 30, 0), 1f, collider: 1.3f);
             ScatterRing(village, tree, new Vector2(0, 0), 24f, 34f, 14, 101, keepOut: 2f);
 
             // ----- Campos do Vento -----
@@ -104,6 +166,7 @@ namespace Game.Client.Editor
             ScatterRing(fields, autumnTree, new Vector2(0, 40), 20f, 50f, 8, 202);
             ScatterRing(fields, shrub, new Vector2(0, 40), 6f, 46f, 45, 203, keepOut: 0.5f);
             ScatterRing(fields, rock, new Vector2(0, 40), 10f, 45f, 14, 204);
+            Wildlife(fields, new Vector2(0, 40), 14f, 46f, ("cervo", 4, 601), ("veado", 2, 602), ("raposa", 2, 603));
 
             // ----- Mata Sombria: densa, escura, com pinheiros -----
             var forest = Group(props, "Mata Sombria");
@@ -111,6 +174,7 @@ namespace Game.Client.Editor
             ScatterRing(forest, darkTree, new Vector2(45, 85), 4f, 48f, 45, 302);
             ScatterRing(forest, shrub, new Vector2(45, 85), 2f, 44f, 60, 303, keepOut: 0.5f);
             ScatterRing(forest, rock, new Vector2(45, 85), 6f, 45f, 18, 304);
+            Wildlife(forest, new Vector2(45, 85), 10f, 44f, ("raposa", 3, 604), ("veado", 1, 605));
 
             // ----- Ruínas Esquecidas -----
             var ruins = Group(props, "Ruínas Esquecidas");
@@ -148,6 +212,36 @@ namespace Game.Client.Editor
         }
 
         // ===== Espalhar =====
+
+        /// <summary>
+        /// Bichos de enfeite (Quaternius: cervo, veado, raposa), parados e comendo, longe da estrada, do rio e dos NPCs.
+        /// Não lutam nem bloqueiam: só dão vida aos campos. Precisam do <see cref="QuaterniusBuilder"/> rodado antes.
+        /// </summary>
+        private static void Wildlife(Transform parent, Vector2 center, float minRadius, float maxRadius, params (string Id, int Count, int Seed)[] kinds)
+        {
+            var group = Group(parent, "Bichos");
+            foreach (var (id, count, seed) in kinds)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Resources/Visuals/fauna/{id}.prefab");
+                if (prefab == null) continue;
+                var random = new System.Random(seed);
+                for (int placed = 0, tries = 0; placed < count && tries < 300; tries++)
+                {
+                    var angle = (float)(random.NextDouble() * Mathf.PI * 2);
+                    var radius = Mathf.Lerp(minRadius, maxRadius, (float)random.NextDouble());
+                    var x = center.x + Mathf.Cos(angle) * radius;
+                    var z = center.y + Mathf.Sin(angle) * radius;
+                    if (!Free(x, z, 2f, solid: true) || Ground.DistanceToRoad(x, z) < 5f) continue;
+                    var animal = (GameObject)PrefabUtility.InstantiatePrefab(prefab, group);
+                    animal.transform.position = Ground.Point(x, z);
+                    animal.transform.rotation = Quaternion.Euler(0, (float)random.NextDouble() * 360f, 0);
+                    // Longe da câmera não anima; cada um começa num ponto diferente da animação (senão comem todos juntos).
+                    if (animal.GetComponentInChildren<Animator>() is { } animator) animator.cullingMode = AnimatorCullingMode.CullCompletely;
+                    animal.AddComponent<FaunaIdle>();
+                    placed++;
+                }
+            }
+        }
 
         private static Transform Group(Transform parent, string name)
         {
@@ -322,7 +416,7 @@ namespace Game.Client.Editor
                 mesh.name = $"{name}_{i + 1}";
                 var path = $"{MeshFolder}/{mesh.name}.asset";
                 AssetDatabase.DeleteAsset(path);
-                AssetDatabase.CreateAsset(mesh, path);
+                AssetWrite.Create(mesh, path);
                 meshes[i] = mesh;
             }
             return meshes;

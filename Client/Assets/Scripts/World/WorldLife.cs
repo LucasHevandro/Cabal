@@ -26,6 +26,18 @@ namespace Game.Client.World
         }
     }
 
+    /// <summary>Bicho de enfeite: começa a animação num ponto qualquer e num ritmo um pouco diferente dos outros.</summary>
+    public sealed class FaunaIdle : MonoBehaviour
+    {
+        private void Start()
+        {
+            var animator = GetComponentInChildren<Animator>();
+            if (animator == null) return;
+            animator.Play(0, -1, Random.value);
+            animator.speed = Random.Range(0.85f, 1.15f);
+        }
+    }
+
     /// <summary>Luz que fica mais forte à noite (lanternas da vila): fraca de dia, cheia à noite.</summary>
     [RequireComponent(typeof(Light))]
     public sealed class NightLight : MonoBehaviour

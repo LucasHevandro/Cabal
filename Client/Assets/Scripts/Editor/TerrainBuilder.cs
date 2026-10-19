@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Game.Client.World;
 using UnityEditor;
 using UnityEngine;
@@ -42,7 +43,7 @@ namespace Game.Client.Editor
             // Cada valor da camada de detalhe é a quantidade de tufos na célula (no modo "cobertura", 1 a 3 quase não aparece).
             data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
             data.terrainLayers = layers;
-            AssetDatabase.CreateAsset(data, dataPath);
+            AssetWrite.Create(data, dataPath);
 
             Heights(data);
             Paint(data);
@@ -181,7 +182,7 @@ namespace Game.Client.Editor
             if (layer == null)
             {
                 layer = new TerrainLayer();
-                AssetDatabase.CreateAsset(layer, path);
+                AssetWrite.Create(layer, path);
             }
             layer.diffuseTexture = texture;
             layer.tileSize = new Vector2(tile, tile);
@@ -197,7 +198,7 @@ namespace Game.Client.Editor
             if (layer == null)
             {
                 layer = new TerrainLayer();
-                AssetDatabase.CreateAsset(layer, path);
+                AssetWrite.Create(layer, path);
             }
             layer.diffuseTexture = GroundTexture(name, dark, light, speckle, seed);
             layer.tileSize = new Vector2(tile, tile);
@@ -215,7 +216,7 @@ namespace Game.Client.Editor
             if (material == null)
             {
                 material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
+                AssetWrite.Create(material, path);
             }
             material.enableInstancing = true;
             return material;
@@ -252,7 +253,7 @@ namespace Game.Client.Editor
             mesh.name = name;
             var meshPath = $"{folder}/{name}_malha.asset";
             AssetDatabase.DeleteAsset(meshPath);
-            AssetDatabase.CreateAsset(mesh, meshPath);
+            AssetWrite.Create(mesh, meshPath);
             var temp = new GameObject(name);
             temp.AddComponent<MeshFilter>().sharedMesh = mesh;
             temp.AddComponent<MeshRenderer>().sharedMaterial = material;
@@ -301,16 +302,24 @@ namespace Game.Client.Editor
             texture.SetPixels32(pixels);
             texture.Apply();
             var path = $"{Folder}/{name}.png";
-            File.WriteAllBytes(path, texture.EncodeToPNG());
+            var bytes = texture.EncodeToPNG();
             Object.DestroyImmediate(texture);
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            // Igual à que já está no disco: não regrava. Regravar uma textura que o Unity ainda está importando (em
+            // paralelo) falha com "Win32 IO 1224", e assim a montagem também fica mais rápida.
+            if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(bytes))
+            {
+                AssetWrite.Bytes(path, bytes);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            var settingsChanged = importer.wrapMode != wrap || importer.alphaIsTransparency != alpha || !importer.mipmapEnabled ||
+                                  importer.isReadable != alpha || importer.textureCompression != TextureImporterCompression.CompressedHQ;
             importer.wrapMode = wrap;
             importer.alphaIsTransparency = alpha;
             importer.mipmapEnabled = true;
             importer.isReadable = alpha; // os detalhes do terreno leem a textura
             importer.textureCompression = TextureImporterCompression.CompressedHQ;
-            importer.SaveAndReimport();
+            if (settingsChanged) importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 

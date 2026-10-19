@@ -20,7 +20,7 @@ namespace Game.Client.Editor
         {
             Directory.CreateDirectory(Folder);
             var texturePath = Folder + "/particula_suave.png";
-            File.WriteAllBytes(texturePath, SoftDisc(64).EncodeToPNG());
+            AssetWrite.Bytes(texturePath, SoftDisc(64).EncodeToPNG());
             AssetDatabase.ImportAsset(texturePath);
             var importer = (TextureImporter)AssetImporter.GetAtPath(texturePath);
             importer.alphaIsTransparency = true;
@@ -34,7 +34,7 @@ namespace Game.Client.Editor
             if (material == null)
             {
                 material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
-                AssetDatabase.CreateAsset(material, materialPath);
+                AssetWrite.Create(material, materialPath);
             }
             material.SetTexture("_BaseMap", texture);
             material.SetColor("_BaseColor", Color.white);
