@@ -123,3 +123,32 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 - **Golpe de cada monstro:** sai de `AttackStyle.ForMonster` (arqueiro dispara, espectro e Senhor da Cripta lançam magia, os chefes guerreiros dão o golpe de duas mãos).
 - **Tamanhos:** os modelos são escalados para a altura definida em `KayKitBuilder.MonsterLooks`. A colisão e o alcance continuam sendo os do servidor.
 - **Conferir no jogo:** `Prototipo.exe -posetest pasta -posemonsters`.
+
+# Skills: golpe, rastro e impacto
+
+Cada uma das 16 skills tem o próprio golpe em `Fx/SkillMoves.cs`. Ele define:
+- a sequência de animações (por exemplo, a Estocada Dupla são duas estocadas e a Tempestade de Aço é um giro seguido de um giro largo);
+- quando a arma acerta ou quando a magia sai da ponta do cajado;
+- quanto o corpo avança e a janela do rastro na arma;
+- se a magia junta energia antes de sair.
+
+O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do parâmetro `AttackSpeed`. O Excellent sai 15% mais rápido.
+
+**No jogo**
+- **Na hora do aperto:** aparecem a nota e a rota do combo e começa a animação. A resposta é imediata, como o ritmo do combo pede.
+- **No momento do acerto (`Impacts`):**
+  - **Golpes físicos:** caem as faíscas, o número de dano, o tremor e a pausa de impacto.
+  - **Magias:** o projétil sai da ponta do cajado. Antes, a energia junta na ponta (`Charge`), e o dano aparece quando ele chega.
+- **Online:** o servidor continua decidindo no aperto, e o resultado dele espera o golpe chegar para aparecer.
+- **Arma (`Fx/WeaponFx.cs`, nos prefabs das classes):**
+  - rastro da cor da skill (dourado e mais largo no Excellent);
+  - brasas na Lâmina Flamejante;
+  - avanço do modelo nas investidas. A posição de verdade continua sendo a do jogo, e o andar não conta esse avanço.
+- **Assinatura no impacto (`SkillFx.Signature`):**
+  - runas no Golpe Rúnico, rachaduras na Fenda Sísmica, labareda na Lâmina Flamejante e X vermelho na Execução;
+  - cristais e geada na Corrente Gélida, implosão e duas ondas na Explosão Arcana;
+  - explosão com fumaça no Meteoro, e chuva de pedras com três ondas de choque no Cataclismo.
+
+**Conferir:** `Prototipo.exe -skilltest pasta` toca as 16 skills na frente de um esqueleto. Ele captura o preparo e o acerto de cada uma, alternando Good e Excellent.
+
+**Clarões:** usam um brilho grande de partícula, que o bloom espalha. Luzes pontuais deixavam um ponto branco solto na tela.
