@@ -81,26 +81,26 @@ namespace Game.Shared.Progression
 
         private static readonly IReadOnlyList<ClassSkill> Blade = new List<ClassSkill>
         {
-            new ClassSkill(new SkillData("corte", SkillKind.Physical, 120, 2.5f, 0.5f), 1),
-            new ClassSkill(new SkillData("giro_de_lamina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f), 3),
-            new ClassSkill(new SkillData("golpe_runico", SkillKind.Magical, 140, 3f, 1.5f, mpCost: 25), 5),
-            new ClassSkill(new SkillData("estocada_dupla", SkillKind.Physical, 200, 2.5f, 3f, mpCost: 20), 8),
-            new ClassSkill(new SkillData("fenda_sismica", SkillKind.Physical, 260, 3f, 6f, areaRadius: 4f, mpCost: 40), 12, RankTwoQuestId),
-            new ClassSkill(new SkillData("lamina_flamejante", SkillKind.Magical, 300, 3f, 4f, mpCost: 50), 15, RankTwoQuestId),
-            new ClassSkill(new SkillData("tempestade_de_aco", SkillKind.Physical, 380, 3f, 10f, areaRadius: 5f, mpCost: 80), 20, RankThreeQuestId),
-            new ClassSkill(new SkillData("execucao", SkillKind.Physical, 600, 2.5f, 15f, mpCost: 100), 25, RankThreeQuestId),
+            new ClassSkill(new SkillData("corte", SkillKind.Physical, 120, 2.5f, 0.5f, castSeconds: 0.45f), 1),
+            new ClassSkill(new SkillData("giro_de_lamina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f, castSeconds: 0.55f), 3),
+            new ClassSkill(new SkillData("golpe_runico", SkillKind.Magical, 140, 3f, 1.5f, mpCost: 25, castSeconds: 0.6f), 5),
+            new ClassSkill(new SkillData("estocada_dupla", SkillKind.Physical, 200, 2.5f, 3f, mpCost: 20, castSeconds: 0.75f), 8),
+            new ClassSkill(new SkillData("fenda_sismica", SkillKind.Physical, 260, 3f, 6f, areaRadius: 4f, mpCost: 40, castSeconds: 0.85f), 12, RankTwoQuestId),
+            new ClassSkill(new SkillData("lamina_flamejante", SkillKind.Magical, 300, 3f, 4f, mpCost: 50, castSeconds: 0.55f), 15, RankTwoQuestId),
+            new ClassSkill(new SkillData("tempestade_de_aco", SkillKind.Physical, 380, 3f, 10f, areaRadius: 5f, mpCost: 80, castSeconds: 1.25f), 20, RankThreeQuestId),
+            new ClassSkill(new SkillData("execucao", SkillKind.Physical, 600, 2.5f, 15f, mpCost: 100, castSeconds: 0.95f), 25, RankThreeQuestId),
         };
 
         private static readonly IReadOnlyList<ClassSkill> Arcanist = new List<ClassSkill>
         {
-            new ClassSkill(new SkillData("faisca", SkillKind.Magical, 110, 12f, 0.5f, mpCost: 8), 1),
-            new ClassSkill(new SkillData("lanca_de_forca", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 30), 1),
-            new ClassSkill(new SkillData("golpe_de_cajado", SkillKind.Physical, 100, 2.5f, 1f), 3),
-            new ClassSkill(new SkillData("explosao_arcana", SkillKind.Magical, 220, 10f, 5f, areaRadius: 4f, mpCost: 80), 5),
-            new ClassSkill(new SkillData("corrente_gelida", SkillKind.Magical, 280, 12f, 4f, mpCost: 60), 12, RankTwoQuestId),
-            new ClassSkill(new SkillData("meteoro", SkillKind.Magical, 380, 12f, 8f, areaRadius: 5f, mpCost: 120), 15, RankTwoQuestId),
-            new ClassSkill(new SkillData("raio_duplo", SkillKind.Magical, 450, 12f, 6f, mpCost: 100), 20, RankThreeQuestId),
-            new ClassSkill(new SkillData("cataclismo", SkillKind.Magical, 700, 12f, 20f, areaRadius: 6f, mpCost: 200), 25, RankThreeQuestId),
+            new ClassSkill(new SkillData("faisca", SkillKind.Magical, 110, 12f, 0.5f, mpCost: 8, castSeconds: 0.45f), 1),
+            new ClassSkill(new SkillData("lanca_de_forca", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 30, castSeconds: 0.6f), 1),
+            new ClassSkill(new SkillData("golpe_de_cajado", SkillKind.Physical, 100, 2.5f, 1f, castSeconds: 0.55f), 3),
+            new ClassSkill(new SkillData("explosao_arcana", SkillKind.Magical, 220, 10f, 5f, areaRadius: 4f, mpCost: 80, castSeconds: 0.75f), 5),
+            new ClassSkill(new SkillData("corrente_gelida", SkillKind.Magical, 280, 12f, 4f, mpCost: 60, castSeconds: 0.85f), 12, RankTwoQuestId),
+            new ClassSkill(new SkillData("meteoro", SkillKind.Magical, 380, 12f, 8f, areaRadius: 5f, mpCost: 120, castSeconds: 1.0f), 15, RankTwoQuestId),
+            new ClassSkill(new SkillData("raio_duplo", SkillKind.Magical, 450, 12f, 6f, mpCost: 100, castSeconds: 0.7f), 20, RankThreeQuestId),
+            new ClassSkill(new SkillData("cataclismo", SkillKind.Magical, 700, 12f, 20f, areaRadius: 6f, mpCost: 200, castSeconds: 1.5f), 25, RankThreeQuestId),
         };
     }
 

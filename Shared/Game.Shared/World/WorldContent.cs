@@ -222,10 +222,10 @@ namespace Game.Shared.World
         /// <summary>Skills iniciais (teclas 1 a 4).</summary>
         public static List<SkillData> StarterSkills() => new List<SkillData>
         {
-            new SkillData("corte", SkillKind.Physical, 120, 2.5f, 0.5f),
-            new SkillData("giro_de_lamina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f),
-            new SkillData("lanca_de_forca", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40),
-            new SkillData("explosao_arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f, mpCost: 90),
+            new SkillData("corte", SkillKind.Physical, 120, 2.5f, 0.5f, castSeconds: 0.45f),
+            new SkillData("giro_de_lamina", SkillKind.Physical, 90, 2.5f, 2.0f, areaRadius: 3.5f, castSeconds: 0.55f),
+            new SkillData("lanca_de_forca", SkillKind.Magical, 160, 12f, 1.5f, mpCost: 40, castSeconds: 0.6f),
+            new SkillData("explosao_arcana", SkillKind.Magical, 220, 10f, 5.0f, areaRadius: 4f, mpCost: 90, castSeconds: 0.75f),
         };
     }
 }

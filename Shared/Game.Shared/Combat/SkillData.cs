@@ -37,12 +37,18 @@ namespace Game.Shared.Combat
         /// <summary>Tempo em que o personagem fica parado ao usar a skill.</summary>
         public float LockSeconds = 0.15f;
 
+        /// <summary>
+        /// Tempo de conjuração: enquanto o golpe acontece, outra skill espera na fila (fora do combo, onde quem dita o
+        /// ritmo é a barra). Igual à duração da animação do golpe.
+        /// </summary>
+        public float CastSeconds = 0.5f;
+
         /// <summary>Construtor vazio para serializadores.</summary>
         public SkillData() { }
 
         /// <summary>Cria uma skill.</summary>
         public SkillData(string id, SkillKind kind, int baseDamage, float range, float cooldownSeconds,
-            float areaRadius = 0f, int mpCost = 0, float lockSeconds = 0.15f)
+            float areaRadius = 0f, int mpCost = 0, float lockSeconds = 0.15f, float castSeconds = 0.5f)
         {
             Id = id;
             Kind = kind;
@@ -52,6 +58,7 @@ namespace Game.Shared.Combat
             AreaRadius = areaRadius;
             MpCost = mpCost;
             LockSeconds = lockSeconds;
+            CastSeconds = castSeconds;
         }
 
         /// <summary>Lança <see cref="ArgumentException"/> se algum valor for inválido.</summary>
@@ -64,6 +71,7 @@ namespace Game.Shared.Combat
             if (AreaRadius < 0) throw new ArgumentException($"{Id}: raio não pode ser negativo.", nameof(AreaRadius));
             if (MpCost < 0) throw new ArgumentException($"{Id}: custo de MP não pode ser negativo.", nameof(MpCost));
             if (LockSeconds < 0) throw new ArgumentException($"{Id}: tempo parado não pode ser negativo.", nameof(LockSeconds));
+            if (CastSeconds < 0) throw new ArgumentException($"{Id}: conjuração não pode ser negativa.", nameof(CastSeconds));
         }
     }
 }
