@@ -189,6 +189,12 @@ namespace Game.Client.Net
                     break;
                 case EntitySpawned spawned:
                     if (spawned.Id != PlayerId) CreateView(spawned);
+                    else if (_combat != null) _combat.ApplyLook(spawned.WeaponId, spawned.WeaponUpgrade);
+                    break;
+                case EntityLook look:
+                    // Trocou de arma ou melhorou: o modelo e o brilho acompanham (eu ou quem eu vejo).
+                    if (look.Id == PlayerId && _combat != null) _combat.ApplyLook(look.WeaponId, look.WeaponUpgrade);
+                    else if (_views.TryGetValue(look.Id, out var looked)) Fx.WeaponFx.SetLook(looked, look.WeaponId, look.WeaponUpgrade);
                     break;
                 case EntityDespawned despawned:
                     if (_views.TryGetValue(despawned.Id, out var view))
@@ -256,6 +262,7 @@ namespace Game.Client.Net
 
             var view = root.AddComponent<NetEntityView>();
             view.Initialize(spawned, parts.Body, parts.Ring, parts.Telegraph, target, data);
+            if (spawned.Kind == EntityKind.Player) Fx.WeaponFx.SetLook(root.transform, spawned.WeaponId, spawned.WeaponUpgrade);
             _views.Add(spawned.Id, view);
         }
 

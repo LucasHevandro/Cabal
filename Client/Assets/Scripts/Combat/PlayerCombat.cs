@@ -150,6 +150,7 @@ namespace Game.Client.Combat
             if (_classModel != null) Destroy(_classModel);
             var key = characterClass == CharacterClass.Arcanist ? "arcanist" : "blade";
             _classModel = VisualCatalog.Spawn(VisualCatalog.Class, key, transform);
+            if (_classModel != null && _lookWeapon.Length > 0) WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
             foreach (var name in new[] { "Corpo", "Frente" })
             {
                 var part = transform.Find(name);
@@ -158,6 +159,16 @@ namespace Game.Client.Combat
         }
 
         private GameObject _classModel;
+        private string _lookWeapon = "";
+        private int _lookUpgrade;
+
+        /// <summary>Arma equipada e melhoria (do servidor): o modelo na mão e o brilho acompanham.</summary>
+        public void ApplyLook(string weaponId, int upgrade)
+        {
+            _lookWeapon = weaponId ?? "";
+            _lookUpgrade = upgrade;
+            WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
+        }
 
         private void Update()
         {

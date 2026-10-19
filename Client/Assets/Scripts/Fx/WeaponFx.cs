@@ -18,6 +18,11 @@ namespace Game.Client.Fx
 
         private Transform _tip;
         private TrailRenderer _trail;
+        private Transform _hand;
+        private string _weaponId = "";
+        private int _upgrade;
+        private MeshRenderer _glow;
+        private MaterialPropertyBlock _glowBlock;
         private Vector3 _restPosition;
         private Coroutine _playing;
         private float _lunge;
@@ -28,6 +33,27 @@ namespace Game.Client.Fx
             if (owner == null || skill == null) return;
             var weapon = owner.GetComponentInChildren<WeaponFx>();
             if (weapon != null) weapon.Play(skill, grade);
+        }
+
+        /// <summary>
+        /// Arma equipada e nível de melhoria de <paramref name="owner"/>: troca o modelo na mão (Visuals/weapon/&lt;id&gt;)
+        /// e acende o brilho da melhoria, como no CABAL (+4 azul, +7 ciano com partículas, +9 roxo, +10 dourado pulsando).
+        /// </summary>
+        public static void SetLook(Component owner, string weaponId, int upgrade)
+        {
+            if (owner == null) return;
+            var weapon = owner.GetComponentInChildren<WeaponFx>();
+            if (weapon != null) weapon.SetLook(weaponId, upgrade);
+        }
+
+        /// <summary>Cor e força do brilho por nível de melhoria (alfa 0 = sem brilho).</summary>
+        public static Color GlowFor(int upgrade)
+        {
+            if (upgrade >= 10) return new Color(1f, 0.72f, 0.2f, 1f);
+            if (upgrade >= 9) return new Color(0.75f, 0.35f, 1f, 0.85f);
+            if (upgrade >= 7) return new Color(0.2f, 1f, 0.9f, 0.7f);
+            if (upgrade >= 4) return new Color(0.3f, 0.55f, 1f, 0.35f + (upgrade - 4) * 0.08f);
+            return Color.clear;
         }
 
         /// <summary>Ponta da arma de <paramref name="owner"/> (de onde saem as magias), ou nula sem modelo.</summary>
@@ -43,9 +69,80 @@ namespace Game.Client.Fx
         private void Awake()
         {
             _restPosition = transform.localPosition;
-            var hand = FindDeep(transform, "handslot.r");
-            var weapon = hand != null ? hand.GetComponentInChildren<MeshRenderer>() : null;
-            if (weapon == null) return;
+            _hand = FindDeep(transform, "handslot.r");
+            var weapon = _hand != null ? _hand.GetComponentInChildren<MeshRenderer>() : null;
+            if (weapon != null) Bind(weapon);
+        }
+
+        private void SetLook(string weaponId, int upgrade)
+        {
+            weaponId ??= "";
+            if (weaponId.Length > 0 && weaponId != _weaponId && _hand != null)
+            {
+                var prefab = Resources.Load<GameObject>("Visuals/weapon/" + weaponId);
+                if (prefab != null)
+                {
+                    for (var i = _hand.childCount - 1; i >= 0; i--) Destroy(_hand.GetChild(i).gameObject);
+                    var model = Instantiate(prefab, _hand, false);
+                    model.name = weaponId;
+                    var renderer = model.GetComponentInChildren<MeshRenderer>();
+                    if (renderer != null) Bind(renderer);
+                }
+            }
+            _weaponId = weaponId;
+            _upgrade = upgrade;
+            UpdateGlowShell();
+        }
+
+        /// <summary>Casco de brilho: a mesma malha da arma, um pouco maior, aditiva (só a partir do +4).</summary>
+        private void UpdateGlowShell()
+        {
+            var weapon = _tip != null ? _tip.parent : null;
+            if (GlowFor(_upgrade).a <= 0f || weapon == null || trailMaterial == null)
+            {
+                if (_glow != null) Destroy(_glow.gameObject);
+                _glow = null;
+                return;
+            }
+            if (_glow == null || _glow.transform.parent != weapon)
+            {
+                if (_glow != null) Destroy(_glow.gameObject);
+                var mesh = weapon.GetComponent<MeshFilter>().sharedMesh;
+                var shell = new GameObject("Brilho da melhoria");
+                shell.transform.SetParent(weapon, false);
+                const float grow = 1.08f;
+                shell.transform.localScale = Vector3.one * grow;
+                shell.transform.localPosition = -mesh.bounds.center * (grow - 1f);
+                shell.AddComponent<MeshFilter>().sharedMesh = mesh;
+                _glow = shell.AddComponent<MeshRenderer>();
+                _glow.sharedMaterial = trailMaterial;
+                _glow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _glow.receiveShadows = false;
+                _glowBlock ??= new MaterialPropertyBlock();
+            }
+        }
+
+        private void Update()
+        {
+            if (_glow == null) return;
+            var color = GlowFor(_upgrade);
+            // Pulsa; no +10 pulsa mais forte e mais rápido.
+            var pulse = 0.75f + 0.25f * Mathf.Sin(Time.time * (_upgrade >= 10 ? 6f : 3f));
+            var strength = color.a * pulse;
+            _glowBlock.SetColor("_BaseColor", new Color(color.r * strength, color.g * strength, color.b * strength, strength));
+            _glow.SetPropertyBlock(_glowBlock);
+            // A partir do +7: faíscas subindo da lâmina.
+            var fx = CombatFx.Instance;
+            if (_upgrade >= 7 && fx != null && _tip != null && Random.value < (_upgrade >= 10 ? 0.6f : 0.25f))
+            {
+                var along = Vector3.Lerp(_tip.parent.position, _tip.position, Random.value);
+                fx.Glow(along, Vector3.up * 0.4f + Random.insideUnitSphere * 0.2f, color, 0.1f, 0.5f);
+            }
+        }
+
+        /// <summary>Acha a ponta da arma e põe nela o rastro (de novo a cada troca de arma).</summary>
+        private void Bind(MeshRenderer weapon)
+        {
             // Ponta: a extremidade do eixo mais comprido da arma, a mais longe da mão.
             var mesh = weapon.GetComponent<MeshFilter>().sharedMesh;
             var bounds = mesh.bounds;
@@ -55,6 +152,7 @@ namespace Game.Client.Fx
             plus[axis] = bounds.max[axis];
             minus[axis] = bounds.min[axis];
             var tipLocal = plus.sqrMagnitude >= minus.sqrMagnitude ? plus : minus;
+            if (_tip != null) Destroy(_tip.gameObject);
             _tip = new GameObject("Ponta da arma").transform;
             _tip.SetParent(weapon.transform, false);
             _tip.localPosition = tipLocal * 0.92f;
