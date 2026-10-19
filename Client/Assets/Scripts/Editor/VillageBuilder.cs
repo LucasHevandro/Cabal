@@ -55,25 +55,43 @@ namespace Game.Client.Editor
             return obj;
         }
 
-        /// <summary>Objeto do KayKit Medieval (barril, caixote, barraca...) no canto; falso se o pacote não está no projeto.</summary>
+        /// <summary>
+        /// Objeto do KayKit Medieval (barril, caixote, barraca, portão...) no canto, com todas as peças do modelo e o atlas
+        /// do pacote; falso se o pacote não está no projeto.
+        /// </summary>
         private static bool PackProp(Transform parent, string model, Vector3 position, float yaw, float scale, bool collider = false)
         {
-            var meshes = PackMeshes.Load(PackMeshes.Village, model);
-            if (meshes.Length == 0) return false;
-            var obj = new GameObject(model);
-            obj.transform.SetParent(parent, false);
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>($"{PackMeshes.Village}/{model}.fbx");
+            if (source == null) return false;
+            var obj = (GameObject)PrefabUtility.InstantiatePrefab(source, parent);
+            PrefabUtility.UnpackPrefabInstance(obj, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            obj.name = model;
             obj.transform.localPosition = position;
             obj.transform.localRotation = Quaternion.Euler(0, yaw, 0);
             obj.transform.localScale = Vector3.one * scale;
-            obj.AddComponent<MeshFilter>().sharedMesh = meshes[0];
-            obj.AddComponent<MeshRenderer>().sharedMaterial = PackMeshes.Atlas(PackMeshes.Village, "hexagons_medieval.png", "vila");
-            if (collider)
+            var atlas = PackMeshes.Atlas(PackMeshes.Village, "hexagons_medieval.png", "vila");
+            var renderers = obj.GetComponentsInChildren<MeshRenderer>();
+            foreach (var renderer in renderers)
             {
-                var box = obj.AddComponent<BoxCollider>();
-                box.center = meshes[0].bounds.center;
-                box.size = meshes[0].bounds.size;
+                var shared = new Material[renderer.sharedMaterials.Length];
+                for (var m = 0; m < shared.Length; m++) shared[m] = atlas;
+                renderer.sharedMaterials = shared;
+                GameObjectUtility.SetStaticEditorFlags(renderer.gameObject, StaticEditorFlags.BatchingStatic);
             }
-            GameObjectUtility.SetStaticEditorFlags(obj, StaticEditorFlags.BatchingStatic);
+            if (collider && renderers.Length > 0)
+            {
+                // Uma caixa só, do tamanho do modelo inteiro (em coordenadas do objeto).
+                var bounds = new Bounds(obj.transform.InverseTransformPoint(renderers[0].bounds.center), Vector3.zero);
+                foreach (var renderer in renderers)
+                {
+                    var b = renderer.bounds;
+                    foreach (var corner in new[] { b.min, b.max, new Vector3(b.min.x, b.min.y, b.max.z), new Vector3(b.max.x, b.max.y, b.min.z) })
+                        bounds.Encapsulate(obj.transform.InverseTransformPoint(corner));
+                }
+                var box = obj.AddComponent<BoxCollider>();
+                box.center = bounds.center;
+                box.size = bounds.size;
+            }
             return true;
         }
 
@@ -199,6 +217,10 @@ namespace Game.Client.Editor
                 switch (npc.Role)
                 {
                     case NpcRole.Smith:
+                        // Ferraria do pacote atrás da bancada (a forja e a bigorna ficam na frente, onde o jogador vê).
+                        PackProp(corner, "building_blacksmith_red", new Vector3(0, 0, 3f), 180f, 4.5f, true);
+                        PackProp(corner, "barrel", new Vector3(1.9f, 0, 0.6f), 30f, 4.2f, true);
+                        PackProp(corner, "resource_stone", new Vector3(-1.9f, 0, 0.6f), -20f, 3f);
                         Part(corner, "Forja", stone, k => k.Box(0, new Vector3(0.9f, 0, 0.3f), Quaternion.identity, new Vector3(1.4f, 1f, 1.1f)), collider: true);
                         Part(corner, "Brasas", ember, k => k.Box(0, new Vector3(0.9f, 1f, 0.3f), Quaternion.identity, new Vector3(1f, 0.08f, 0.7f)));
                         Part(corner, "Bigorna", iron, k =>
@@ -273,15 +295,29 @@ namespace Game.Client.Editor
                         Part(corner, "Tapete", clothBlue, k => k.Box(0, new Vector3(0, 0.01f, -1.6f), Quaternion.identity, new Vector3(2.2f, 0.02f, 1.6f)));
                         break;
                     case NpcRole.DungeonPortal:
-                        // Arco de pedra com o portal brilhando (a entrada da Cripta).
-                        Part(corner, "Arco", stone, k =>
+                        // Portão de pedra com o portal brilhando (a entrada da Cripta). Sem o pacote, o arco feito em código.
+                        if (PackProp(corner, "wall_straight_gate", new Vector3(0, 0, 0.3f), 90f, 2.6f, true))
                         {
-                            foreach (var x in new[] { -1.3f, 1.3f })
-                                k.Box(0, new Vector3(x, 0, 0.3f), Quaternion.identity, new Vector3(0.6f, 3.2f, 0.7f));
-                            k.Box(0, new Vector3(0, 3.2f, 0.3f), Quaternion.identity, new Vector3(3.4f, 0.6f, 0.8f));
-                            k.Box(0, new Vector3(0, 0, 0.3f), Quaternion.identity, new Vector3(3.6f, 0.2f, 1.2f));
-                        }, collider: true);
-                        Part(corner, "Portal", portalGlow, k => k.Box(0, new Vector3(0, 0.2f, 0.3f), Quaternion.identity, new Vector3(2f, 3f, 0.08f)));
+                            PackProp(corner, "flag_red", new Vector3(-2.9f, 0, 0.1f), 0f, 3.2f);
+                            PackProp(corner, "flag_red", new Vector3(2.9f, 0, 0.1f), 0f, 3.2f);
+                            Part(corner, "Portal", portalGlow, k =>
+                            {
+                                // A porta aparece dos dois lados do portão: o brilho também.
+                                k.Box(0, new Vector3(0, 0.15f, 1.55f), Quaternion.identity, new Vector3(1.7f, 2.5f, 0.06f));
+                                k.Box(0, new Vector3(0, 0.15f, -0.95f), Quaternion.identity, new Vector3(1.7f, 2.5f, 0.06f));
+                            });
+                        }
+                        else
+                        {
+                            Part(corner, "Arco", stone, k =>
+                            {
+                                foreach (var x in new[] { -1.3f, 1.3f })
+                                    k.Box(0, new Vector3(x, 0, 0.3f), Quaternion.identity, new Vector3(0.6f, 3.2f, 0.7f));
+                                k.Box(0, new Vector3(0, 3.2f, 0.3f), Quaternion.identity, new Vector3(3.4f, 0.6f, 0.8f));
+                                k.Box(0, new Vector3(0, 0, 0.3f), Quaternion.identity, new Vector3(3.6f, 0.2f, 1.2f));
+                            }, collider: true);
+                            Part(corner, "Portal", portalGlow, k => k.Box(0, new Vector3(0, 0.2f, 0.3f), Quaternion.identity, new Vector3(2f, 3f, 0.08f)));
+                        }
                         var light = new GameObject("Luz do portal").AddComponent<Light>();
                         light.transform.SetParent(corner, false);
                         light.transform.localPosition = new Vector3(0, 1.6f, -0.4f);

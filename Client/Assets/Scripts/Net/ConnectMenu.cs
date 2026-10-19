@@ -63,11 +63,13 @@ namespace Game.Client.Net
         private RenderTexture _backdrop;
         private bool _backdropReady;
         private Camera _backdropCamera;
+        private bool _forcedTime;
 
         private System.Collections.IEnumerator Start()
         {
             if (GameMode.ChoiceMade) yield break;
             World.Atmosphere.ForcedTime = 0.62f;
+            _forcedTime = true;
             // Espera o céu, a névoa e a luz chegarem no fim da tarde (a atmosfera muda aos poucos).
             yield return new WaitForSecondsRealtime(0.8f);
             if (!GameMode.ChoiceMade) CaptureBackdrop();
@@ -103,7 +105,9 @@ namespace Game.Client.Net
         /// <summary>Saiu da tela de entrada: o jogo volta a ser desenhado e a hora volta ao relógio.</summary>
         private void ReleaseBackdrop()
         {
-            World.Atmosphere.ForcedTime = null;
+            // Só solta a hora que a própria tela de entrada prendeu (os testes também prendem a hora).
+            if (_forcedTime) World.Atmosphere.ForcedTime = null;
+            _forcedTime = false;
             if (_backdropCamera != null) _backdropCamera.enabled = true;
             _backdropCamera = null;
             if (_backdrop != null) _backdrop.Release();
@@ -332,7 +336,7 @@ namespace Game.Client.Net
         {
             if (GameMode.ChoiceMade)
             {
-                if (_backdrop != null || World.Atmosphere.ForcedTime != null) ReleaseBackdrop();
+                if (_backdrop != null || _forcedTime) ReleaseBackdrop();
                 return;
             }
             Game.Client.UI.UiTheme.Ensure();
