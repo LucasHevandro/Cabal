@@ -305,7 +305,18 @@ public sealed partial class GameWorld
         {
             if (!InRange(player.X, player.Z, other.X, other.Z, InterestRadius)) continue;
             visible.Add(other.Id);
-            if (player.KnownEntities.Add(other.Id)) _outbox.Send(player.Id, SpawnMessage(other));
+            var look = other.Look;
+            if (player.KnownEntities.Add(other.Id))
+            {
+                _outbox.Send(player.Id, SpawnMessage(other));
+                player.KnownLooks[other.Id] = look;
+            }
+            else if (!player.KnownLooks.TryGetValue(other.Id, out var known) || known != look)
+            {
+                // Trocou de arma ou melhorou: quem já o via atualiza o modelo e o brilho.
+                player.KnownLooks[other.Id] = look;
+                _outbox.Send(player.Id, new EntityLook { Id = other.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade });
+            }
             snapshot.Entities.Add(new EntityState
             {
                 Id = other.Id, X = other.X, Z = other.Z, Yaw = other.Yaw, Hp = other.Hp.Current,
@@ -331,6 +342,7 @@ public sealed partial class GameWorld
         foreach (var id in player.KnownEntities.Where(id => !visible.Contains(id)).ToList())
         {
             player.KnownEntities.Remove(id);
+            player.KnownLooks.Remove(id);
             _outbox.Send(player.Id, new EntityDespawned { Id = id });
         }
 
@@ -521,6 +533,7 @@ public sealed partial class GameWorld
         // Jogadores levam a classe no TypeId ("blade"/"arcanist"): o cliente escolhe o modelo por ela.
         Id = player.Id, Kind = EntityKind.Player, TypeId = player.Class == CharacterClass.Arcanist ? "arcanist" : "blade",
         Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
+        WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade,
     };
 
     private static EntitySpawned SpawnMessage(ServerMonster monster) => new()

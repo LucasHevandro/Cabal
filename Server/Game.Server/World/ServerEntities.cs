@@ -94,6 +94,13 @@ public sealed class ServerPlayer
 
     /// <summary>Entidades e itens que este jogador já conhece (recebeu EntitySpawned/LootSpawned).</summary>
     public HashSet<int> KnownEntities { get; } = new();
+
+    /// <summary>A aparência (arma e melhoria) que este jogador já recebeu de cada outro jogador que vê.</summary>
+    public Dictionary<int, (string WeaponId, int Upgrade)> KnownLooks { get; } = new();
+
+    /// <summary>Arma na mão e o nível de melhoria dela (o que os outros veem).</summary>
+    public (string WeaponId, int Upgrade) Look =>
+        Equipment[Game.Shared.Items.EquipSlot.Weapon] is { } weapon ? (weapon.ItemId, weapon.Upgrade) : ("", 0);
     public HashSet<int> KnownLoot { get; } = new();
 
     /// <summary>Precisa reenviar a mensagem correspondente no próximo tick.</summary>
