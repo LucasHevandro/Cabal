@@ -196,3 +196,40 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
 - **Tema** (`UiTheme`): painéis com degradê escuro, cantos arredondados e moldura bronze. Barras de vida, mana, SP e XP com brilho. Botões, campos, casas de item e caixas de marcar próprios. Fonte Segoe UI do sistema, com Arial de reserva. Tudo é gerado em código.
 - **Ícones de skill** (`SkillIcons`): um medalhão na cor do tipo com o símbolo de cada uma das 16 skills (corte, giro, runa, chama, floco de gelo, raio...).
 - **Ícones de item** (`ItemIcons`): uma câmera escondida fotografa o modelo do item na primeira vez que ele aparece numa janela, com luz própria e fundo transparente. Sem modelo, fica o quadradinho com o nome.
+
+# Pacotes de cenário e de monstros (CC0)
+
+Todos são CC0 (domínio público): uso livre, inclusive comercial, sem precisar de crédito. As licenças ficam junto, em
+`Assets/Art/KayKit` e `Assets/Art/Quaternius`.
+
+- **KayKit Forest Nature Pack (grátis)**, em `Assets/Art/KayKit/Natureza`. Fornece as árvores, arbustos, pedras e
+  rochedos do mundo. O `PropBuilder` usa o pacote quando ele está no projeto e volta às formas feitas em código quando
+  não está. Na Mata Sombria o mesmo atlas ganha um tom mais escuro; nas Ruínas, um tom seco.
+- **KayKit Medieval Hexagon Pack (grátis)**, em `Assets/Art/KayKit/Vila`:
+  - casas, taverna, igreja e serraria em volta da praça;
+  - moinho de vento nos campos e moinho de água no rio;
+  - cerca e poço;
+  - nos cantos dos NPCs: caixotes, barris, frutas, alvo, armeiro e as barracas dos acampamentos.
+  O pacote é feito na escala de um tabuleiro, por isso tudo é aumentado de 4 a 6,5 vezes.
+- **Quaternius Ultimate Monsters e Ultimate Animated Animals**, em `Assets/Art/Quaternius`, montados pelo
+  `QuaterniusBuilder` (menu **Jogo > Visuais > Montar monstros (Quaternius)**):
+  - o Coelho Saltador é o Bunny, com a cenoura;
+  - o Lobo Cinzento é o Wolf;
+  - cada um tem Animator próprio: parado, andando e correndo pela velocidade, golpe, dano e morte.
+  - **Bichos de enfeite:** cervos, veados e raposas pastam nos campos e na mata. Não lutam e não bloqueiam; cada um
+    começa a animação num ponto diferente.
+  - O javali, a aranha e o golem continuam feitos em código, porque os pacotes não têm um equivalente. O espectro
+    continua sendo o esqueleto-fantasma do KayKit.
+- **Conferir um pacote novo:** `-executeMethod Game.Client.Editor.AssetSheet.Run -sheetFolder Assets/Art/... -sheetOut pasta`
+  monta uma folha de fotos e lista tamanho, materiais e animações de cada modelo.
+
+# Contorno (acabamento único)
+
+`Shaders/Contorno.shader` desenha um traço de desenho animado em tela cheia, antes do pós-processamento, no
+renderizador do PC. O `RenderLook` liga o shader toda vez que a cena é montada.
+
+- O traço acha as bordas pela profundidade e pelas normais da cena (as mesmas que a oclusão de ambiente já calcula).
+- Ele escurece a cor de cada borda sem trocar o tom.
+- Some a partir de 25 m e desaparece aos 45 m, para o fundo não virar rabisco.
+- O traço é leve (força 0,5) porque a grama tem muitas folhinhas.
+- O renderizador de celular fica sem o contorno.

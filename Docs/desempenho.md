@@ -27,6 +27,7 @@ PC de teste: GeForce GTX 1660 Ti e Core i7-7700, 1920x1080, qualidade Alta, 30 j
 | Mundo novo (terreno, grama, cenário, névoa e pós-processamento; 1600x900) | 258 | 91 | 17 ms | 110 | 14 KB |
 | Personagens KayKit animados (30 jogadores com Animator e malha deformada; 1600x900) | 238 | 89 | 17 ms | 140 | 14 KB |
 | Pacote visual (equipamento, cripta, polimento, rio, vila com lanternas, dia e noite, tema da interface; 1600x900, 30 s) | 195 | 73 | 36 ms | 96 | 12 KB |
+| Pacotes KayKit e Quaternius, bichos de enfeite e contorno (1600x900, 30 s) | 177 | 65 | 25 ms | 85 | 12 KB |
 
 O mundo novo custa cerca de 1 ms por quadro (terreno, grama e uns 1.200 objetos de cenário com static batching) e
 não aumentou o lixo por quadro: as coletas a mais vêm só de ter mais quadros no mesmo tempo. O 1% pior continua acima
@@ -34,6 +35,11 @@ de 60 FPS com folga.
 
 O pacote visual custa cerca de 1 ms a mais por quadro. O peso vem da vila (mais objetos e as luzes das lanternas e das
 forjas), da água do rio e do tema da interface, que desenha cantos arredondados. O 1% pior segue acima de 60 FPS.
+
+Os pacotes de cenário, os monstros com malha deformada, os 12 bichos de enfeite e o contorno em tela cheia custam mais
+cerca de 0,5 ms por quadro. O 1% pior caiu para 65 FPS: ainda passa da meta, mas com pouca folga. Se cair abaixo de 60
+num PC mais fraco, os primeiros a cortar são os bichos de enfeite e o contorno (dá para tirar o contorno só na
+qualidade baixa).
 
 Com o limite padrão de 60 FPS sobra mais da metade do quadro livre mesmo no 1% pior, então a meta está cumprida
 neste PC com folga. Num PC mais fraco o gargalo provável é a CPU (interface IMGUI e coleta de lixo), não a placa.
