@@ -292,3 +292,15 @@ centro da sua região (cheia até 80% do raio, some até 130%), então o clima m
 - **De noite** a água escurece junto com a luz ambiente.
 - Sem textura de profundidade (perfil de qualidade baixa) fica só a cor funda, com reflexo e brilho.
 - **Conferir:** as vistas `ponte-*` do `-worldtest`.
+
+# Minimapa
+
+Ao montar a cena, o `Editor/MinimapBaker` fotografa o mundo de cima (câmera ortográfica, norte para cima, sem neblina) e
+guarda em `Resources/Visuals/mapa_mundo.png` (1024×1024, 256 m de lado, centro em `Minimap.WorldMapCenter`).
+
+- O minimapa e o mapa grande (tecla M) desenham essa foto por baixo das zonas, dos pontos e da seta do jogador.
+- Os discos das zonas ficam bem fracos por cima da foto e os nomes ganham sombra.
+- Sem a foto (ou na dungeon e na arena), o mapa volta aos discos coloridos.
+- **Peculiaridade:** vistas por essa câmera, pedras e colunas cinza saem azul forte. Não é a luz ambiente, as sondas
+  nem os mipmaps. O baker devolve esses pixels a cinza pelo brilho.
+- **Conferir:** abrir `mapa_mundo.png`; a vista `9c-mapa` do teste online (`-onlineui`).
