@@ -80,14 +80,25 @@ namespace Game.Client.Editor
             }
             if (collider && renderers.Length > 0)
             {
-                // Uma caixa só, do tamanho do modelo inteiro (em coordenadas do objeto).
-                var bounds = new Bounds(obj.transform.InverseTransformPoint(renderers[0].bounds.center), Vector3.zero);
-                foreach (var renderer in renderers)
+                // Uma caixa só, do tamanho do modelo (em coordenadas do objeto), sem a base hexagonal do pacote: só os
+                // vértices acima de 35 cm contam. Com a base, a caixa da ferraria cobria até a ferreira.
+                var bounds = new Bounds();
+                var any = false;
+                foreach (var filter in obj.GetComponentsInChildren<MeshFilter>())
                 {
-                    var b = renderer.bounds;
-                    foreach (var corner in new[] { b.min, b.max, new Vector3(b.min.x, b.min.y, b.max.z), new Vector3(b.max.x, b.max.y, b.min.z) })
-                        bounds.Encapsulate(obj.transform.InverseTransformPoint(corner));
+                    if (filter.sharedMesh == null) continue;
+                    foreach (var vertex in filter.sharedMesh.vertices)
+                    {
+                        var world = filter.transform.TransformPoint(vertex);
+                        if (world.y - obj.transform.position.y < 0.35f) continue;
+                        var local = obj.transform.InverseTransformPoint(world);
+                        if (!any) bounds = new Bounds(local, Vector3.zero);
+                        else bounds.Encapsulate(local);
+                        any = true;
+                    }
                 }
+                if (!any) return true;
+                bounds.Encapsulate(new Vector3(bounds.center.x, 0f, bounds.center.z)); // até o chão
                 var box = obj.AddComponent<BoxCollider>();
                 box.center = bounds.center;
                 box.size = bounds.size;
@@ -235,7 +246,7 @@ namespace Game.Client.Editor
                 {
                     case NpcRole.Smith:
                         // Ferraria do pacote atrás da bancada (a forja e a bigorna ficam na frente, onde o jogador vê).
-                        PackProp(corner, "building_blacksmith_red", new Vector3(0, 0, 3f), 180f, 4.5f, true);
+                        PackProp(corner, "building_blacksmith_red", new Vector3(0, 0, -4.2f), 0f, 4.5f, true);
                         PackProp(corner, "barrel", new Vector3(1.9f, 0, 0.6f), 30f, 4.2f, true);
                         PackProp(corner, "resource_stone", new Vector3(-1.9f, 0, 0.6f), -20f, 3f);
                         Part(corner, "Forja", stone, k => k.Box(0, new Vector3(0.9f, 0, 0.3f), Quaternion.identity, new Vector3(1.4f, 1f, 1.1f)), collider: true);
