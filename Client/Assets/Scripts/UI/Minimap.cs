@@ -26,6 +26,10 @@ namespace Game.Client.UI
         /// <summary>Onde começam os painéis do lado direito (missões, dungeon, fila da arena), logo abaixo do minimapa.</summary>
         public const float PanelsTop = Top + Size + 12f;
 
+        /// <summary>Área da foto do mundo visto de cima (<c>Resources/Visuals/mapa_mundo</c>): centro em xz e meia largura.</summary>
+        public static readonly Vector2 WorldMapCenter = new Vector2(0f, 92f);
+        public const float WorldMapHalf = 128f;
+
         private const float SmallRange = 45f;
         private const float BigSize = 820f;
 
@@ -47,6 +51,8 @@ namespace Game.Client.UI
         private static List<ZoneDefinition> _zones;
         private static HashSet<string> _bossIds;
         private static Texture2D _disc;
+        private static Texture2D _worldPicture;
+        private static bool _pictureLoaded;
         private static GUIStyle _label;
         private static GUIStyle _arrow;
 
@@ -177,20 +183,32 @@ namespace Game.Client.UI
 
         private static void DrawZones(System.Func<float, float, Vector2> toMap, float scale, bool big)
         {
+            // Fundo: o mundo fotografado de cima. Sem a foto, só os discos das zonas.
+            if (_worldPicture != null)
+            {
+                var topLeft = toMap(WorldMapCenter.x - WorldMapHalf, WorldMapCenter.y + WorldMapHalf);
+                var size = WorldMapHalf * 2 * scale;
+                GUI.DrawTexture(new Rect(topLeft.x, topLeft.y, size, size), _worldPicture);
+            }
             for (var i = 0; i < _zones.Count; i++)
             {
                 var zone = _zones[i];
                 var c = ZoneColors[i % ZoneColors.Length];
                 var p = toMap(zone.CenterX, zone.CenterZ);
                 var radius = zone.Radius * scale;
-                GUI.color = new Color(c.r, c.g, c.b, 0.42f);
+                GUI.color = new Color(c.r, c.g, c.b, _worldPicture != null ? (big ? 0.16f : 0.08f) : 0.42f);
                 GUI.DrawTexture(new Rect(p.x - radius, p.y - radius, radius * 2, radius * 2), _disc);
                 GUI.color = Color.white;
                 if (big)
                 {
                     var levels = zone.MinLevel == zone.MaxLevel ? $"{zone.MinLevel}" : $"{zone.MinLevel}–{zone.MaxLevel}";
-                    GUI.Label(new Rect(p.x - 140, p.y - radius + 6, 280, 40),
-                        $"<b>{zone.Name}</b>\n<size=13>{Loc.T("map.zone_levels", levels)}</size>", _label.WithCenter());
+                    // Com sombra, para ler por cima da foto.
+                    var text = $"<b>{zone.Name}</b>\n<size=13>{Loc.T("map.zone_levels", levels)}</size>";
+                    var labelRect = new Rect(p.x - 140, p.y - radius + 6, 280, 40);
+                    GUI.color = new Color(0, 0, 0, 0.9f);
+                    GUI.Label(new Rect(labelRect.x + 2, labelRect.y + 2, labelRect.width, labelRect.height), text, _label.WithCenter());
+                    GUI.color = Color.white;
+                    GUI.Label(labelRect, text, _label.WithCenter());
                 }
             }
         }
@@ -277,6 +295,11 @@ namespace Game.Client.UI
         private static void EnsureResources()
         {
             _zones ??= WorldContent.Zones();
+            if (!_pictureLoaded)
+            {
+                _pictureLoaded = true;
+                _worldPicture = Resources.Load<Texture2D>("Visuals/mapa_mundo");
+            }
             if (_bossIds == null)
             {
                 _bossIds = new HashSet<string>(WorldContent.Spawns().Where(s => s.IsBoss).Select(s => s.Data.Id));

@@ -64,6 +64,8 @@ namespace Game.Client.Editor
             hud.AddComponent<CombatHud>().SetCombat(playerObject.GetComponent<PlayerCombat>());
             hud.AddComponent<DamageNumbers>();
 
+            MinimapBaker.Bake();
+
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath)!);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddToBuildSettings(ScenePath);
