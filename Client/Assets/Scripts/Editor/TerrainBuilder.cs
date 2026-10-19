@@ -186,7 +186,7 @@ namespace Game.Client.Editor
             }
             layer.diffuseTexture = texture;
             layer.tileSize = new Vector2(tile, tile);
-            layer.smoothness = 0f;
+            Matte(layer);
             EditorUtility.SetDirty(layer);
             return layer;
         }
@@ -202,10 +202,20 @@ namespace Game.Client.Editor
             }
             layer.diffuseTexture = GroundTexture(name, dark, light, speckle, seed);
             layer.tileSize = new Vector2(tile, tile);
-            layer.smoothness = 0f;
-            layer.metallic = 0f;
+            Matte(layer);
             EditorUtility.SetDirty(layer);
             return layer;
+        }
+
+        /// <summary>
+        /// Chão fosco. A suavidade tem de ser a constante: o padrão lê o alfa da textura (1 = liso) e o terreno espelhava
+        /// o céu, deixando campos e mata com um véu branco, forte à noite.
+        /// </summary>
+        private static void Matte(TerrainLayer layer)
+        {
+            layer.smoothnessSource = TerrainLayerSmoothnessSource.ConstantOnly;
+            layer.smoothness = 0f;
+            layer.metallic = 0f;
         }
 
         private static Material TerrainMaterial()
