@@ -16,6 +16,15 @@ public class AppearanceTests
     public void Grau_da_armadura_vem_so_da_couraca(string? itemId, int grade) =>
         Assert.Equal(grade, Appearance.ArmorGrade(itemId));
 
+    [Theory]
+    [InlineData("luvas_aco_negro", EquipSlot.Gloves, 2)]
+    [InlineData("botas_astralita", EquipSlot.Boots, 3)]
+    [InlineData("botas_ferro", EquipSlot.Gloves, 0)]
+    [InlineData("anel_astralita", EquipSlot.Accessory, 0)]
+    [InlineData("espada_astralita", EquipSlot.Weapon, 0)]
+    public void Grau_de_cada_peca_so_conta_na_casa_dela(string itemId, EquipSlot slot, int grade) =>
+        Assert.Equal(grade, Appearance.GradeOf(itemId, slot));
+
     [Fact]
     public void Cor_fora_da_paleta_vira_a_primeira()
     {

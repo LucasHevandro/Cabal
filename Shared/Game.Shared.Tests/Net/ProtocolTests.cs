@@ -42,14 +42,16 @@ public class ProtocolTests
         Assert.Equal(9, RoundTrip(new StartCombo { TargetId = 9, ClientTime = 1 }).TargetId);
         Assert.Equal(9, RoundTrip(new Finisher { TargetId = 9 }).TargetId);
         Assert.Equal(5, RoundTrip(new PickupLoot { LootId = 5 }).LootId);
-        var look = RoundTrip(new EntityLook { Id = 4, WeaponId = "espada_astralita", WeaponUpgrade = 10, ArmorGrade = 3 });
-        Assert.Equal((4, "espada_astralita", (byte)10, (byte)3), (look.Id, look.WeaponId, look.WeaponUpgrade, look.ArmorGrade));
+        var look = RoundTrip(new EntityLook { Id = 4, WeaponId = "espada_astralita", WeaponUpgrade = 10, ArmorGrade = 3, GlovesGrade = 2, BootsGrade = 1 });
+        Assert.Equal((4, "espada_astralita", (byte)10, (byte)3, (byte)2, (byte)1),
+            (look.Id, look.WeaponId, look.WeaponUpgrade, look.ArmorGrade, look.GlovesGrade, look.BootsGrade));
         var spawned = RoundTrip(new EntitySpawned
         {
-            Id = 3, Kind = EntityKind.Player, TypeId = "blade", WeaponId = "espada_ferro", WeaponUpgrade = 7, ArmorGrade = 2, Hair = 4, Cloth = 5,
+            Id = 3, Kind = EntityKind.Player, TypeId = "blade", WeaponId = "espada_ferro", WeaponUpgrade = 7, ArmorGrade = 2, GlovesGrade = 3,
+            BootsGrade = 1, Hair = 4, Cloth = 5,
         });
-        Assert.Equal(("espada_ferro", (byte)7, (byte)2, (byte)4, (byte)5),
-            (spawned.WeaponId, spawned.WeaponUpgrade, spawned.ArmorGrade, spawned.Hair, spawned.Cloth));
+        Assert.Equal(("espada_ferro", (byte)7, (byte)2, (byte)3, (byte)1, (byte)4, (byte)5),
+            (spawned.WeaponId, spawned.WeaponUpgrade, spawned.ArmorGrade, spawned.GlovesGrade, spawned.BootsGrade, spawned.Hair, spawned.Cloth));
         Assert.Equal(3.5, RoundTrip(new Ping { ClientTime = 3.5 }).ClientTime);
     }
 

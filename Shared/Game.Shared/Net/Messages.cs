@@ -77,7 +77,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 15;
+        public const int Version = 16;
         public const int DefaultPort = 7777;
     }
 
@@ -282,8 +282,13 @@ namespace Game.Shared.Net
 
         public byte WeaponUpgrade;
 
-        /// <summary>Jogadores: grau da armadura vestida (cor do metal) e as cores de cabelo e roupa da criação.</summary>
+        /// <summary>
+        /// Jogadores: grau da couraça, das luvas e das botas vestidas (cor do metal do corpo, dos braços e das pernas) e as
+        /// cores de cabelo e roupa da criação.
+        /// </summary>
         public byte ArmorGrade;
+        public byte GlovesGrade;
+        public byte BootsGrade;
         public byte Hair;
         public byte Cloth;
 
@@ -300,6 +305,8 @@ namespace Game.Shared.Net
             w.WriteString(WeaponId);
             w.WriteByte(WeaponUpgrade);
             w.WriteByte(ArmorGrade);
+            w.WriteByte(GlovesGrade);
+            w.WriteByte(BootsGrade);
             w.WriteByte(Hair);
             w.WriteByte(Cloth);
         }
@@ -308,7 +315,8 @@ namespace Game.Shared.Net
         {
             Id = r.ReadInt(), Kind = (EntityKind)r.ReadByte(), TypeId = r.ReadString(), Name = r.ReadString(),
             Level = r.ReadInt(), MaxHp = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
-            WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(), ArmorGrade = r.ReadByte(), Hair = r.ReadByte(), Cloth = r.ReadByte(),
+            WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
+            ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(), Hair = r.ReadByte(), Cloth = r.ReadByte(),
         };
     }
 
@@ -324,6 +332,8 @@ namespace Game.Shared.Net
         public string WeaponId = "";
         public byte WeaponUpgrade;
         public byte ArmorGrade;
+        public byte GlovesGrade;
+        public byte BootsGrade;
 
         public void Write(PacketWriter w)
         {
@@ -331,10 +341,15 @@ namespace Game.Shared.Net
             w.WriteString(WeaponId);
             w.WriteByte(WeaponUpgrade);
             w.WriteByte(ArmorGrade);
+            w.WriteByte(GlovesGrade);
+            w.WriteByte(BootsGrade);
         }
 
-        public static EntityLook Read(PacketReader r) =>
-            new EntityLook { Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(), ArmorGrade = r.ReadByte() };
+        public static EntityLook Read(PacketReader r) => new EntityLook
+        {
+            Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
+            ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(),
+        };
     }
 
     public sealed class EntityDespawned : INetMessage

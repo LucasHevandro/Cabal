@@ -146,8 +146,10 @@ namespace Game.Shared.Accounts
         public int Hair;
         public int Cloth;
 
-        /// <summary>Grau da couraça vestida (0 = sem), para a prévia da seleção.</summary>
+        /// <summary>Grau da couraça, das luvas e das botas vestidas (0 = sem), para a prévia da seleção.</summary>
         public int ArmorGrade;
+        public int GlovesGrade;
+        public int BootsGrade;
     }
 
     [Serializable]
