@@ -59,6 +59,16 @@ namespace Game.Client.Editor
             ["guardia_selene"] = new Look { Model = "Knight", RightHand = "sword_2handed", Hide = new[] { "Knight_HelmetVisor" } },
         };
 
+        /// <summary>Moradores que andam pela praça (só enfeite: não falam nem lutam).</summary>
+        private static readonly Dictionary<string, Look> VillagerLooks = new Dictionary<string, Look>
+        {
+            ["morador_1"] = new Look { Model = "Barbarian", LeftHand = "mug_full" },
+            // Crianças (menores): não se confundem com os NPCs, que usam os mesmos modelos em tamanho de adulto.
+            ["morador_2"] = new Look { Model = "Rogue", Height = 1.35f },
+            ["morador_3"] = new Look { Model = "Ranger", Height = 1.3f },
+            ["morador_4"] = new Look { Model = "Mage", LeftHand = "spellbook_open", Hide = new[] { "Mage_Hat" } },
+        };
+
         /// <summary>Monstros mortos-vivos (o pacote Skeletons); os bichos ficam no CreatureBuilder.</summary>
         private static readonly Dictionary<string, Look> MonsterLooks = new Dictionary<string, Look>
         {
@@ -84,6 +94,8 @@ namespace Game.Client.Editor
                 Clip("MovementBasic", "Running_A"), Clip("Special", "Skeletons_Death"));
             foreach (var (id, look) in ClassLooks) MakePrefab($"{Visuals}/class/{id}.prefab", look, materials, controller, weaponFx: true);
             foreach (var (id, look) in NpcLooks) MakePrefab($"{Visuals}/npc/{id}.prefab", look, materials, controller);
+            Directory.CreateDirectory($"{Visuals}/villager");
+            foreach (var (id, look) in VillagerLooks) MakePrefab($"{Visuals}/villager/{id}.prefab", look, materials, controller);
             foreach (var (id, look) in MonsterLooks) MakePrefab($"{Visuals}/monster/{id}.prefab", look, materials, skeleton);
             AssetDatabase.SaveAssets();
             Debug.Log($"[KayKit] {ClassLooks.Count} classes, {NpcLooks.Count} NPCs e {MonsterLooks.Count} monstros montados.");
@@ -319,6 +331,10 @@ namespace Game.Client.Editor
             Quick(toHit, 0.05f);
             Leave(hit, locomotion, 0.8f);
 
+            // Gestos dos NPCs: conversar (Talk) e trocar a pose parada de vez em quando (Idle2).
+            AddGesture(controller, machine, locomotion, "Talk", Clip("General", "Interact"));
+            AddGesture(controller, machine, locomotion, "Idle2", Clip("General", "Idle_B"));
+
             var dodge = machine.AddState("Esquiva");
             dodge.motion = Clip("MovementAdvanced", "Dodge_Forward");
             var toDodge = machine.AddAnyStateTransition(dodge);
@@ -339,6 +355,23 @@ namespace Game.Client.Editor
 
             EditorUtility.SetDirty(controller);
             return controller;
+        }
+
+        private static void AddGesture(AnimatorController controller, AnimatorStateMachine machine, AnimatorState locomotion, string trigger,
+            AnimationClip clip)
+        {
+            if (clip == null) return;
+            if (controller.parameters.All(p => p.name != trigger))
+                controller.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
+            var state = machine.AddState("Gesto " + trigger);
+            state.motion = clip;
+            // Só sai do andar/parado (um gesto não corta golpe, dano nem morte).
+            var enter = locomotion.AddTransition(state);
+            enter.AddCondition(AnimatorConditionMode.If, 0, trigger);
+            enter.AddCondition(AnimatorConditionMode.Less, 0.2f, "Speed");
+            enter.AddCondition(AnimatorConditionMode.IfNot, 0, "Dead");
+            Quick(enter, 0.15f);
+            Leave(state, locomotion, 0.9f);
         }
 
         private static void Quick(AnimatorStateTransition transition, float duration)

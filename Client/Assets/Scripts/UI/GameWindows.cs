@@ -1021,8 +1021,49 @@ namespace Game.Client.UI
                 GUI.Label(new Rect(rect.x + 2, rect.y + 2, rect.width, rect.height), $"<b>{npc.Name}</b>\n<size=13>{role}</size>", _small.WithCenter());
                 GUI.color = Accent;
                 GUI.Label(rect, $"<b>{npc.Name}</b>\n<size=13>{role}</size>", _small.WithCenter());
+                if (QuestMarker(npc) is { } marker)
+                {
+                    // Flutua de leve em cima do nome, com sombra.
+                    var bob = Mathf.Sin(Time.unscaledTime * 3f + npc.X) * 4f;
+                    var markRect = new Rect(screen.x - 30, rect.y - 50 + bob, 60, 50);
+                    GUI.color = new Color(0, 0, 0, 0.75f);
+                    GUI.Label(new Rect(markRect.x + 2, markRect.y + 2, markRect.width, markRect.height), $"<size=40><b>{marker.Text}</b></size>", _small.WithCenter());
+                    GUI.color = marker.Color;
+                    GUI.Label(markRect, $"<size=40><b>{marker.Text}</b></size>", _small.WithCenter());
+                }
                 GUI.color = Color.white;
             }
+        }
+
+        private static readonly Color MarkerGold = new Color(1f, 0.85f, 0.2f);
+        private static readonly Color MarkerGray = new Color(0.75f, 0.75f, 0.78f);
+
+        /// <summary>
+        /// Marcador em cima de quem dá missões: "?" amarelo = tem missão dele pronta para entregar; "!" amarelo = tem missão
+        /// nova para o nível do jogador; "?" cinza = missão dele em andamento. Nulo = nada a mostrar.
+        /// </summary>
+        private static (string Text, Color Color)? QuestMarker(NpcDefinition npc)
+        {
+            if (npc.Role != NpcRole.QuestGiver || Player == null) return null;
+            var active = false;
+            foreach (var progress in CharacterState.Quests.Active)
+            {
+                var quest = QuestCatalog.Find(progress.QuestId);
+                if (quest == null || quest.GiverNpcId != npc.Id) continue;
+                active = true;
+                var ready = true;
+                for (var i = 0; i < quest.Objectives.Count; i++)
+                    if (i >= progress.Counts.Count || progress.Counts[i] < quest.Objectives[i].Count) ready = false;
+                if (ready) return ("?", MarkerGold);
+            }
+            var level = Player.Level;
+            foreach (var quest in QuestCatalog.All)
+            {
+                if (quest.GiverNpcId != npc.Id || quest.MinLevel > level || CharacterState.QuestCompleted(quest.Id) || CharacterState.CountsOf(quest.Id) != null)
+                    continue;
+                if (string.IsNullOrEmpty(quest.PreviousQuestId) || CharacterState.QuestCompleted(quest.PreviousQuestId)) return ("!", MarkerGold);
+            }
+            return active ? ("?", MarkerGray) : ((string, Color)?)null;
         }
 
         // ----- Utilidades -----

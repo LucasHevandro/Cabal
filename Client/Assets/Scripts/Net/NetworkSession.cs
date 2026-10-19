@@ -118,6 +118,7 @@ namespace Game.Client.Net
                 if (parts.Ring != null) parts.Ring.SetActive(false);
                 // Vira para a praça (ponto de nascimento).
                 root.transform.rotation = Quaternion.LookRotation(new Vector3(-npc.X, 0, -npc.Z).normalized + Vector3.forward * 0.001f);
+                root.AddComponent<Game.Client.World.NpcLife>().NpcId = npc.Id;
                 NpcViews[npc.Id] = root.transform;
             }
         }

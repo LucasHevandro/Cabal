@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &8363337179585759102
+--- !u!1 &2387265621283223729
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,7 +8,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2184973455092248185}
+  - component: {fileID: 6943625803122359537}
   m_Layer: 0
   m_Name: servo_da_cripta
   m_TagString: Untagged
@@ -16,29 +16,29 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2184973455092248185
+--- !u!4 &6943625803122359537
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8363337179585759102}
+  m_GameObject: {fileID: 2387265621283223729}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2411203374182564511}
+  - {fileID: 1518889044250453060}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &2809377333878547828
+--- !u!1001 &1341673517673513903
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 2184973455092248185}
+    m_TransformParent: {fileID: 6943625803122359537}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 701f6b466b9afa448b159e187bd83798, type: 3}
       propertyPath: m_LocalScale.x
@@ -138,26 +138,26 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 701f6b466b9afa448b159e187bd83798, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8665879033216684649}
+      addedObject: {fileID: 2084564052966202864}
   m_SourcePrefab: {fileID: 100100000, guid: 701f6b466b9afa448b159e187bd83798, type: 3}
---- !u!4 &2411203374182564511 stripped
+--- !u!4 &1518889044250453060 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 701f6b466b9afa448b159e187bd83798, type: 3}
-  m_PrefabInstance: {fileID: 2809377333878547828}
+  m_PrefabInstance: {fileID: 1341673517673513903}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &3043729785446488101 stripped
+--- !u!1 &2188746280714878718 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 701f6b466b9afa448b159e187bd83798, type: 3}
-  m_PrefabInstance: {fileID: 2809377333878547828}
+  m_PrefabInstance: {fileID: 1341673517673513903}
   m_PrefabAsset: {fileID: 0}
---- !u!95 &8665879033216684649
+--- !u!95 &2084564052966202864
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3043729785446488101}
+  m_GameObject: {fileID: 2188746280714878718}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 5e53af61bac9a9e46aa5c6a06100d4ed, type: 2}

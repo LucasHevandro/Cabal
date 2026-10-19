@@ -1079,6 +1079,17 @@ namespace Game.Client.DevTools
             var npc = NpcCatalog.Find(npcId);
             var motor = PlayerCombat.Local.GetComponent<PlayerMotor>();
             var target = new Vector3(npc.X, 0, npc.Z - 2f);
+            // NPC fora da vila: primeiro até a saída norte da praça (a reta pelo meio esbarra nos cantos dos NPCs).
+            var flatStart = new Vector2(motor.transform.position.x, motor.transform.position.z);
+            if ((new Vector2(target.x, target.z) - flatStart).magnitude > 14f && new Vector2(npc.X, npc.Z).magnitude > 16f)
+                yield return WalkToPoint(motor, new Vector3(0f, 0, 12f));
+            yield return WalkToPoint(motor, target);
+            yield return new WaitForSecondsRealtime(0.3f); // a última posição chega ao servidor
+            Log($"Andou até {npcId}: está em ({motor.transform.position.x:0.0}, {motor.transform.position.z:0.0}), alvo ({target.x:0.0}, {target.z:0.0})");
+        }
+
+        private static IEnumerator WalkToPoint(PlayerMotor motor, Vector3 target)
+        {
             var giveUp = Time.realtimeSinceStartup + 25f;
             while (Time.realtimeSinceStartup < giveUp)
             {
@@ -1088,7 +1099,6 @@ namespace Game.Client.DevTools
                 motor.Teleport(position + Vector3.ClampMagnitude(flat, 6f * Time.deltaTime));
                 yield return null;
             }
-            yield return new WaitForSecondsRealtime(0.3f); // a última posição chega ao servidor
         }
 
         private static IEnumerator WaitFor(Func<bool> condition, float seconds)
