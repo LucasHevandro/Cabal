@@ -954,3 +954,12 @@ options.quit = Sair do jogo
 options.quit_title = Sair do jogo?
 options.quit_text = Seu personagem fica salvo onde está.
 options.quit_yes = Sair
+
+# Lista de servidores na tela de entrada
+login.server_choose = Servidor
+login.server_other = Outro endereço…
+servers.online = <color=#7fe07f>● No ar</color> · {0} jogadores · {1} ms
+servers.unstable = <color=#f0c860>● Instável</color>
+servers.other_version = <color=#f0a050>● Outra versão do jogo (atualize)</color>
+servers.offline = <color=#ff8070>● Fora do ar</color>
+servers.checking = <color=#aaaaaa>● Verificando…</color>
