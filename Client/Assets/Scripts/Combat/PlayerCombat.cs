@@ -60,6 +60,23 @@ namespace Game.Client.Combat
         private OrbitCamera _camera;
         private SkillCooldowns _cooldowns;
         private float _unlockMovementAt;
+
+        // Conjuração (fora do combo): até quando o golpe atual dura, e a skill que espera ele acabar (só a última pedida).
+        private const float SkillQueueSeconds = 1.5f;
+        private float _castUntil;
+        private float _castStartedAt;
+        private int _queuedSkill = -1;
+        private float _queuedAt;
+
+        /// <summary>A skill sendo conjurada agora (nulo se nenhuma).</summary>
+        public SkillData Casting => Time.time < _castUntil ? _casting : null;
+        private SkillData _casting;
+
+        /// <summary>Quanto da conjuração atual já passou (0 a 1).</summary>
+        public float CastProgress => _castUntil <= _castStartedAt ? 1f : Mathf.Clamp01((Time.time - _castStartedAt) / (_castUntil - _castStartedAt));
+
+        /// <summary>Índice da skill esperando na fila (-1 = nenhuma).</summary>
+        public int QueuedSkill => _queuedSkill;
         private float _mpRegenCarry;
         private Vector3 _spawnPoint;
         private float _respawnAt;
@@ -175,6 +192,14 @@ namespace Game.Client.Combat
             var now = Time.time;
             if (_motor != null) _motor.MovementLocked = IsDead || now < _unlockMovementAt;
 
+            // A conjuração acabou: sai a skill da fila (se não esperou demais).
+            if (_queuedSkill >= 0 && now >= _castUntil)
+            {
+                var queued = _queuedSkill;
+                _queuedSkill = -1;
+                if (!IsDead && now - _queuedAt <= SkillQueueSeconds) UseSkill(queued, now);
+            }
+
             if (IsDead)
             {
                 if (!GameMode.IsOnline && now >= _respawnAt) Respawn();
@@ -285,6 +310,13 @@ namespace Game.Client.Combat
                 Refuse(Loc.T("skill.locked_detail", skill.Name, UnlockText(index)));
                 return;
             }
+            // Conjurando outra skill: esta espera na fila (no combo quem dita o ritmo é a barra).
+            if (Combo.State != ComboState.Active && Time.time < _castUntil)
+            {
+                _queuedSkill = index;
+                _queuedAt = Time.time;
+                return;
+            }
             var target = Target;
             double? distance = target != null && target.IsAlive ? DistanceToEdge(target) : (double?)null;
 
@@ -341,6 +373,12 @@ namespace Game.Client.Combat
 
             SkillRules.TryUse(skill, index, _cooldowns, Mp, distance, Time.time);
             _unlockMovementAt = Time.time + skill.LockSeconds;
+            if (!inCombo)
+            {
+                _casting = skill;
+                _castStartedAt = Time.time;
+                _castUntil = Time.time + skill.CastSeconds;
+            }
             if (_motor != null) _motor.FacePoint(target.transform.position);
 
             // O golpe da skill (SkillMoves): a animação toca agora e o efeito cai quando a arma acerta (ou a magia sai).

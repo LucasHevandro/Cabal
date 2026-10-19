@@ -72,9 +72,7 @@ namespace Game.Client.UI
             // Online o inventário de verdade fica nas janelas do jogo (GameWindows).
             if (KeyBindings.Pressed(GameAction.Inventory) && !GameMode.IsOnline) _showInventory = !_showInventory;
             if (KeyBindings.Pressed(GameAction.Map)) Minimap.Toggle();
-            // F1: os controles ficam na aba Controles das opções (fora da tela, para não poluir).
-            if (KeyBindings.Pressed(GameAction.Help)) OptionsWindow.ToggleControls();
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Minimap.BigOpen = false;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && !OptionsWindow.EscapeTaken) Minimap.BigOpen = false;
         }
 
         // Só GUI (sem GUILayout): sem a passada de layout, o OnGUI roda menos vezes por quadro.
@@ -434,6 +432,14 @@ namespace Game.Client.UI
                     if (!combat.Mp.Has(skill.MpCost)) Box(rect, new Color(0.05f, 0.08f, 0.35f, 0.55f));
                     if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i)) Box(rect, new Color(0.03f, 0.03f, 0.05f, 0.8f));
 
+                    // Na fila, esperando a conjuração atual: moldura dourada piscando.
+                    if (i == combat.QueuedSkill && Event.current.type == EventType.Repaint)
+                    {
+                        var pulse = 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 12f);
+                        GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0,
+                            new Color(1f, 0.82f, 0.35f, pulse), Vector4.one * 2.5f, Vector4.one * 4f);
+                    }
+
                     var remaining = combat.CooldownRemaining(i);
                     if (remaining > 0)
                     {
@@ -445,7 +451,18 @@ namespace Game.Client.UI
                 ShadowLabel(new Rect(rect.x + 3, rect.y + 1, rect.width, 16), SlotKeyLabel(slot), _key, filled ? Color.white : new Color(1f, 1f, 1f, 0.45f), 1f);
             }
 
+            DrawCastBar();
             if (hovered >= 0) DrawSkillTooltip(skills[hovered], hovered, mouse);
+        }
+
+        /// <summary>Barra de conjuração logo acima da barra de atalhos, com o nome da skill.</summary>
+        private void DrawCastBar()
+        {
+            var casting = combat.Casting;
+            if (casting == null) return;
+            var rect = new Rect(VirtualWidth / 2 - 130, BarTop - 30, 260, 10);
+            Bar(rect, combat.CastProgress, new Color(1f, 0.78f, 0.35f));
+            ShadowLabel(new Rect(rect.x, rect.y - 24, rect.width, 18), casting.Name, _key.WithCenter(), Color.white, 1f);
         }
 
         /// <summary>Nome, tipo, MP e recarga da skill embaixo do mouse.</summary>

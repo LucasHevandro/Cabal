@@ -136,7 +136,7 @@ namespace Game.Client.UI
             if (KeyBindings.Pressed(GameAction.QuestLog)) Fx.UiSounds.Toggle(_questLogOpen = !_questLogOpen);
             if (KeyBindings.Pressed(GameAction.Skills)) Fx.UiSounds.Toggle(_skillsOpen = !_skillsOpen);
             if (KeyBindings.Pressed(GameAction.Talk)) TalkToNearest();
-            if (keyboard.escapeKey.wasPressedThisFrame) CloseAll();
+            if (keyboard.escapeKey.wasPressedThisFrame && !OptionsWindow.EscapeTaken) CloseAll();
 
             // Afastou-se do NPC: a conversa fecha.
             var dialog = CharacterState.Dialog;
@@ -146,6 +146,11 @@ namespace Game.Client.UI
                 if (npc == null || !NearNpc(npc, NpcCatalog.InteractRange + 1.5f)) CharacterState.CloseDialog();
             }
         }
+
+        /// <summary>Alguma janela que o Esc fecha está aberta (aí o Esc fecha ela em vez de abrir as opções).</summary>
+        public static bool AnyOpen => Instance != null && Instance.isActiveAndEnabled &&
+            (Instance._inventoryOpen || Instance._attributesOpen || Instance._questLogOpen || Instance._skillsOpen ||
+             Instance._discardSlot >= 0 || CharacterState.Dialog != null);
 
         private void CloseAll()
         {

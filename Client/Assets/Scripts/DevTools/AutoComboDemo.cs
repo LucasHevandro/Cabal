@@ -65,6 +65,21 @@ namespace Game.Client.DevTools
             Teleport(combat.transform, target.transform.position + (combat.transform.position - target.transform.position).normalized * 2f);
             Log($"Alvo: {target.DisplayName}, HP {target.Hp.Current}/{target.Hp.Max}, SP {combat.Sp.Current}");
             yield return new WaitForSecondsRealtime(0.5f);
+
+            // Conjuração e fila: o Corte apertado no meio do Giro de Lâmina (0,55 s) espera ele acabar.
+            combat.RequestSkill(1);
+            yield return new WaitForSecondsRealtime(0.15f);
+            combat.RequestSkill(0);
+            var waited = combat.QueuedSkill == 0 && combat.Casting != null;
+            Capture("0-conjurando");
+            yield return new WaitForSecondsRealtime(0.8f);
+            if (!waited || combat.QueuedSkill != -1)
+            {
+                Finish("FALHA: a skill pedida durante a conjuração não esperou na fila");
+                yield break;
+            }
+            Log("Fila de skill: o Corte esperou o Giro de Lâmina acabar");
+            yield return new WaitForSecondsRealtime(2f); // recarga do Giro antes do combo
             Capture("1-antes-do-combo");
 
             combat.RequestStartCombo();

@@ -9,9 +9,10 @@ using UnityEngine.InputSystem;
 namespace Game.Client.UI
 {
     /// <summary>
-    /// Janela de opções (F10 no jogo, botão no menu de entrada): vídeo, áudio e idioma. Volume, qualidade, FPS e idioma
+    /// Janela de opções (Esc no jogo, botão no menu de entrada): vídeo, áudio e idioma. Volume, qualidade, FPS e idioma
     /// valem na hora; resolução e tela cheia só com "Aplicar". Funciona online e offline (criada sozinha ao abrir o jogo).
     /// </summary>
+    [DefaultExecutionOrder(-100)] // lê o Esc antes das outras janelas (que fecham com ele)
     public sealed class OptionsWindow : MonoBehaviour
     {
         private const float VirtualWidth = 1920f;
@@ -52,6 +53,13 @@ namespace Game.Client.UI
 
         public static bool IsOpen { get; private set; }
 
+        private static int _escapeFrame = -1;
+
+        /// <summary>O Esc deste quadro abriu ou fechou as opções: as outras janelas não fazem nada com ele.</summary>
+        public static bool EscapeTaken => _escapeFrame == Time.frameCount;
+
+        private bool _confirmQuit;
+
         /// <summary>O ponteiro está sobre a janela (o clique não vai para o mundo).</summary>
         public static bool Contains(Vector2 screenPoint)
         {
@@ -74,6 +82,7 @@ namespace Game.Client.UI
         {
             if (!IsOpen) return;
             IsOpen = false;
+            if (_instance != null) _instance._confirmQuit = false;
             UiSounds.Toggle(false);
             if (_instance != null) _instance._waitingFor = null;
             GameSettings.Save();
@@ -85,12 +94,6 @@ namespace Game.Client.UI
             else Open();
         }
 
-        /// <summary>F1: abre direto na aba Controles (ou fecha, se já estava nela).</summary>
-        public static void ToggleControls()
-        {
-            if (IsOpen && _instance != null && _instance._page == Page.Controls) Close();
-            else Open(Page.Controls);
-        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
@@ -136,8 +139,38 @@ namespace Game.Client.UI
                 }
                 return;
             }
-            if (KeyBindings.PressedRaw(GameAction.Options)) Toggle();
-            else if (IsOpen && keyboard.escapeKey.wasPressedThisFrame) Close();
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                // Esc: fecha a confirmação de sair, depois as opções. Fechado, abre as opções quando não há outra
+                // coisa para o Esc fechar antes (janela, conversa, mapa grande, amigos ou alvo selecionado).
+                if (_confirmQuit) _confirmQuit = false;
+                else if (IsOpen) Close();
+                else if (!SomethingElseToClose()) Open();
+                else return;
+                _escapeFrame = Time.frameCount;
+            }
+            else if (KeyBindings.PressedRaw(GameAction.Options)) Toggle();
+        }
+
+        /// <summary>Para o teste automático: abre as opções já perguntando se quer sair.</summary>
+        public static void OpenQuitConfirm()
+        {
+            Open();
+            if (_instance != null) _instance._confirmQuit = true;
+        }
+
+        private static bool SomethingElseToClose() =>
+            GameWindows.AnyOpen || Minimap.BigOpen || SocialWindows.FriendsOpen ||
+            (PlayerCombat.Local != null && PlayerCombat.Local.Target != null);
+
+        /// <summary>Sair do jogo: salva as opções e fecha (online, o servidor salva o personagem ao perder a conexão).</summary>
+        private static void QuitGame()
+        {
+            GameSettings.Save();
+            Application.Quit();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#endif
         }
 
         // Só GUI (sem GUILayout): sem a passada de layout, o OnGUI roda menos vezes por quadro.
@@ -172,8 +205,22 @@ namespace Game.Client.UI
 
             var buttonsY = _rect.yMax - 60;
             if (GUI.Button(new Rect(_rect.xMax - 28 - 160, buttonsY, 160, 40), "<b>" + Loc.T("ui.close") + "</b>", _button)) Close();
-            GUI.Label(new Rect(x, buttonsY - 34, width, 24), Loc.T("options.hint", KeyBindings.Label(GameAction.Options)), _small);
+            GUI.Label(new Rect(x, buttonsY - 34, width, 24), Loc.T("options.hint"), _small);
+            if (GUI.Button(new Rect(_rect.xMax - 28 - 170, _rect.y + 18, 170, 36), Loc.T("options.quit"), _button)) _confirmQuit = true;
+            if (_confirmQuit) DrawQuitConfirm();
             GUI.matrix = Matrix4x4.identity;
+        }
+
+        /// <summary>Confirmação de sair, por cima da janela.</summary>
+        private void DrawQuitConfirm()
+        {
+            UiTheme.Panel(_rect, 0.75f);
+            var box = new Rect(_rect.center.x - 200, _rect.center.y - 90, 400, 180);
+            UiTheme.Panel(box, 1f);
+            GUI.Label(new Rect(box.x + 20, box.y + 18, box.width - 40, 34), "<b>" + Loc.T("options.quit_title") + "</b>", _label.WithCenter());
+            GUI.Label(new Rect(box.x + 20, box.y + 54, box.width - 40, 50), Loc.T("options.quit_text"), _small.WithCenter());
+            if (GUI.Button(new Rect(box.x + 30, box.yMax - 62, 160, 40), "<b>" + Loc.T("options.quit_yes") + "</b>", _button)) QuitGame();
+            if (GUI.Button(new Rect(box.xMax - 190, box.yMax - 62, 160, 40), Loc.T("ui.cancel"), _button)) _confirmQuit = false;
         }
 
         private void DrawGeneral(float x, float y, float width)
@@ -282,8 +329,7 @@ namespace Game.Client.UI
                 _controlsKey = key;
                 _controlsText =
                     Loc.T("help.controls", KeyBindings.MoveLabel(), KeyBindings.Label(GameAction.Run), KeyBindings.Label(GameAction.Dodge),
-                        KeyBindings.Label(GameAction.Options), KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map),
-                        KeyBindings.Label(GameAction.Help)) + "\n\n" +
+                        "Esc", KeyBindings.Label(GameAction.NextTarget), KeyBindings.Label(GameAction.Map)) + "\n\n" +
                     (online
                         ? Loc.T("help.keys_online", KeyBindings.SkillsLabel(8), KeyBindings.Label(GameAction.Pickup),
                             KeyBindings.Label(GameAction.Inventory), KeyBindings.Label(GameAction.Attributes), KeyBindings.Label(GameAction.Talk),

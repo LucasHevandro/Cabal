@@ -120,8 +120,12 @@ namespace Game.Client.UI
             var keyboard = GameInput.Keyboard;
             if (keyboard == null || ConnectMenu.IsOpen) return;
             if (KeyBindings.Pressed(GameAction.Friends)) Fx.UiSounds.Toggle(_friendsOpen = !_friendsOpen);
-            if (keyboard.escapeKey.wasPressedThisFrame) _friendsOpen = false;
+            if (keyboard.escapeKey.wasPressedThisFrame && !OptionsWindow.EscapeTaken) _friendsOpen = false;
+            FriendsOpen = _friendsOpen;
         }
+
+        /// <summary>A lista de amigos está aberta (o Esc fecha ela antes de abrir as opções).</summary>
+        public static bool FriendsOpen { get; private set; }
 
         private void OnMessage(INetMessage message)
         {

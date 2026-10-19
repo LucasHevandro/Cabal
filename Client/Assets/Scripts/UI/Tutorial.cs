@@ -246,7 +246,7 @@ namespace Game.Client.UI
                 case Step.Routes:
                     return Loc.T("tutorial.routes");
                 default:
-                    return Loc.T("tutorial.done", KeyBindings.Label(GameAction.Options));
+                    return Loc.T("tutorial.done", "Esc");
             }
         }
 
