@@ -140,7 +140,7 @@ namespace Game.Shared.Net
         public static SetHotbar Read(PacketReader r)
         {
             var message = new SetHotbar();
-            var count = System.Math.Min((int)r.ReadByte(), 16);
+            var count = System.Math.Min((int)r.ReadByte(), 32);
             for (var i = 0; i < count; i++) message.Slots.Add(r.ReadByte());
             return message;
         }

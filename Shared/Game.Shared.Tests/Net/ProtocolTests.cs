@@ -201,6 +201,17 @@ public class ProtocolTests
     }
 
     [Fact]
+    public void Barra_de_atalhos_com_20_casas_e_aprender_skill()
+    {
+        var slots = Enumerable.Range(0, Game.Shared.Progression.SkillTraining.HotbarSize).Select(i => (byte)(i % 3 == 0 ? 255 : i)).ToList();
+        var bar = RoundTrip(new SetHotbar { Slots = slots });
+        Assert.Equal(slots, bar.Slots);
+        Assert.Equal("execucao", RoundTrip(new LearnSkill { SkillId = "execucao" }).SkillId);
+        var sheet = RoundTrip(new CharacterSheet { Hotbar = slots });
+        Assert.Equal(slots, sheet.Hotbar);
+    }
+
+    [Fact]
     public void Tipo_desconhecido_ou_conteudo_errado_eh_erro_de_protocolo()
     {
         Assert.Throws<ProtocolException>(() => NetCodec.Decode((MessageType)999, Array.Empty<byte>()));

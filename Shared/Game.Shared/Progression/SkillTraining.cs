@@ -12,7 +12,11 @@ namespace Game.Shared.Progression
     /// </summary>
     public static class SkillTraining
     {
-        public const int HotbarSize = ClassCatalog.HotbarSize;
+        /// <summary>Casas da barra: duas fileiras de 10 (1 a 0 e Alt+1 a Alt+0), como no CABAL.</summary>
+        public const int HotbarSize = 20;
+
+        /// <summary>Casas por fileira.</summary>
+        public const int HotbarRow = 10;
 
         /// <summary>Casa vazia na barra.</summary>
         public const byte Empty = 255;
