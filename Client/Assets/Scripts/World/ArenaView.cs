@@ -23,6 +23,8 @@ namespace Game.Client.World
         private string _builtFor = "";
         private readonly List<Renderer> _points = new List<Renderer>();
         private readonly List<Transform> _fills = new List<Transform>();
+        private readonly List<Renderer> _flags = new List<Renderer>();
+        private MaterialPropertyBlock _flagColor;
         private readonly Dictionary<string, Material> _tints = new Dictionary<string, Material>();
 
         private void Start()
@@ -55,7 +57,15 @@ namespace Game.Client.World
             for (var i = 0; i < _points.Count && i < state.Points.Count; i++)
             {
                 var point = state.Points[i];
-                _points[i].sharedMaterial = Tint(point.Owner == (sbyte)ArenaTeam.Blue ? Blue : point.Owner == (sbyte)ArenaTeam.Red ? Red : Neutral);
+                var ownerColor = point.Owner == (sbyte)ArenaTeam.Blue ? Blue : point.Owner == (sbyte)ArenaTeam.Red ? Red : Neutral;
+                _points[i].sharedMaterial = Tint(ownerColor);
+                // A bandeira do ponto fica com a cor do dono.
+                if (i < _flags.Count && _flags[i] != null)
+                {
+                    _flagColor ??= new MaterialPropertyBlock();
+                    _flagColor.SetColor("_BaseColor", ownerColor);
+                    _flags[i].SetPropertyBlock(_flagColor);
+                }
                 // O disco de dentro cresce com o progresso da captura, na cor de quem está tomando.
                 var amount = Mathf.Abs(point.Progress);
                 _fills[i].localScale = new Vector3(amount * ArenaRules.CaptureRadius * 2, 0.02f, amount * ArenaRules.CaptureRadius * 2);
@@ -92,6 +102,7 @@ namespace Game.Client.World
             _builtFor = "";
             _points.Clear();
             _fills.Clear();
+            _flags.Clear();
         }
 
         private void Build(PvpState state)
@@ -104,11 +115,40 @@ namespace Game.Client.World
             var length = ArenaRules.HalfLength * 2;
             var wall = _session.Material("arena_muro", new Color(0.42f, 0.38f, 0.34f));
 
-            Block("Chão", new Vector3(0, -0.5f, 0), new Vector3(width, 1, length), _session.Material("arena_chao", new Color(0.5f, 0.46f, 0.38f)));
-            Block("Muro oeste", new Vector3(-ArenaRules.HalfWidth - 0.5f, 1.5f, 0), new Vector3(1, 3, length + 2), wall);
-            Block("Muro leste", new Vector3(ArenaRules.HalfWidth + 0.5f, 1.5f, 0), new Vector3(1, 3, length + 2), wall);
-            Block("Muro sul", new Vector3(0, 1.5f, -ArenaRules.HalfLength - 0.5f), new Vector3(width + 2, 3, 1), wall);
-            Block("Muro norte", new Vector3(0, 1.5f, ArenaRules.HalfLength + 0.5f), new Vector3(width + 2, 3, 1), wall);
+            var ground = Block("Chão", new Vector3(0, -0.5f, 0), new Vector3(width, 1, length), _session.Material("arena_chao", new Color(0.5f, 0.46f, 0.38f)));
+            Kit.Floor(ground.GetComponent<Renderer>(), "piso_arena", new Vector2(width, length), 6f);
+            var walls = new[]
+            {
+                Block("Muro oeste", new Vector3(-ArenaRules.HalfWidth - 0.5f, 1.5f, 0), new Vector3(1, 3, length + 2), wall),
+                Block("Muro leste", new Vector3(ArenaRules.HalfWidth + 0.5f, 1.5f, 0), new Vector3(1, 3, length + 2), wall),
+                Block("Muro sul", new Vector3(0, 1.5f, -ArenaRules.HalfLength - 0.5f), new Vector3(width + 2, 3, 1), wall),
+                Block("Muro norte", new Vector3(0, 1.5f, ArenaRules.HalfLength + 0.5f), new Vector3(width + 2, 3, 1), wall),
+            };
+            var hasKit = Kit.Place(_root.transform, "muro_arena", new Vector3(-ArenaRules.HalfWidth - 0.5f, 0, -ArenaRules.HalfLength + 2f),
+                Quaternion.LookRotation(Vector3.left)) != null;
+            if (hasKit)
+            {
+                foreach (var block in walls) Kit.HideMesh(block);
+                for (var z = -ArenaRules.HalfLength + 2f; z < ArenaRules.HalfLength + 1f; z += 4f)
+                {
+                    Kit.Place(_root.transform, "muro_arena", new Vector3(-ArenaRules.HalfWidth - 0.5f, 0, z), Quaternion.LookRotation(Vector3.left));
+                    Kit.Place(_root.transform, "muro_arena", new Vector3(ArenaRules.HalfWidth + 0.5f, 0, z), Quaternion.LookRotation(Vector3.right));
+                }
+                for (var x = -ArenaRules.HalfWidth + 2f; x < ArenaRules.HalfWidth + 1f; x += 4f)
+                {
+                    Kit.Place(_root.transform, "muro_arena", new Vector3(x, 0, -ArenaRules.HalfLength - 0.5f), Quaternion.LookRotation(Vector3.back));
+                    Kit.Place(_root.transform, "muro_arena", new Vector3(x, 0, ArenaRules.HalfLength + 0.5f), Quaternion.identity);
+                }
+                // Arquibancada dos dois lados compridos (só enfeite, fora do campo) e braseiros nos cantos.
+                for (var z = -ArenaRules.HalfLength + 6f; z < ArenaRules.HalfLength - 4f; z += 8f)
+                {
+                    Kit.Place(_root.transform, "arquibancada", new Vector3(-ArenaRules.HalfWidth - 2f, 0, z), Quaternion.LookRotation(Vector3.left));
+                    Kit.Place(_root.transform, "arquibancada", new Vector3(ArenaRules.HalfWidth + 2f, 0, z), Quaternion.LookRotation(Vector3.right));
+                }
+                foreach (var x in new[] { -1f, 1f })
+                foreach (var z in new[] { -1f, 1f })
+                    Kit.Place(_root.transform, "braseiro_arena", new Vector3(x * (ArenaRules.HalfWidth - 2f), 0, z * (ArenaRules.HalfLength - 2f)), Quaternion.identity);
+            }
 
             foreach (var team in new[] { ArenaTeam.Blue, ArenaTeam.Red })
             {
@@ -118,7 +158,10 @@ namespace Game.Client.World
             }
             // Obstáculos para quebrar a linha reta entre as bases.
             foreach (var (x, z) in new[] { (-10f, -14f), (10f, -14f), (-10f, 14f), (10f, 14f) })
-                Block("Pilar", new Vector3(x, 1.5f, z), new Vector3(3, 3, 3), wall);
+            {
+                var pillar = Block("Pilar", new Vector3(x, 1.5f, z), new Vector3(3, 3, 3), wall);
+                if (hasKit && Kit.Place(_root.transform, "pilar_arena", new Vector3(x, 0, z), Quaternion.identity) != null) Kit.HideMesh(pillar);
+            }
 
             foreach (var point in ArenaRules.Points)
             {
@@ -126,7 +169,9 @@ namespace Game.Client.World
                 _points.Add(disc.GetComponent<Renderer>());
                 var fill = Disc($"Captura {point.Name}", new Vector3(point.X, 0.05f, point.Z), 0.01f, Tint(Blue));
                 _fills.Add(fill.transform);
-                Block($"Bandeira {point.Name}", new Vector3(point.X, 2f, point.Z), new Vector3(0.25f, 4f, 0.25f), wall, collider: false);
+                var flag = hasKit ? Kit.Place(_root.transform, "bandeira", new Vector3(point.X, 0, point.Z), Quaternion.identity) : null;
+                if (flag != null) _flags.Add(flag.transform.Find("Pano")?.GetComponentInChildren<Renderer>());
+                else Block($"Bandeira {point.Name}", new Vector3(point.X, 2f, point.Z), new Vector3(0.25f, 4f, 0.25f), wall, collider: false);
             }
         }
 

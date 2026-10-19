@@ -265,7 +265,7 @@ namespace Game.Client.Editor
         }
 
         /// <summary>Fogo do braseiro: partículas e, em metade deles, uma luz que tremula.</summary>
-        private static void Fire(Transform parent, Vector3 offset, bool withLight)
+        internal static void Fire(Transform parent, Vector3 offset, bool withLight)
         {
             var fire = new GameObject("Fogo");
             fire.transform.SetParent(parent, false);

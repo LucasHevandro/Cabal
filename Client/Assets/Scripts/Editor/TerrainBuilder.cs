@@ -195,7 +195,7 @@ namespace Game.Client.Editor
         }
 
         /// <summary>Textura de chão 512x512 que repete sem emenda: duas cores misturadas por ruído e pintinhas.</summary>
-        private static Texture2D GroundTexture(string name, Color dark, Color light, float speckle, int seed)
+        internal static Texture2D GroundTexture(string name, Color dark, Color light, float speckle, int seed)
         {
             const int size = 512;
             var pixels = new Color32[size * size];
@@ -268,7 +268,7 @@ namespace Game.Client.Editor
             return kit.Build("flores");
         }
 
-        private static Texture2D SaveTexture(string name, int width, int height, Color32[] pixels, TextureWrapMode wrap, bool alpha)
+        internal static Texture2D SaveTexture(string name, int width, int height, Color32[] pixels, TextureWrapMode wrap, bool alpha)
         {
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
             texture.SetPixels32(pixels);
