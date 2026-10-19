@@ -226,7 +226,7 @@ namespace Game.Client.UI
             var text = arena ? Loc.T("hud.zone_arena") : dungeon != null ? Loc.T("hud.zone_dungeon", dungeon.Name) : zone == null ? Loc.T("hud.zone_road") : Loc.T("hud.zone", zone.DisplayName, levels);
             var rect = new Rect(VirtualWidth - 460, 20, 440, 40);
             UiTheme.Panel(rect, 0.78f);
-            GUI.Label(rect, text, _center);
+            GUI.Label(rect, text, UiArt.Title(21, TextAnchor.MiddleCenter));
         }
 
         private void DrawNetwork()

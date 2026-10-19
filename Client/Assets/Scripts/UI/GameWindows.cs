@@ -256,7 +256,9 @@ namespace Game.Client.UI
         {
             OpenRects.Add(rect);
             UiTheme.Panel(rect);
-            GUI.Label(new Rect(rect.x + 14, rect.y + 8, rect.width - 28, 30), $"<b>{title}</b>", _label);
+            // Título na fonte serifada; a dica entre parênteses (o <size=14>) fica clara e discreta.
+            var styled = title.Replace("<size=14>", "<size=14><color=#c9c1b2>").Replace("</size>", "</color></size>");
+            GUI.Label(new Rect(rect.x + 14, rect.y + 6, rect.width - 28, 30), styled, UiArt.Title(22));
             UiTheme.Divider(new Rect(rect.x + 10, rect.y + 40, rect.width - 20, 2));
             return rect;
         }
@@ -319,6 +321,14 @@ namespace Game.Client.UI
             var dragged = _dragging && _dragFrom == kind && _dragSlot == slot;
             UiTheme.Slot(rect, hover);
             if (item != null && !dragged) DrawItemIcon(rect, item);
+            else if (kind == Msg.ItemContainerKind.Equipment && Event.current.type == EventType.Repaint)
+            {
+                // Casa de equipamento vazia: a silhueta da peça que vai ali.
+                var size = Mathf.Min(rect.width, rect.height) * 0.72f;
+                GUI.color = new Color(0.85f, 0.78f, 0.62f, 0.22f);
+                GUI.DrawTexture(new Rect(rect.center.x - size / 2, rect.center.y - size / 2, size, size), UiArt.Silhouette((EquipSlot)slot));
+                GUI.color = Color.white;
+            }
             if (item != null && item.Uid == _smithItemUid && _smithItemUid != 0) Outline(rect, Accent);
 
             if (!hover) return;

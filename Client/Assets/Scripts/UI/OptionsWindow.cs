@@ -440,7 +440,7 @@ namespace Game.Client.UI
             UiTheme.Ensure();
             _label = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, wordWrap = true };
             _label.normal.textColor = Color.white;
-            _title = new GUIStyle(_label) { fontSize = 28, fontStyle = FontStyle.Bold };
+            _title = new GUIStyle(UiArt.Title(30)) { wordWrap = true };
             _small = new GUIStyle(_label) { fontSize = 14 };
             _button = new GUIStyle(GUI.skin.button) { fontSize = 18, richText = true };
             _tab = new GUIStyle(GUI.skin.label) { fontSize = 20, richText = true, alignment = TextAnchor.MiddleCenter };

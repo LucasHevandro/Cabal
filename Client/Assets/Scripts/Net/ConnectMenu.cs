@@ -357,7 +357,7 @@ namespace Game.Client.Net
                 return;
             }
             Game.Client.UI.UiTheme.Ensure();
-            _title ??= new GUIStyle(GUI.skin.label) { fontSize = 28, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            _title ??= new GUIStyle(Game.Client.UI.UiArt.Title(32, TextAnchor.MiddleCenter));
             _label ??= new GUIStyle(GUI.skin.label) { fontSize = 17 };
             _small ??= new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true };
 
@@ -373,7 +373,8 @@ namespace Game.Client.Net
             var width = (_screen == Screen.Terms ? 820 : _screen == Screen.CreateCharacter ? 820 : 480) * scale;
             var height = (_screen == Screen.Terms ? 780 : _screen == Screen.CreateCharacter ? 600 : 520) * scale;
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
-            GUILayout.BeginArea(area, GUI.skin.box);
+            Game.Client.UI.UiTheme.Panel(area, 0.94f);
+            GUILayout.BeginArea(new Rect(area.x + 14 * scale, area.y + 6 * scale, area.width - 28 * scale, area.height - 12 * scale));
             GUILayout.Space(8 * scale);
             GUILayout.Label(Loc.T("login.title"), _title);
             GUILayout.Space(12 * scale);

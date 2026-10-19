@@ -282,7 +282,8 @@ namespace Game.Client.UI
             UiTheme.Ensure();
             _text = new GUIStyle(GUI.skin.label) { fontSize = 18, richText = true, wordWrap = true };
             _text.normal.textColor = Color.white;
-            _title = new GUIStyle(_text) { fontSize = 16, fontStyle = FontStyle.Bold };
+            _title = new GUIStyle(_text) { fontSize = 17, fontStyle = FontStyle.Bold };
+            if (UiArt.TitleFont != null) _title.font = UiArt.TitleFont;
             _title.normal.textColor = Accent;
             _button = new GUIStyle(GUI.skin.button) { fontSize = 14, richText = true };
             _arrow = new GUIStyle(_text) { fontSize = 34, alignment = TextAnchor.MiddleCenter };

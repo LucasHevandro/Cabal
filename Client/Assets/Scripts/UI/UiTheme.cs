@@ -4,8 +4,9 @@ using UnityEngine;
 namespace Game.Client.UI
 {
     /// <summary>
-    /// Visual comum da interface (IMGUI): painéis com moldura bronze e cantos arredondados, barras com brilho, botões e
-    /// campos com textura própria e a fonte do sistema (Segoe UI). Tudo gerado em código, sem arte de fora.
+    /// Visual comum da interface (IMGUI): painéis com moldura bronze, cantos arredondados e ornamento dourado
+    /// (<see cref="UiArt"/>), barras com brilho, botões e campos com textura própria, a fonte do sistema (Segoe UI) no
+    /// texto e uma serifada nos títulos. Tudo gerado em código, sem arte de fora.
     /// </summary>
     public static class UiTheme
     {
@@ -58,6 +59,7 @@ namespace Game.Client.UI
             GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, Fade(Border, alpha), Vector4.one * 1.6f, Vector4.one * radius);
             var inner = new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6);
             GUI.DrawTexture(inner, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, new Color(1, 1, 1, 0.05f * alpha), Vector4.one, Vector4.one * (radius - 3));
+            UiArt.Corners(rect, alpha);
         }
 
         /// <summary>Caixa de marcar do tema: quadradinho com moldura e um miolo dourado quando ligada; o texto ao lado.</summary>
