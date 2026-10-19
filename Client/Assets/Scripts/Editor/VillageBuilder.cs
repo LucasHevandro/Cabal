@@ -138,6 +138,18 @@ namespace Game.Client.Editor
             AssetDatabase.DeleteAsset(path);
             AssetWrite.Create(mesh, path);
 
+            // Shader próprio: espuma nas margens, reflexo do céu e ondinhas (Shaders/Agua.shader).
+            var shaded = Shader.Find("Jogo/Agua") != null;
+            if (shaded)
+            {
+                var custom = TrainingSceneBuilder.MaterialFor("Agua", Color.white, "Jogo/Agua");
+                custom.shaderKeywords = new string[0];
+                custom.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                EditorUtility.SetDirty(custom);
+                RiverObject(parent, mesh, custom, false);
+                return;
+            }
+
             var water = TrainingSceneBuilder.MaterialFor("Agua", new Color(0.25f, 0.5f, 0.62f, 0.72f), "Universal Render Pipeline/Unlit");
             water.SetFloat("_Surface", 1f);
             water.SetFloat("_Blend", 0f);
@@ -149,14 +161,19 @@ namespace Game.Client.Editor
             water.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             water.SetTexture("_BaseMap", TerrainBuilder.GroundTexture("agua", new Color(0.55f, 0.75f, 0.85f), new Color(0.95f, 1f, 1f), 0.04f, 31));
             EditorUtility.SetDirty(water);
+            RiverObject(parent, mesh, water, true);
+        }
 
+        private static void RiverObject(Transform parent, Mesh mesh, Material material, bool flowingTexture)
+        {
             var river = new GameObject("Rio");
             river.transform.SetParent(parent, false);
             river.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = river.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = water;
+            renderer.sharedMaterial = material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            river.AddComponent<FlowingWater>();
+            renderer.receiveShadows = false;
+            if (flowingTexture) river.AddComponent<FlowingWater>();
         }
 
         /// <summary>Ponte de madeira em arco onde a estrada cruza o rio.</summary>
