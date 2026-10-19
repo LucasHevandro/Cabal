@@ -152,3 +152,22 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
 **Conferir:** `Prototipo.exe -skilltest pasta` toca as 16 skills na frente de um esqueleto. Ele captura o preparo e o acerto de cada uma, alternando Good e Excellent.
 
 **Clarões:** usam um brilho grande de partícula, que o bloom espalha. Luzes pontuais deixavam um ponto branco solto na tela.
+
+# Equipamento visível e brilho da melhoria
+
+- **Arma na mão:** cada arma tem o próprio modelo em `Visuals/weapon/<id>`, gerado pelo `ItemModelBuilder` (menu **Jogo > Visuais > Montar itens**).
+  - **Ferro:** o modelo do KayKit.
+  - **Aço negro:** maior e escurecido.
+  - **Astralita:** a espada colorida, ou o cajado em azul-cristal, com um brilho leve.
+- **Brilho da melhoria** (`WeaponFx.GlowFor`): um "casco" da mesma malha, aditivo, pulsando sobre a arma.
+
+  | Melhoria | Brilho |
+  |---|---|
+  | +4 a +6 | azul fraco |
+  | +7 e +8 | ciano, com partículas subindo da lâmina |
+  | +9 | roxo |
+  | +10 | dourado, pulsando mais forte |
+
+- **Outros jogadores:** o servidor manda a arma e a melhoria de cada jogador no `EntitySpawned` e, quando mudam, no `EntityLook` (protocolo v13). Assim todo mundo vê o brilho de todo mundo.
+- **Itens no chão:** os 37 itens têm modelo em `Visuals/item/<id>`: as armas, armadura, luvas, botas e anel por nível, cristais dos núcleos, gemas, poções, materiais e a chave da cripta. Giram e flutuam com o feixe da raridade.
+- **Conferir:** `Prototipo.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, e depois todos os itens.
