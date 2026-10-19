@@ -31,6 +31,8 @@ namespace Game.Shared.Net
         ArenaCommand = 22,
         GmCommand = 23,
         ClientReport = 24,
+        LearnSkill = 25,
+        SetHotbar = 26,
 
         // Servidor → cliente
         Welcome = 100,
@@ -75,7 +77,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 13;
+        public const int Version = 14;
         public const int DefaultPort = 7777;
     }
 
@@ -735,6 +737,8 @@ namespace Game.Shared.Net
                 MessageType.UpgradeItem => UpgradeItem.Read(reader),
                 MessageType.ApplyOption => ApplyOption.Read(reader),
                 MessageType.AllocateAttributes => AllocateAttributes.Read(reader),
+                MessageType.LearnSkill => LearnSkill.Read(reader),
+                MessageType.SetHotbar => SetHotbar.Read(reader),
                 MessageType.TalkToNpc => TalkToNpc.Read(reader),
                 MessageType.QuestCommand => QuestCommand.Read(reader),
                 MessageType.ActivateAwakening => ActivateAwakening.Read(reader),

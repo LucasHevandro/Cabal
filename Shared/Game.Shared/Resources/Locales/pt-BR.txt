@@ -125,6 +125,7 @@ npc.ferreira_ilsa = Ferreira Ilsa
 npc.guarda_volumes_bento = Bento do Armazém
 npc.mercadora_lia = Mercadora Lia
 npc.guardia_selene = Guardiã Selene
+npc.mestre_aldric = Mestre Aldric
 
 # ===== Missões =====
 quest.primeiros_passos = Primeiros passos
@@ -140,10 +141,10 @@ quest.arte_do_combo.desc = Derrote coelhos nos Campos do Vento para treinar o ri
 quest.arte_do_combo.unlocks = Libera o combo.
 quest.pele_e_presa.desc = Os lobos cinzentos rondam a vila. Traga peles para reforçar as armaduras.
 quest.ameaca_na_mata.desc = Javalis e aranhas tomaram a Mata Sombria. Abra caminho.
-quest.ameaca_na_mata.unlocks = Libera as skills de rank 2.
+quest.ameaca_na_mata.unlocks = O Mestre Aldric passa a ensinar as skills de rank 2.
 quest.veneno_raro.desc = A Ferreira Ilsa precisa de glândulas de veneno para temperar o aço.
 quest.as_ruinas.desc = Golens de pedra guardam a entrada das Ruínas Esquecidas.
-quest.as_ruinas.unlocks = Libera as skills de rank 3.
+quest.as_ruinas.unlocks = O Mestre Aldric passa a ensinar as skills de rank 3.
 quest.ecos_espectrais.desc = Espectros vagam pelas ruínas. Reúna a essência deles.
 quest.o_guardiao.desc = Derrote o Guardião das Ruínas na arena ao norte.
 
@@ -168,7 +169,7 @@ combo.started = Combo! Aperte as skills quando o marcador estiver na janela
 combo.finisher_closer = Chegue perto do alvo para finalizar
 fx.final = FINAL {0}
 combo.finisher = Finalizador x{0:0.00} depois de {1} acertos
-skill.locked_detail = {0} ainda não foi liberada ({1})
+skill.locked_detail = {0} ainda não foi aprendida ({1}): aprenda com o Mestre Aldric, na vila
 skill.cooldown = {0} em recarga
 combat.out_of_range = Fora de alcance
 combat.no_mp = MP insuficiente ({0}/{1})
@@ -466,11 +467,13 @@ npc.hint_warehouse = armazém
 npc.hint_merchant = loja
 npc.hint_dungeon = dungeon
 npc.hint_quests = missões
+npc.hint_trainer = aprender skills
 npc.role_smith = Ferreira
 npc.role_warehouse = Armazém
 npc.role_merchant = Loja
 npc.role_dungeon = Dungeon
 npc.role_quests = Missões
+npc.role_trainer = Mestre de skills
 
 # ===== Cliente: chat, grupo e amigos =====
 chat.hint = Enter abre o chat. Digite /ajuda para ver os comandos.
@@ -536,7 +539,7 @@ auth.try_again = Tente de novo em instantes.
 # ===== Servidor: combate =====
 combo.ended_timeout = Combo encerrado: tempo esgotado ({0} acertos)
 combo.need_target = Selecione um alvo para o combo
-skill.locked = {0} ainda não foi liberada
+skill.locked = {0} ainda não foi aprendida (Mestre Aldric, na vila)
 combat.need_target = Selecione um alvo
 combo.ended_cooldown = Combo encerrado: {0} em recarga
 combo.ended_window = Combo encerrado: fora da janela ({0} acertos)
@@ -850,6 +853,7 @@ action.friends = Amigos
 action.map = Mapa
 action.help = Mostrar/esconder ajuda
 action.options = Opções
+action.skills = Skills
 key.space = Espaço
 key.leftshift = Shift
 key.rightshift = Shift dir.
@@ -930,3 +934,19 @@ suspect.perfect_combo = combo perfeito demais
 suspect.hours_online = muitas horas seguidas online
 suspect.repeated_route = rota repetida
 
+# Mestre de skills e barra de atalhos
+trainer.go_to = Vá até {0}, na vila, para aprender skills.
+trainer.already_known = Você já sabe {0}.
+trainer.need_level = Precisa do nível {0}.
+trainer.need_quest = Precisa concluir a missão "{0}".
+trainer.no_alz = Precisa de {0:N0} Alz.
+trainer.learned = Você aprendeu {0}! ({1:N0} Alz) Ela foi para a barra de atalhos.
+skills.title = Skills  <size=14>({0} fecha · arraste para a barra)</size>
+skills.trainer_title = {0} — skills da classe
+skills.trainer_hint = Aprenda as skills da sua classe. Depois, arraste o ícone para a barra de atalhos.
+skills.learned = Aprendida
+skills.learn = Aprender · {0:N0} Alz
+skills.learn_free = Aprender
+skills.need = <color=#ff8a7a>{0}</color>
+skills.your_alz = Seu Alz: <b>{0:N0}</b>
+skills.bar_hint = Arraste da barra para fora para tirar uma skill; arraste entre as casas para trocar de lugar.

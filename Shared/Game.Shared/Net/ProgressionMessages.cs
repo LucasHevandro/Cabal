@@ -114,6 +114,38 @@ namespace Game.Shared.Net
             new AllocateAttributes { Strength = r.ReadUShort(), Dexterity = r.ReadUShort(), Intelligence = r.ReadUShort() };
     }
 
+    /// <summary>Aprender uma skill da classe com o mestre de skills (perto dele, pagando em Alz).</summary>
+    public sealed class LearnSkill : INetMessage
+    {
+        public MessageType Type => MessageType.LearnSkill;
+        public string SkillId = "";
+
+        public void Write(PacketWriter w) => w.WriteString(SkillId);
+
+        public static LearnSkill Read(PacketReader r) => new LearnSkill { SkillId = r.ReadString() };
+    }
+
+    /// <summary>Nova arrumação da barra de atalhos: o índice da skill da classe em cada casa (255 = vazia).</summary>
+    public sealed class SetHotbar : INetMessage
+    {
+        public MessageType Type => MessageType.SetHotbar;
+        public List<byte> Slots = new List<byte>();
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteByte((byte)Slots.Count);
+            foreach (var slot in Slots) w.WriteByte(slot);
+        }
+
+        public static SetHotbar Read(PacketReader r)
+        {
+            var message = new SetHotbar();
+            var count = System.Math.Min((int)r.ReadByte(), 16);
+            for (var i = 0; i < count; i++) message.Slots.Add(r.ReadByte());
+            return message;
+        }
+    }
+
     /// <summary>Falar com um NPC: conta para missões e abre a conversa (<see cref="NpcDialog"/>).</summary>
     public sealed class TalkToNpc : INetMessage
     {
@@ -175,8 +207,11 @@ namespace Game.Shared.Net
         public float CritPercent;
         public bool ComboUnlocked;
 
-        /// <summary>Uma marca por skill da classe (na ordem do catálogo): liberada ou não.</summary>
+        /// <summary>Uma marca por skill da classe (na ordem do catálogo): aprendida ou não.</summary>
         public List<bool> SkillUnlocked = new List<bool>();
+
+        /// <summary>Barra de atalhos: o índice da skill em cada casa (255 = vazia).</summary>
+        public List<byte> Hotbar = new List<byte>();
 
         public byte AwakeningGauge;
         public double AwakeningUntil;
@@ -195,6 +230,8 @@ namespace Game.Shared.Net
             w.WriteBool(ComboUnlocked);
             w.WriteByte((byte)SkillUnlocked.Count);
             foreach (var unlocked in SkillUnlocked) w.WriteBool(unlocked);
+            w.WriteByte((byte)Hotbar.Count);
+            foreach (var slot in Hotbar) w.WriteByte(slot);
             w.WriteByte(AwakeningGauge);
             w.WriteDouble(AwakeningUntil);
         }
@@ -209,6 +246,8 @@ namespace Game.Shared.Net
             };
             var count = r.ReadByte();
             for (var i = 0; i < count; i++) sheet.SkillUnlocked.Add(r.ReadBool());
+            var slots = r.ReadByte();
+            for (var i = 0; i < slots; i++) sheet.Hotbar.Add(r.ReadByte());
             sheet.AwakeningGauge = r.ReadByte();
             sheet.AwakeningUntil = r.ReadDouble();
             return sheet;

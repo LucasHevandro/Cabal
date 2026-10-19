@@ -17,6 +17,9 @@ namespace Game.Shared.Progression
 
         /// <summary>Portal da dungeon: entrada com o grupo e ranking de tempos.</summary>
         DungeonPortal = 4,
+
+        /// <summary>Mestre de skills: ensina as skills da classe (nível, missão de rank e Alz).</summary>
+        Trainer = 5,
     }
 
     /// <summary>NPC da vila: posição fixa e o que ele faz.</summary>
@@ -43,6 +46,7 @@ namespace Game.Shared.Progression
         public const string Warehouse = "guarda_volumes_bento";
         public const string Merchant = "mercadora_lia";
         public const string DungeonPortal = "guardia_selene";
+        public const string Trainer = "mestre_aldric";
 
         public static readonly IReadOnlyList<NpcDefinition> All = new List<NpcDefinition>
         {
@@ -51,6 +55,7 @@ namespace Game.Shared.Progression
             new NpcDefinition { Id = Warehouse, Role = NpcRole.Warehouse, X = -7, Z = 3 },
             new NpcDefinition { Id = Merchant, Role = NpcRole.Merchant, X = 5, Z = -6 },
             new NpcDefinition { Id = DungeonPortal, Role = NpcRole.DungeonPortal, X = -5, Z = -6 },
+            new NpcDefinition { Id = Trainer, Role = NpcRole.Trainer, X = -9, Z = -1.5f },
         };
 
         public static NpcDefinition? Find(string id) => All.FirstOrDefault(n => n.Id == id);
