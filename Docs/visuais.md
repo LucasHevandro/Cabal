@@ -281,3 +281,14 @@ centro da sua região (cheia até 80% do raio, some até 130%), então o clima m
 
 - Usam o material `Resources/Visuals/fx/particula_suave` e acendem e apagam devagar.
 - **Conferir:** `Prototipo.exe -worldtest pasta` fotografa também a mata e as ruínas, de dia, no pôr do sol e à noite.
+
+# Água
+
+`Shaders/Agua.shader` (material `Materials/Prototipo/Agua.mat`, montado pelo `VillageBuilder`):
+
+- **Cor:** rasa perto da margem e funda no meio, pela textura de profundidade da cena.
+- **Ondinhas** que correm com a corrente (`_Flow`), com reflexo do céu quando se olha de lado (fresnel) e brilho do sol.
+- **Espuma** onde a água fica rasa: margens, pedras e pilares da ponte.
+- **De noite** a água escurece junto com a luz ambiente.
+- Sem textura de profundidade (perfil de qualidade baixa) fica só a cor funda, com reflexo e brilho.
+- **Conferir:** as vistas `ponte-*` do `-worldtest`.
