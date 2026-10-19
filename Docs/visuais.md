@@ -233,3 +233,34 @@ renderizador do PC. O `RenderLook` liga o shader toda vez que a cena é montada.
 - Some a partir de 25 m e desaparece aos 45 m, para o fundo não virar rabisco.
 - O traço é leve (força 0,5) porque a grama tem muitas folhinhas.
 - O renderizador de celular fica sem o contorno.
+
+# Efeitos das skills com shader
+
+`Fx/MagicFx` cuida de três efeitos novos. Nada é criado nem destruído por golpe: cada um sai de uma reserva.
+
+- **Marcas no chão** (`Shaders/MarcaChao.shader`):
+  - os desenhos são feitos em código, sem textura: runa girando, rachaduras com brilho, queimado com brasas e geada
+    cristalina;
+  - cada marca aparece rápido, esmaece e acompanha a inclinação do morro.
+  - Por skill: Golpe Rúnico, Giro e Tempestade fazem runa; Fenda Sísmica e Execução, rachadura; Lâmina Flamejante e
+    Meteoro, queimado; Corrente Gélida, geada; Explosão Arcana, runa; Cataclismo, queimado e runa juntos.
+- **Cúpulas de energia** (`Shaders/Energia.shader`):
+  - o shader tem borda brilhante, energia ondulando por dentro e dissolve aos pedaços;
+  - as cúpulas crescem do ponto do golpe nas magias de área e nas explosões;
+  - o mesmo shader faz a aura dos projéteis.
+  As marcas e cúpulas usam a cor própria da skill; o dourado do Excellent fica nas faíscas e no clarão.
+- **Impacto de tela:** borrão radial a partir do alvo, com clarão, que some em cerca de 0,3 s.
+  - É forte no finalizador, mais leve no Excellent e nos golpes pesados.
+  - Fica no mesmo passo de tela cheia do contorno, sem custo extra.
+- **Conferir:** `Prototipo.exe -skilltest pasta`.
+
+# NPCs e moradores
+
+- **Marcadores** em cima de quem dá missões:
+  - "!" amarelo quando há missão nova para o nível;
+  - "?" amarelo quando há missão pronta para entregar;
+  - "?" cinza quando a missão está em andamento.
+- **Conversa:** o NPC vira para o jogador e faz um gesto (`Interact`). Ao fechar, volta para a pose de antes. Parado, ele
+  troca de pose de vez em quando (`Idle_B`). Os gatilhos `Talk` e `Idle2` estão no Animator dos personagens (`World/NpcLife.cs`).
+- **Moradores** (`World/VillageLife`), em `Resources/Visuals/villager`: dois adultos andam pela praça e duas crianças
+  (menores, para não confundir com os NPCs) correm de um lado para o outro. São só enfeite: não são alvo e não falam.

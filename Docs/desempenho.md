@@ -28,6 +28,7 @@ PC de teste: GeForce GTX 1660 Ti e Core i7-7700, 1920x1080, qualidade Alta, 30 j
 | Personagens KayKit animados (30 jogadores com Animator e malha deformada; 1600x900) | 238 | 89 | 17 ms | 140 | 14 KB |
 | Pacote visual (equipamento, cripta, polimento, rio, vila com lanternas, dia e noite, tema da interface; 1600x900, 30 s) | 195 | 73 | 36 ms | 96 | 12 KB |
 | Pacotes KayKit e Quaternius, bichos de enfeite e contorno (1600x900, 30 s) | 177 | 65 | 25 ms | 85 | 12 KB |
+| Efeitos das skills com shader, marcadores, NPCs vivos e moradores (1600x900, 30 s) | 175 | 67 | 19 ms | 83 | 13 KB |
 
 O mundo novo custa cerca de 1 ms por quadro (terreno, grama e uns 1.200 objetos de cenário com static batching) e
 não aumentou o lixo por quadro: as coletas a mais vêm só de ter mais quadros no mesmo tempo. O 1% pior continua acima
