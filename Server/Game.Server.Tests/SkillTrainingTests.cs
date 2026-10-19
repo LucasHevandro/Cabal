@@ -29,6 +29,10 @@ public class SkillTrainingTests
         return (world, outbox, player);
     }
 
+    /// <summary>Barra com as primeiras casas dadas e o resto vazio.</summary>
+    private static byte[] Bar(params byte[] first) =>
+        first.Concat(Enumerable.Repeat(SkillTraining.Empty, SkillTraining.HotbarSize - first.Length)).ToArray();
+
     private static void GoToTrainer(ServerPlayer player)
     {
         var npc = NpcCatalog.Find(NpcCatalog.Trainer)!;
@@ -40,7 +44,7 @@ public class SkillTrainingTests
     {
         var (_, _, player) = Setup();
         Assert.Equal(new[] { "corte" }, player.LearnedSkills);
-        Assert.Equal(new byte[] { 0, 255, 255, 255, 255, 255, 255, 255 }, player.Hotbar);
+        Assert.Equal(Bar(0), player.Hotbar);
 
         // Subir de nível não ensina nada: precisa ir ao mestre.
         player.Progress = new CharacterProgress(10, 0);
@@ -96,8 +100,8 @@ public class SkillTrainingTests
         player.LearnedSkills.Add("giro_de_lamina");
 
         // Golpe Rúnico (2) não foi aprendido e o Corte (0) aparece duas vezes.
-        world.Handle(player.Id, new SetHotbar { Slots = { 255, 1, 0, 2, 0, 255, 255, 255 } }, 1);
-        Assert.Equal(new byte[] { 255, 1, 0, 255, 255, 255, 255, 255 }, player.Hotbar);
+        world.Handle(player.Id, new SetHotbar { Slots = { 255, 1, 0, 2, 0, 255, 255, 255, 255, 255, 255, 255, 1 } }, 1);
+        Assert.Equal(Bar(255, 1, 0), player.Hotbar);
     }
 
     [Fact]
@@ -105,7 +109,7 @@ public class SkillTrainingTests
     {
         var (world, _, player) = Setup();
         player.LearnedSkills.Add("giro_de_lamina");
-        player.Hotbar = new byte[] { 1, 255, 0, 255, 255, 255, 255, 255 };
+        player.Hotbar = Bar(1, 255, 0);
         var (snapshot, _) = world.CaptureForSave(player);
         Assert.Equal(new[] { "corte", "giro_de_lamina" }, snapshot.LearnedSkills);
 
@@ -114,12 +118,12 @@ public class SkillTrainingTests
             Id = 9, Name = "Bia", LearnedSkills = snapshot.LearnedSkills, Hotbar = snapshot.Hotbar,
         };
         var (_, _, back) = Setup(record);
-        Assert.Equal(new byte[] { 1, 255, 0, 255, 255, 255, 255, 255 }, back.Hotbar);
+        Assert.Equal(Bar(1, 255, 0), back.Hotbar);
 
         // De antes do mestre (sem a lista): nível 8 fica com as 4 skills que o nível já liberava.
         var old = AuthService.InitialCharacter(CharacterClass.Blade) with { Id = 10, Name = "Caio", Level = 8 };
         var (_, _, veteran) = Setup(old);
         Assert.Equal(4, veteran.LearnedSkills.Count);
-        Assert.Equal(new byte[] { 0, 1, 2, 3, 255, 255, 255, 255 }, veteran.Hotbar);
+        Assert.Equal(Bar(0, 1, 2, 3), veteran.Hotbar);
     }
 }
