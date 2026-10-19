@@ -168,9 +168,43 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
   | +9 | roxo |
   | +10 | dourado, pulsando mais forte |
 
-- **Outros jogadores:** o servidor manda a arma e a melhoria de cada jogador no `EntitySpawned` e, quando mudam, no `EntityLook` (protocolo v13). Assim todo mundo vê o brilho de todo mundo.
+- **Outros jogadores:** o servidor manda a arma e a melhoria de cada jogador no `EntitySpawned` e, quando mudam, no `EntityLook` (protocolo v13; desde o v15 também o grau da armadura). Assim todo mundo vê o brilho de todo mundo.
 - **Itens no chão:** os 37 itens têm modelo em `Visuals/item/<id>`: as armas, armadura, luvas, botas e anel por nível, cristais dos núcleos, gemas, poções, materiais e a chave da cripta. Giram e flutuam com o feixe da raridade.
-- **Conferir:** `Prototipo.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, e depois todos os itens.
+- **Conferir:** `Prototipo.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, a
+  vitrine de aparência (`aparencia.png`) e depois todos os itens.
+
+# Aparência: armadura, cabelo e roupa
+
+A textura dos personagens do KayKit é uma paleta: uma grade de 8×4 cores em degradê. Mudar a cor de uma parte é
+repintar a célula dela. O `Fx/CharacterPaint` faz isso no cliente:
+
+1. Lê a paleta pela GPU em 256×256.
+2. Repinta as células mantendo o degradê de cada pixel.
+3. Guarda um material por combinação de cores.
+
+Só as malhas com esqueleto (o corpo) são repintadas; a arma na mão tem o brilho próprio.
+
+| Parte | Knight (Lâmina) | Mage (Arcanista) |
+|---|---|---|
+| Metal (segue a armadura) | células (3,0), (7,0) e (7,1) | (3,0) e a capa (2,1) |
+| Cabelo | (1,0) | (1,0) |
+| Roupa | tabardo e capa (0,1) | túnica e chapéu (0,1) e (1,1) |
+
+- **Metal por grau da couraça vestida:**
+  - sem couraça: cor original;
+  - Ferro: prata;
+  - Aço Negro: quase preto;
+  - Astralita: azul-claro.
+- **Cabelo** (6 opções): original, loiro, ruivo, preto, grisalho e castanho.
+- **Roupa** (6 opções): original, azul, verde, roxo, preto e branco.
+- **Na criação:** a cor de cabelo e a de roupa são escolhidas ao lado de uma prévia 3D girando (`Net/CharacterPreview`).
+  O servidor guarda as duas (colunas `Hair` e `Cloth`, migração `AparenciaPersonagem`) e corrige índices fora da paleta.
+- **No protocolo (v15):** o `EntitySpawned` leva o grau da armadura, o cabelo e a roupa. O `EntityLook` leva o grau
+  quando o jogador troca de couraça.
+- **Convidados** (testes e bots) variam as cores pelo id.
+- **Conferir:**
+  - `-geartest` (`aparencia.png`): Lâmina e Arcanista em cada grau e com algumas cores;
+  - `-logintest`: `criacao_arcanista.png` e `criacao_lamina.png`.
 
 # Cripta e arena PvP
 
