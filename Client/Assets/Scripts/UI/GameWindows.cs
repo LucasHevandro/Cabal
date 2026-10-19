@@ -134,6 +134,7 @@ namespace Game.Client.UI
             if (KeyBindings.Pressed(GameAction.Inventory)) Fx.UiSounds.Toggle(_inventoryOpen = !_inventoryOpen);
             if (KeyBindings.Pressed(GameAction.Attributes)) Fx.UiSounds.Toggle(_attributesOpen = !_attributesOpen);
             if (KeyBindings.Pressed(GameAction.QuestLog)) Fx.UiSounds.Toggle(_questLogOpen = !_questLogOpen);
+            if (KeyBindings.Pressed(GameAction.Skills)) Fx.UiSounds.Toggle(_skillsOpen = !_skillsOpen);
             if (KeyBindings.Pressed(GameAction.Talk)) TalkToNearest();
             if (keyboard.escapeKey.wasPressedThisFrame) CloseAll();
 
@@ -148,7 +149,7 @@ namespace Game.Client.UI
 
         private void CloseAll()
         {
-            _inventoryOpen = _attributesOpen = _questLogOpen = false;
+            _inventoryOpen = _attributesOpen = _questLogOpen = _skillsOpen = false;
             _discardSlot = -1;
             CharacterState.CloseDialog();
         }
@@ -234,6 +235,7 @@ namespace Game.Client.UI
             DrawPvp();
             if (_attributesOpen) DrawAttributes();
             if (_questLogOpen) DrawQuestLog();
+            DrawSkills(npc);
             DrawTalkPrompt();
             if (_discardSlot >= 0) DrawDiscardConfirm();
 
@@ -982,14 +984,14 @@ namespace Game.Client.UI
         private static string RoleHintKey(NpcRole role) => role switch
         {
             NpcRole.Smith => "npc.hint_smith", NpcRole.Warehouse => "npc.hint_warehouse", NpcRole.Merchant => "npc.hint_merchant",
-            NpcRole.DungeonPortal => "npc.hint_dungeon", _ => "npc.hint_quests",
+            NpcRole.DungeonPortal => "npc.hint_dungeon", NpcRole.Trainer => "npc.hint_trainer", _ => "npc.hint_quests",
         };
 
         /// <summary>Plaquinha do NPC no mundo (ex.: Ferreira).</summary>
         private static string RoleLabelKey(NpcRole role) => role switch
         {
             NpcRole.Smith => "npc.role_smith", NpcRole.Warehouse => "npc.role_warehouse", NpcRole.Merchant => "npc.role_merchant",
-            NpcRole.DungeonPortal => "npc.role_dungeon", _ => "npc.role_quests",
+            NpcRole.DungeonPortal => "npc.role_dungeon", NpcRole.Trainer => "npc.role_trainer", _ => "npc.role_quests",
         };
 
         /// <summary>Nome em cima de cada NPC (coordenadas de tela, antes da escala).</summary>

@@ -174,6 +174,27 @@ namespace Game.Client.Net
         public static bool SkillUnlocked(int slot) =>
             Sheet == null || (slot >= 0 && slot < Sheet.SkillUnlocked.Count && Sheet.SkillUnlocked[slot]);
 
+        /// <summary>
+        /// A skill (índice da classe) na casa da barra de atalhos; -1 = casa vazia. Sem a ficha do servidor (offline),
+        /// a barra segue a ordem das skills.
+        /// </summary>
+        public static int HotbarSkill(int slot)
+        {
+            if (Sheet == null || Sheet.Hotbar.Count == 0) return slot;
+            if (slot < 0 || slot >= Sheet.Hotbar.Count) return -1;
+            var index = Sheet.Hotbar[slot];
+            return index == Game.Shared.Progression.SkillTraining.Empty ? -1 : index;
+        }
+
+        /// <summary>Arrumação nova da barra (já mostrada; o servidor confirma na próxima ficha).</summary>
+        public static void SetHotbar(IReadOnlyList<byte> slots)
+        {
+            if (Sheet == null) return;
+            Sheet.Hotbar.Clear();
+            Sheet.Hotbar.AddRange(slots);
+            Changed?.Invoke();
+        }
+
         /// <summary>Contadores de uma missão aceita (nulo se não está aceita).</summary>
         public static List<int> CountsOf(string questId)
         {

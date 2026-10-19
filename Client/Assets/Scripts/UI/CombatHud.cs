@@ -366,28 +366,47 @@ namespace Game.Client.UI
             GUI.Label(new Rect(rect.x, rect.y - 4, rect.width, 22), full ? Loc.T("hud.awakening_ready", KeyBindings.Label(GameAction.Awakening)) : Loc.T("hud.awakening_gauge", sheet.AwakeningGauge), _small.WithCenter());
         }
 
+        /// <summary>Casas da barra de atalhos: online sempre 8 (o jogador arruma); offline, uma por skill.</summary>
+        public static int HotbarCount(int skillCount) => GameMode.IsOnline ? Game.Shared.Progression.SkillTraining.HotbarSize : skillCount;
+
+        /// <summary>Retângulo da casa <paramref name="slot"/> da barra (tela virtual); as janelas usam para arrastar.</summary>
+        public static Rect HotbarRect(int slot, int count)
+        {
+            var size = count > 4 ? 104f : 150f;
+            var gap = count > 4 ? 10f : 20f;
+            var total = count * size + (count - 1) * gap;
+            return new Rect(VirtualWidth / 2 - total / 2 + slot * (size + gap), VirtualHeight - 180, size, 120);
+        }
+
         private void DrawSkillBar()
         {
             var skills = combat.Skills;
-            var size = skills.Count > 4 ? 104f : 150f;
-            var gap = skills.Count > 4 ? 10f : 20f;
-            var total = skills.Count * size + (skills.Count - 1) * gap;
-            var x = VirtualWidth / 2 - total / 2;
-            var y = VirtualHeight - 180;
+            var count = HotbarCount(skills.Count);
 
-            for (var i = 0; i < skills.Count; i++)
+            for (var slot = 0; slot < count; slot++)
             {
-                var rect = new Rect(x + i * (size + gap), y, size, 120);
+                var rect = HotbarRect(slot, count);
+                PanelRects.Add(rect);
+                var i = CharacterState.HotbarSkill(slot);
+                if (i < 0 || i >= skills.Count)
+                {
+                    // Casa vazia: só a tecla, apagada.
+                    UiTheme.Panel(rect, 0.45f);
+                    GUI.color = new Color(1f, 1f, 1f, 0.4f);
+                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
+                    GUI.color = Color.white;
+                    continue;
+                }
                 var skill = skills[i];
                 UiTheme.Panel(rect, 0.78f);
-                var iconSize = skills.Count > 4 ? 40f : 46f;
+                var iconSize = count > 4 ? 40f : 46f;
                 var icon = SkillIcons.Get(skill);
                 if (icon != null) GUI.DrawTexture(new Rect(rect.xMax - iconSize - 6, rect.y + 6, iconSize, iconSize), icon);
-                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(i), _big);
+                GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
                 GUI.Label(new Rect(rect.x + 8, rect.y + 50, rect.width - 16, 38), skill.Name, _small.WithCenter());
                 var kindText = skill.Kind == SkillKind.Physical ? Loc.T("hud.kind_physical") : Loc.T("hud.kind_magical");
                 if (skill.MpCost > 0) kindText = Loc.T("hud.kind_with_mp", kindText, skill.MpCost);
-                if (skills.Count > 4) _small.fontSize = 13; // com 8 skills a caixa é estreita: "mágico · 25 MP" cabe menor
+                if (count > 4) _small.fontSize = 13; // com 8 skills a caixa é estreita: "mágico · 25 MP" cabe menor
                 GUI.Label(new Rect(rect.x + 4, rect.y + 88, rect.width - 8, 24), kindText, _small.WithCenter());
                 _small.fontSize = 16;
 
@@ -397,7 +416,7 @@ namespace Game.Client.UI
                 if (GameMode.IsOnline && !CharacterState.SkillUnlocked(i))
                 {
                     Box(rect, new Color(0.05f, 0.05f, 0.07f, 0.95f));
-                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(i), _big);
+                    GUI.Label(new Rect(rect.x + 10, rect.y + 6, 40, 30), SkillKeyLabel(slot), _big);
                     GUI.Label(new Rect(rect.x + 4, rect.y + 36, rect.width - 8, 80), $"<color=#999999>{skill.Name}</color>\n{combat.UnlockText(i, compact: true)}", _small.WithCenter());
                     continue;
                 }

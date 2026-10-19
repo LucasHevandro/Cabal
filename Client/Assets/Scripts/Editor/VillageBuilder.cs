@@ -246,6 +246,23 @@ namespace Game.Client.Editor
                         light.intensity = 1.6f;
                         light.shadows = LightShadows.None;
                         break;
+                    case NpcRole.Trainer:
+                        // Mestre de skills: armeiro com espadas e cajados, e um boneco de palha para as aulas.
+                        Part(corner, "Armeiro", darkWood, k =>
+                        {
+                            foreach (var x in new[] { -1f, 1f })
+                                k.Box(0, new Vector3(x, 0, 0.3f), Quaternion.identity, new Vector3(0.12f, 1.6f, 0.12f));
+                            k.Box(0, new Vector3(0, 1.35f, 0.3f), Quaternion.identity, new Vector3(2.2f, 0.1f, 0.14f));
+                            k.Box(0, new Vector3(0, 0.25f, 0.3f), Quaternion.identity, new Vector3(2.2f, 0.1f, 0.3f));
+                        }, collider: true);
+                        Part(corner, "Armas", iron, k =>
+                        {
+                            for (var i = 0; i < 4; i++)
+                                k.Box(0, new Vector3(-0.66f + i * 0.44f, 0.3f, 0.36f), Quaternion.Euler(-8f, 0, 0), new Vector3(0.07f, 1.25f, 0.03f));
+                        });
+                        var dummy = Group(corner, "Boneco do mestre", new Vector3(1.9f, 0, -0.4f), Quaternion.Euler(0, 200f, 0));
+                        StrawDummy(dummy);
+                        break;
                 }
             }
         }

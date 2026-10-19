@@ -440,6 +440,34 @@ namespace Game.Client.DevTools
             Capture("8-missao-concluida");
             yield return new WaitForEndOfFrame();
 
+            // Mestre de skills e a barra de atalhos arrumada pelo jogador (o servidor confirma na ficha).
+            yield return WalkTo(NpcCatalog.Trainer);
+            windows.TalkToNearestNpc();
+            yield return WaitFor(() => CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.Trainer, 3f);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("8b-mestre");
+            yield return new WaitForEndOfFrame();
+            CharacterState.CloseDialog();
+            var original = new List<byte>(CharacterState.Sheet.Hotbar);
+            var swapped = new List<byte>(original);
+            (swapped[0], swapped[1]) = (swapped[1], swapped[0]);
+            swapped[7] = Game.Shared.Progression.SkillTraining.Empty;
+            NetworkSession.Instance.Send(new SetHotbar { Slots = swapped });
+            yield return WaitFor(() => CharacterState.Sheet.Hotbar.Count == 8 && CharacterState.Sheet.Hotbar[0] == original[1]
+                && CharacterState.Sheet.Hotbar[7] == Game.Shared.Progression.SkillTraining.Empty, 3f);
+            if (CharacterState.HotbarSkill(0) != original[1] || CharacterState.HotbarSkill(7) != -1)
+            {
+                outcome.Message = "a barra de atalhos não foi arrumada pelo servidor";
+                yield break;
+            }
+            windows.SetSkillsOpen(true);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("8c-skills");
+            yield return new WaitForEndOfFrame();
+            windows.SetSkillsOpen(false);
+            NetworkSession.Instance.Send(new SetHotbar { Slots = original });
+            yield return WaitFor(() => CharacterState.HotbarSkill(7) == original[7], 3f);
+
             // Janela de opções (F10) por cima do jogo.
             OptionsWindow.Open();
             yield return new WaitForSecondsRealtime(0.4f);

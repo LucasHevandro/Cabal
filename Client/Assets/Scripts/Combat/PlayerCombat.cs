@@ -191,14 +191,14 @@ namespace Game.Client.Combat
 
             if (KeyBindings.Pressed(GameAction.StartCombo)) RequestStartCombo();
             if (KeyBindings.Pressed(GameAction.Finisher)) RequestFinisher();
-            if (KeyBindings.Pressed(GameAction.Skill1)) RequestSkill(0);
-            if (KeyBindings.Pressed(GameAction.Skill2)) RequestSkill(1);
-            if (KeyBindings.Pressed(GameAction.Skill3)) RequestSkill(2);
-            if (KeyBindings.Pressed(GameAction.Skill4)) RequestSkill(3);
-            if (KeyBindings.Pressed(GameAction.Skill5)) RequestSkill(4);
-            if (KeyBindings.Pressed(GameAction.Skill6)) RequestSkill(5);
-            if (KeyBindings.Pressed(GameAction.Skill7)) RequestSkill(6);
-            if (KeyBindings.Pressed(GameAction.Skill8)) RequestSkill(7);
+            if (KeyBindings.Pressed(GameAction.Skill1)) RequestHotbar(0);
+            if (KeyBindings.Pressed(GameAction.Skill2)) RequestHotbar(1);
+            if (KeyBindings.Pressed(GameAction.Skill3)) RequestHotbar(2);
+            if (KeyBindings.Pressed(GameAction.Skill4)) RequestHotbar(3);
+            if (KeyBindings.Pressed(GameAction.Skill5)) RequestHotbar(4);
+            if (KeyBindings.Pressed(GameAction.Skill6)) RequestHotbar(5);
+            if (KeyBindings.Pressed(GameAction.Skill7)) RequestHotbar(6);
+            if (KeyBindings.Pressed(GameAction.Skill8)) RequestHotbar(7);
             if (KeyBindings.Pressed(GameAction.Awakening) && Online) NetworkSession.Instance.Send(new Msg.ActivateAwakening());
         }
 
@@ -212,6 +212,13 @@ namespace Game.Client.Combat
 
         /// <summary>Tenta usar a skill do slot <paramref name="index"/> (0 a 3).</summary>
         public void RequestSkill(int index) => UseSkill(index, Time.time);
+
+        /// <summary>Usa a skill que está na casa <paramref name="slot"/> da barra de atalhos (nada se a casa está vazia).</summary>
+        public void RequestHotbar(int slot)
+        {
+            var index = CharacterState.HotbarSkill(slot);
+            if (index >= 0) RequestSkill(index);
+        }
 
         private void TryStartCombo(double now)
         {
