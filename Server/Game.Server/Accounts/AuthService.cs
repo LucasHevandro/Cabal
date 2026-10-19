@@ -120,7 +120,11 @@ public sealed class AuthService
         if (_tokens.Validate(token) is not { } accountId) return AuthResult<CharacterList>.Fail(new LocalText("auth.session_expired"), 401);
         var list = new CharacterList();
         foreach (var c in await _store.ListCharactersAsync(accountId))
-            list.Characters.Add(new CharacterSummary { Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level, Hair = c.Hair, Cloth = c.Cloth });
+            list.Characters.Add(new CharacterSummary
+            {
+                Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level, Hair = c.Hair, Cloth = c.Cloth,
+                ArmorGrade = Game.Shared.Items.Appearance.ArmorGrade(c.ArmorId),
+            });
         return AuthResult<CharacterList>.Success(list);
     }
 

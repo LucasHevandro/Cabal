@@ -6,6 +6,8 @@ using Game.Server.Accounts;
 using Game.Server.Net;
 using Game.Server.Persistence;
 using Game.Shared.Accounts;
+using Game.Shared.Items;
+using Game.Shared.Net;
 
 namespace Game.Server.Tests;
 
@@ -106,6 +108,21 @@ public class AuthServiceTests
         Assert.Equal(new[] { (3, 5), (0, 0) }, list.Characters.Select(c => (c.Hair, c.Cloth)));
         var loaded = (await auth.ResolveCharacterAsync(token, ana.Id)).Value!;
         Assert.Equal((3, 5), (loaded.Hair, loaded.Cloth));
+    }
+
+    [Fact]
+    public async Task Lista_de_personagens_leva_o_grau_da_couraca_vestida()
+    {
+        var (auth, store, _, _) = Create();
+        await auth.RegisterAsync(Creds());
+        var token = (await auth.LoginAsync(Creds())).Value!.Token;
+        var ana = (await auth.CreateCharacterAsync(token, new CreateCharacterRequest { Name = "Ana" })).Value!;
+        Assert.Equal(0, (await auth.ListCharactersAsync(token)).Value!.Characters.Single().ArmorGrade);
+
+        var armor = new ItemRecord(77, ItemContainerKind.Equipment, (int)EquipSlot.Armor, "armadura_astralita", 1);
+        await store.SaveCharacterAsync(new CharacterSnapshot(ana.Id, 20, 0, 0, 0, 0, 100, 100, 100, new[] { armor }), Array.Empty<ItemLogEntry>());
+
+        Assert.Equal(3, (await auth.ListCharactersAsync(token)).Value!.Characters.Single().ArmorGrade);
     }
 
     [Fact]

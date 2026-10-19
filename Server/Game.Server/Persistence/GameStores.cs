@@ -168,7 +168,9 @@ public sealed class EfGameStore : IGameStore
         return await db.Characters.AsNoTracking()
             .Where(c => c.AccountId == accountId)
             .OrderBy(c => c.Id)
-            .Select(c => new CharacterSummaryRecord(c.Id, c.Name, (CharacterClass)c.ClassId, c.Level, c.Hair, c.Cloth))
+            .Select(c => new CharacterSummaryRecord(c.Id, c.Name, (CharacterClass)c.ClassId, c.Level, c.Hair, c.Cloth,
+                c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Armor)
+                    .Select(i => i.ItemId).FirstOrDefault() ?? ""))
             .ToListAsync();
     }
 
@@ -533,7 +535,8 @@ public sealed class InMemoryGameStore : IGameStore
         lock (_lock)
         {
             IReadOnlyList<CharacterSummaryRecord> list = _characters.Values.Where(c => c.AccountId == accountId).OrderBy(c => c.Id)
-                .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level, c.Hair, c.Cloth)).ToList();
+                .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level, c.Hair, c.Cloth,
+                    c.Items.FirstOrDefault(i => i.Container == ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Armor)?.ItemId ?? "")).ToList();
             return Task.FromResult(list);
         }
     }
