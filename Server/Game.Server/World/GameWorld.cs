@@ -329,6 +329,7 @@ public sealed partial class GameWorld
                 _outbox.Send(player.Id, new EntityLook
                 {
                     Id = other.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade, ArmorGrade = (byte)look.ArmorGrade,
+                    GlovesGrade = (byte)look.GlovesGrade, BootsGrade = (byte)look.BootsGrade,
                 });
             }
             snapshot.Entities.Add(new EntityState
@@ -560,6 +561,7 @@ public sealed partial class GameWorld
         Id = player.Id, Kind = EntityKind.Player, TypeId = player.Class == CharacterClass.Arcanist ? "arcanist" : "blade",
         Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
         WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade, ArmorGrade = (byte)player.Look.ArmorGrade,
+        GlovesGrade = (byte)player.Look.GlovesGrade, BootsGrade = (byte)player.Look.BootsGrade,
         Hair = (byte)player.Hair, Cloth = (byte)player.Cloth,
     };
 

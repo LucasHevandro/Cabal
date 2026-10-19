@@ -60,7 +60,8 @@ public sealed record ReportRecord(
 /// <summary>Uma dungeon concluída: tempo, medalha, combo máximo e quem estava no grupo (para o ranking).</summary>
 public sealed record DungeonRunRecord(string DungeonId, double Seconds, int Medal, int MaxCombo, string Members, DateTimeOffset At);
 
-public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level, int Hair = 0, int Cloth = 0, string ArmorId = "");
+public sealed record CharacterSummaryRecord(int Id, string Name, CharacterClass Class, int Level, int Hair = 0, int Cloth = 0,
+    string ArmorId = "", string GlovesId = "", string BootsId = "");
 
 /// <summary>Personagem como está no banco.</summary>
 public sealed record CharacterRecord(

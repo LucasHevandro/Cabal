@@ -170,6 +170,10 @@ public sealed class EfGameStore : IGameStore
             .OrderBy(c => c.Id)
             .Select(c => new CharacterSummaryRecord(c.Id, c.Name, (CharacterClass)c.ClassId, c.Level, c.Hair, c.Cloth,
                 c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Armor)
+                    .Select(i => i.ItemId).FirstOrDefault() ?? "",
+                c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Gloves)
+                    .Select(i => i.ItemId).FirstOrDefault() ?? "",
+                c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Boots)
                     .Select(i => i.ItemId).FirstOrDefault() ?? ""))
             .ToListAsync();
     }
@@ -536,10 +540,13 @@ public sealed class InMemoryGameStore : IGameStore
         {
             IReadOnlyList<CharacterSummaryRecord> list = _characters.Values.Where(c => c.AccountId == accountId).OrderBy(c => c.Id)
                 .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level, c.Hair, c.Cloth,
-                    c.Items.FirstOrDefault(i => i.Container == ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Armor)?.ItemId ?? "")).ToList();
+                    Worn(c, EquipSlot.Armor), Worn(c, EquipSlot.Gloves), Worn(c, EquipSlot.Boots))).ToList();
             return Task.FromResult(list);
         }
     }
+
+    private static string Worn(CharacterRecord c, EquipSlot slot) =>
+        c.Items.FirstOrDefault(i => i.Container == ItemContainerKind.Equipment && i.Slot == (int)slot)?.ItemId ?? "";
 
     public Task<CharacterRecord> CreateCharacterAsync(int accountId, string name, CharacterClass characterClass, CharacterRecord initial)
     {

@@ -43,7 +43,7 @@ public class LookTests
     }
 
     [Fact]
-    public void Quem_aparece_leva_o_grau_da_armadura_e_as_cores_da_criacao()
+    public void Quem_aparece_leva_o_grau_das_pecas_vestidas_e_as_cores_da_criacao()
     {
         var outbox = new FakeOutbox();
         var world = new GameWorld(outbox, Array.Empty<SpawnDefinition>());
@@ -52,13 +52,17 @@ public class LookTests
         var armored = initial with
         {
             Id = 1, AccountId = 1, Name = "Ana", Hair = 4, Cloth = 2,
-            Items = initial.Items.Append(new ItemRecord(uid++, ItemContainerKind.Equipment, (int)EquipSlot.Armor, "armadura_aco_negro", 1)).ToList(),
+            Items = initial.Items
+                .Append(new ItemRecord(uid++, ItemContainerKind.Equipment, (int)EquipSlot.Armor, "armadura_aco_negro", 1))
+                .Append(new ItemRecord(uid++, ItemContainerKind.Equipment, (int)EquipSlot.Gloves, "luvas_astralita", 1))
+                .Append(new ItemRecord(uid++, ItemContainerKind.Equipment, (int)EquipSlot.Boots, "botas_ferro", 1)).ToList(),
         };
         var ana = world.AddPlayer("Ana", 0, character: armored);
         var bia = world.AddPlayer("Bia", 0, character: AuthService.InitialCharacter(newUid: () => uid++) with { Id = 2, AccountId = 2, Name = "Bia" });
         world.Tick(0.05);
 
         var spawned = outbox.Sent.Where(s => s.PlayerId == bia.Id).Select(s => s.Message).OfType<EntitySpawned>().Single(m => m.Id == ana.Id);
-        Assert.Equal(((byte)2, (byte)4, (byte)2), (spawned.ArmorGrade, spawned.Hair, spawned.Cloth));
+        Assert.Equal(((byte)2, (byte)3, (byte)1, (byte)4, (byte)2),
+            (spawned.ArmorGrade, spawned.GlovesGrade, spawned.BootsGrade, spawned.Hair, spawned.Cloth));
     }
 }

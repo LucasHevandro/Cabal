@@ -123,7 +123,9 @@ public sealed class AuthService
             list.Characters.Add(new CharacterSummary
             {
                 Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level, Hair = c.Hair, Cloth = c.Cloth,
-                ArmorGrade = Game.Shared.Items.Appearance.ArmorGrade(c.ArmorId),
+                ArmorGrade = Game.Shared.Items.Appearance.GradeOf(c.ArmorId, Game.Shared.Items.EquipSlot.Armor),
+                GlovesGrade = Game.Shared.Items.Appearance.GradeOf(c.GlovesId, Game.Shared.Items.EquipSlot.Gloves),
+                BootsGrade = Game.Shared.Items.Appearance.GradeOf(c.BootsId, Game.Shared.Items.EquipSlot.Boots),
             });
         return AuthResult<CharacterList>.Success(list);
     }

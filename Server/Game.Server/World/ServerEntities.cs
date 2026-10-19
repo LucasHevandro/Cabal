@@ -112,16 +112,20 @@ public sealed class ServerPlayer
     /// <summary>Entidades e itens que este jogador já conhece (recebeu EntitySpawned/LootSpawned).</summary>
     public HashSet<int> KnownEntities { get; } = new();
 
-    /// <summary>A aparência (arma, melhoria e armadura) que este jogador já recebeu de cada outro jogador que vê.</summary>
-    public Dictionary<int, (string WeaponId, int Upgrade, int ArmorGrade)> KnownLooks { get; } = new();
+    /// <summary>A aparência (arma, melhoria e peças vestidas) que este jogador já recebeu de cada outro jogador que vê.</summary>
+    public Dictionary<int, (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade)> KnownLooks { get; } = new();
 
-    /// <summary>Arma na mão, o nível de melhoria dela e o grau da armadura vestida (o que os outros veem).</summary>
-    public (string WeaponId, int Upgrade, int ArmorGrade) Look =>
+    /// <summary>Arma na mão, o nível de melhoria dela e o grau da couraça, das luvas e das botas (o que os outros veem).</summary>
+    public (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade) Look =>
     (
         Equipment[Game.Shared.Items.EquipSlot.Weapon]?.ItemId ?? "",
         Equipment[Game.Shared.Items.EquipSlot.Weapon]?.Upgrade ?? 0,
-        Game.Shared.Items.Appearance.ArmorGrade(Equipment[Game.Shared.Items.EquipSlot.Armor]?.ItemId)
+        WornGrade(Game.Shared.Items.EquipSlot.Armor),
+        WornGrade(Game.Shared.Items.EquipSlot.Gloves),
+        WornGrade(Game.Shared.Items.EquipSlot.Boots)
     );
+
+    private int WornGrade(Game.Shared.Items.EquipSlot slot) => Game.Shared.Items.Appearance.GradeOf(Equipment[slot]?.ItemId, slot);
     public HashSet<int> KnownLoot { get; } = new();
 
     /// <summary>Precisa reenviar a mensagem correspondente no próximo tick.</summary>
