@@ -65,17 +65,22 @@ namespace Game.Client.DevTools
             }
             foreach (var holder in holders) Destroy(holder);
 
-            // 1b) Armadura por grau (sem, Ferro, Aço Negro, Astralita) e algumas cores de cabelo e roupa.
-            var looks = new[] { (0, 0, 0), (1, 0, 0), (2, 0, 0), (3, 0, 0), (1, 1, 1), (2, 3, 4), (3, 2, 5), (0, 5, 2) };
+            // 1b) Conjunto por grau (sem, Ferro, Aço Negro, Astralita), peças misturadas e algumas cores de cabelo e roupa.
+            var looks = new[]
+            {
+                (CharacterPaint.Gear.Set(0), 0, 0), (CharacterPaint.Gear.Set(1), 0, 0), (CharacterPaint.Gear.Set(2), 0, 0),
+                (CharacterPaint.Gear.Set(3), 0, 0), (new CharacterPaint.Gear(3, 2, 1), 1, 1), (new CharacterPaint.Gear(2, 3, 0), 3, 4),
+                (new CharacterPaint.Gear(0, 3, 3), 2, 5), (new CharacterPaint.Gear(1, 0, 2), 5, 2),
+            };
             var dressed = new GameObject[looks.Length * 2];
             for (var i = 0; i < dressed.Length; i++)
             {
-                var (grade, hair, cloth) = looks[i % looks.Length];
+                var (gear, hair, cloth) = looks[i % looks.Length];
                 dressed[i] = new GameObject($"aparencia_{i}");
                 dressed[i].transform.position = World.Ground.Point(origin.x + (i % looks.Length - 3.5f) * 1.25f, origin.z + (i < looks.Length ? 0f : 2.2f));
                 dressed[i].transform.rotation = Quaternion.Euler(0, 180, 0);
                 var model = VisualCatalog.Spawn(VisualCatalog.Class, i < looks.Length ? "blade" : "arcanist", dressed[i].transform);
-                if (model != null) CharacterPaint.Apply(model.transform, grade, hair, cloth);
+                if (model != null) CharacterPaint.Apply(model.transform, gear, hair, cloth);
             }
             camera.transform.position = origin + new Vector3(0, 2.6f, -9.5f);
             camera.transform.LookAt(origin + new Vector3(0, 0.9f, 1.1f));

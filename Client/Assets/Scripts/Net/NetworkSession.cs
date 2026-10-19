@@ -191,15 +191,16 @@ namespace Game.Client.Net
                     break;
                 case EntitySpawned spawned:
                     if (spawned.Id != PlayerId) CreateView(spawned);
-                    else if (_combat != null) _combat.ApplyLook(spawned.WeaponId, spawned.WeaponUpgrade, spawned.ArmorGrade, spawned.Hair, spawned.Cloth);
+                    else if (_combat != null) _combat.ApplyLook(spawned.WeaponId, spawned.WeaponUpgrade, GearOf(spawned), spawned.Hair, spawned.Cloth);
                     break;
                 case EntityLook look:
                     // Trocou de arma ou de armadura, ou melhorou: o modelo, o brilho e o metal acompanham (eu ou quem eu vejo).
-                    if (look.Id == PlayerId && _combat != null) _combat.ApplyLook(look.WeaponId, look.WeaponUpgrade, look.ArmorGrade);
+                    var gear = new Fx.CharacterPaint.Gear(look.ArmorGrade, look.GlovesGrade, look.BootsGrade);
+                    if (look.Id == PlayerId && _combat != null) _combat.ApplyLook(look.WeaponId, look.WeaponUpgrade, gear);
                     else if (_views.TryGetValue(look.Id, out var looked))
                     {
                         Fx.WeaponFx.SetLook(looked, look.WeaponId, look.WeaponUpgrade);
-                        looked.SetArmor(look.ArmorGrade);
+                        looked.SetGear(gear);
                     }
                     break;
                 case EntityDespawned despawned:
@@ -271,10 +272,13 @@ namespace Game.Client.Net
             if (spawned.Kind == EntityKind.Player)
             {
                 Fx.WeaponFx.SetLook(root.transform, spawned.WeaponId, spawned.WeaponUpgrade);
-                Fx.CharacterPaint.Apply(root.transform, spawned.ArmorGrade, spawned.Hair, spawned.Cloth);
+                Fx.CharacterPaint.Apply(root.transform, GearOf(spawned), spawned.Hair, spawned.Cloth);
             }
             _views.Add(spawned.Id, view);
         }
+
+        private static Fx.CharacterPaint.Gear GearOf(EntitySpawned spawned) =>
+            new Fx.CharacterPaint.Gear(spawned.ArmorGrade, spawned.GlovesGrade, spawned.BootsGrade);
 
         private Material MaterialFor(string key, Color color)
         {

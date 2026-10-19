@@ -168,7 +168,7 @@ namespace Game.Client.Combat
             var key = characterClass == CharacterClass.Arcanist ? "arcanist" : "blade";
             _classModel = VisualCatalog.Spawn(VisualCatalog.Class, key, transform);
             if (_classModel != null && _lookWeapon.Length > 0) WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
-            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookArmor, _hair, _cloth);
+            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _hair, _cloth);
             foreach (var name in new[] { "Corpo", "Frente" })
             {
                 var part = transform.Find(name);
@@ -179,23 +179,23 @@ namespace Game.Client.Combat
         private GameObject _classModel;
         private string _lookWeapon = "";
         private int _lookUpgrade;
-        private int _lookArmor;
+        private CharacterPaint.Gear _lookGear;
         private int _hair;
         private int _cloth;
 
         /// <summary>
-        /// Arma equipada, melhoria e grau da armadura (do servidor): o modelo na mão, o brilho e a cor do metal
+        /// Arma equipada, melhoria e grau das peças vestidas (do servidor): o modelo na mão, o brilho e a cor do metal
         /// acompanham. Cabelo e roupa só vêm quando o personagem aparece (nulos = mantém).
         /// </summary>
-        public void ApplyLook(string weaponId, int upgrade, int armorGrade, int? hair = null, int? cloth = null)
+        public void ApplyLook(string weaponId, int upgrade, CharacterPaint.Gear gear, int? hair = null, int? cloth = null)
         {
             _lookWeapon = weaponId ?? "";
             _lookUpgrade = upgrade;
-            _lookArmor = armorGrade;
+            _lookGear = gear;
             _hair = hair ?? _hair;
             _cloth = cloth ?? _cloth;
             WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
-            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookArmor, _hair, _cloth);
+            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _hair, _cloth);
         }
 
         private void Update()

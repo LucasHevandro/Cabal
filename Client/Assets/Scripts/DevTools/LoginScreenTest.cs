@@ -46,8 +46,8 @@ namespace Game.Client.DevTools
                 yield return new WaitForSecondsRealtime(0.4f);
                 menu.OpenCharactersForTest(new System.Collections.Generic.List<Game.Shared.Accounts.CharacterSummary>
                 {
-                    new Game.Shared.Accounts.CharacterSummary { Id = 1, Name = "Aria", ClassId = 1, Level = 24, Hair = 2, Cloth = 1, ArmorGrade = 3 },
-                    new Game.Shared.Accounts.CharacterSummary { Id = 2, Name = "Bruno", ClassId = 0, Level = 12, Hair = 5, Cloth = 4, ArmorGrade = 2 },
+                    new Game.Shared.Accounts.CharacterSummary { Id = 1, Name = "Aria", ClassId = 1, Level = 24, Hair = 2, Cloth = 1, ArmorGrade = 3, GlovesGrade = 3, BootsGrade = 3 },
+                    new Game.Shared.Accounts.CharacterSummary { Id = 2, Name = "Bruno", ClassId = 0, Level = 12, Hair = 5, Cloth = 4, ArmorGrade = 2, GlovesGrade = 3, BootsGrade = 1 },
                 });
                 yield return new WaitForSecondsRealtime(1.5f);
                 ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "selecao.png"));

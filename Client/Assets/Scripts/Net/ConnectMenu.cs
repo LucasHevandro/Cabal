@@ -416,7 +416,8 @@ namespace Game.Client.Net
             else if (!GameMode.ChoiceMade && _screen == Screen.Characters && _characters.Count > 0)
             {
                 var shown = _characters[Mathf.Clamp(_previewed, 0, _characters.Count - 1)];
-                _preview.Show((CharacterClass)shown.ClassId, shown.Hair, shown.Cloth, shown.ArmorGrade);
+                _preview.Show((CharacterClass)shown.ClassId, shown.Hair, shown.Cloth,
+                    new CharacterPaint.Gear(shown.ArmorGrade, shown.GlovesGrade, shown.BootsGrade));
             }
             else _preview.Hide();
 

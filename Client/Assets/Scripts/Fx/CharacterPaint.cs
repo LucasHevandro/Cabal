@@ -5,8 +5,9 @@ namespace Game.Client.Fx
 {
     /// <summary>
     /// Cores do personagem: a textura dos modelos do KayKit é uma paleta (grade de 8×4 cores em degradê), então trocar
-    /// a cor de uma parte é repintar a célula dela. O metal segue o grau da armadura (Ferro, Aço Negro, Astralita), e o
-    /// cabelo e a roupa seguem o que o jogador escolheu na criação. Índice 0 mantém a cor original do modelo.
+    /// a cor de uma parte é repintar a célula dela. O metal segue o grau da peça vestida (Ferro, Aço Negro, Astralita):
+    /// a couraça no corpo, as luvas nos braços e as botas nas pernas (cada uma é uma malha do modelo). O cabelo e a
+    /// roupa seguem o que o jogador escolheu na criação. Índice 0 mantém a cor original do modelo.
     /// Só o corpo (malhas com esqueleto) é repintado: a arma na mão tem o próprio brilho.
     /// </summary>
     public static class CharacterPaint
@@ -40,47 +41,82 @@ namespace Game.Client.Fx
             new Color(0.45f, 0.72f, 1f), // Astralita
         };
 
-        /// <summary>Que células da paleta são metal, cabelo e roupa em cada modelo (coluna, linha a partir de cima).</summary>
+        /// <summary>
+        /// Que células da paleta são metal, cabelo e roupa em cada modelo (coluna, linha a partir de cima). Braços e pernas
+        /// podem ter células a mais que seguem as luvas e as botas (os punhos e os sapatos do Mage não são metal).
+        /// </summary>
         private sealed class Layout
         {
             public Vector2Int[] Metal;
+            public Vector2Int[] ArmMetal = System.Array.Empty<Vector2Int>();
+            public Vector2Int[] LegMetal = System.Array.Empty<Vector2Int>();
             public Vector2Int[] Hair;
             public Vector2Int[] Cloth;
         }
 
+        private enum Part { Body, Arm, Leg }
+
         private static readonly Dictionary<string, Layout> Layouts = new Dictionary<string, Layout>
         {
-            // Knight: armadura (3,0), detalhes (7,0) e (7,1); cabelo (1,0); tabardo e capa vermelhos (0,1).
+            // Knight: armadura (3,0), detalhes (7,0) e (7,1), manopla (4,0); cabelo (1,0); tabardo e capa vermelhos (0,1).
             ["knight_texture"] = new Layout
             {
                 Metal = new[] { new Vector2Int(3, 0), new Vector2Int(7, 0), new Vector2Int(7, 1) },
+                ArmMetal = new[] { new Vector2Int(4, 0) },
                 Hair = new[] { new Vector2Int(1, 0) },
                 Cloth = new[] { new Vector2Int(0, 1) },
             },
-            // Mage: metal (3,0) e a capa (2,1) seguem a armadura; cabelo (1,0); túnica e chapéu (0,1) e (1,1).
+            // Mage: metal (3,0) e a capa (2,1) seguem a armadura, os punhos (4,0) as luvas e os sapatos (3,2) as botas;
+            // cabelo (1,0); túnica e chapéu (0,1) e (1,1).
             ["mage_texture"] = new Layout
             {
                 Metal = new[] { new Vector2Int(3, 0), new Vector2Int(2, 1) },
+                ArmMetal = new[] { new Vector2Int(4, 0) },
+                LegMetal = new[] { new Vector2Int(3, 2) },
                 Hair = new[] { new Vector2Int(1, 0) },
                 Cloth = new[] { new Vector2Int(0, 1), new Vector2Int(1, 1) },
             },
         };
 
         private const int Size = 256; // a paleta reduzida: cada célula vira 32×64 pixels, o degradê continua liso
-        private static readonly Dictionary<(Material, int, int, int), Material> Painted = new Dictionary<(Material, int, int, int), Material>();
+        private static readonly Dictionary<(Material, Part, int, int, int), Material> Painted = new Dictionary<(Material, Part, int, int, int), Material>();
         private static readonly Dictionary<Texture, Color32[]> Originals = new Dictionary<Texture, Color32[]>();
 
         /// <summary>Repinta o corpo do modelo dentro de <paramref name="root"/> (sem modelo ou sem paleta conhecida, nada muda).</summary>
-        public static void Apply(Transform root, int armorGrade, int hair, int cloth)
+        /// <summary>Grau de cada peça vestida (0 = nada: cor original).</summary>
+        public readonly struct Gear
+        {
+            public readonly int Armor;
+            public readonly int Gloves;
+            public readonly int Boots;
+
+            public Gear(int armor, int gloves, int boots)
+            {
+                Armor = armor;
+                Gloves = gloves;
+                Boots = boots;
+            }
+
+            /// <summary>Conjunto completo do mesmo grau (vitrines e prévias).</summary>
+            public static Gear Set(int grade) => new Gear(grade, grade, grade);
+        }
+
+        public static void Apply(Transform root, int armorGrade, int hair, int cloth) => Apply(root, Gear.Set(armorGrade), hair, cloth);
+
+        public static void Apply(Transform root, Gear gear, int hair, int cloth)
         {
             if (root == null) return;
             foreach (var renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
+                // Knight_ArmLeft, Mage_LegRight...: braços seguem as luvas, pernas as botas, o resto a couraça.
+                var name = renderer.name;
+                var part = name.Contains("Arm") ? Part.Arm : name.Contains("Leg") ? Part.Leg : Part.Body;
+                var grade = part == Part.Arm ? gear.Gloves : part == Part.Leg ? gear.Boots : gear.Armor;
                 var materials = renderer.sharedMaterials;
                 var changed = false;
                 for (var i = 0; i < materials.Length; i++)
                 {
-                    var painted = PaintedFor(materials[i], armorGrade, hair, cloth);
+                    var painted = PaintedFor(materials[i], part, grade, hair, cloth);
                     if (painted == null || painted == materials[i]) continue;
                     materials[i] = painted;
                     changed = true;
@@ -89,7 +125,7 @@ namespace Game.Client.Fx
             }
         }
 
-        private static Material PaintedFor(Material material, int armorGrade, int hair, int cloth)
+        private static Material PaintedFor(Material material, Part part, int armorGrade, int hair, int cloth)
         {
             if (material == null) return null;
             // Um material já pintado guarda o original: repintar parte sempre da paleta do pacote.
@@ -102,11 +138,13 @@ namespace Game.Client.Fx
             var clothColor = Pick(ClothColors, cloth);
             if (metal.a == 0 && hairColor.a == 0 && clothColor.a == 0) return material;
 
-            var key = (material, armorGrade, hair, cloth);
+            var key = (material, part, armorGrade, hair, cloth);
             if (Painted.TryGetValue(key, out var cached) && cached != null) return cached;
 
             var pixels = (Color32[])OriginalPixels(texture).Clone();
             Recolor(pixels, layout.Metal, metal);
+            if (part == Part.Arm) Recolor(pixels, layout.ArmMetal, metal);
+            if (part == Part.Leg) Recolor(pixels, layout.LegMetal, metal);
             Recolor(pixels, layout.Hair, hairColor);
             Recolor(pixels, layout.Cloth, clothColor);
             var result = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = texture.name + "_pintada", wrapMode = TextureWrapMode.Clamp };

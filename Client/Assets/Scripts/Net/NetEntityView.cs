@@ -65,8 +65,8 @@ namespace Game.Client.Net
         private int _hair;
         private int _cloth;
 
-        /// <summary>Jogadores: trocou de armadura (o metal muda de cor; cabelo e roupa ficam os da criação).</summary>
-        public void SetArmor(int armorGrade) => Fx.CharacterPaint.Apply(transform, armorGrade, _hair, _cloth);
+        /// <summary>Jogadores: trocou de peça vestida (o metal muda de cor; cabelo e roupa ficam os da criação).</summary>
+        public void SetGear(Fx.CharacterPaint.Gear gear) => Fx.CharacterPaint.Apply(transform, gear, _hair, _cloth);
 
         /// <summary>Recebe o estado do snapshot.</summary>
         public void AddSample(double serverTime, in EntityState state)
