@@ -1,6 +1,6 @@
 # Balanceamento: nível 1 → 30
 
-Meta do GDD: **8 a 12 horas** de jogo do nível 1 ao 30. Conferido pelo simulador
+Meta: **6 a 10 horas** de jogo do nível 1 ao 30 (o GDD pedia 8 a 12; com as missões das regiões ficou em ~7 h, a pedido, para a subida não cansar). Conferido pelo simulador
 `Shared/Game.Shared/Progression/LevelingSimulation.cs` (o teste `LevelingBalanceTests` falha se sair da faixa ou
 se um nível sozinho passar de 8% do tempo total). Para ver a tabela atualizada:
 
@@ -28,107 +28,107 @@ dotnet run --project Tools/Game.Balance -- --markdown
 | Vida dos monstros comuns | — | ×2 | morriam em 2–5 s: pouco tempo para o combo |
 | XP das missões | — | ×2 | manter as missões valendo ~1 nível cada |
 | Monstro novo | — | Cavaleiro Caído (Nv 29, Ruínas) | do 27 ao 29 não havia monstro do nível: o nível 29 levava 67 min |
+| Missões (2026-10-19) | 8, só a história | 29: história + 20 paralelas em 3 NPCs de região + a da Cripta | poucas missões: a subida dependia só de caçar (10,4 h → 7,0 h) |
 
-## Resultado
+## Resultado (2026-10-19)
 
-### Lâmina: 10,4 horas
+### Lâmina: 7,0 horas
 
 | Nível | Caça | s/abate | XP/abate | Abates | XP de missão | Minutos | Acumulado (h) |
 |---:|---|---:|---:|---:|---:|---:|---:|
 | 1 | lobo_cinzento (Nv 6) | 14,2 | 105 | 3 | 300 | 4 | 0,1 |
-| 2 | lobo_cinzento (Nv 6) | 13,8 | 98 | 17 | 0 | 5 | 0,1 |
+| 2 | lobo_cinzento (Nv 6) | 13,8 | 98 | 7 | 900 | 5 | 0,1 |
 | 3 | lobo_cinzento (Nv 6) | 12,6 | 91 | 20 | 1200 | 8 | 0,3 |
-| 4 | lobo_cinzento (Nv 6) | 12,3 | 84 | 55 | 0 | 14 | 0,5 |
-| 5 | lobo_cinzento (Nv 6) | 12,0 | 77 | 84 | 0 | 21 | 0,9 |
-| 6 | lobo_cinzento (Nv 6) | 11,8 | 70 | 66 | 4000 | 19 | 1,2 |
-| 7 | javali_furioso (Nv 12) | 19,1 | 300 | 37 | 0 | 15 | 1,4 |
-| 8 | javali_furioso (Nv 12) | 17,9 | 280 | 48 | 0 | 18 | 1,7 |
-| 9 | javali_furioso (Nv 12) | 17,5 | 260 | 63 | 0 | 23 | 2,1 |
-| 10 | javali_furioso (Nv 12) | 15,7 | 240 | 38 | 10000 | 15 | 2,4 |
-| 11 | aranha_da_mata (Nv 16) | 16,8 | 450 | 50 | 0 | 17 | 2,7 |
-| 12 | aranha_da_mata (Nv 16) | 16,1 | 420 | 61 | 0 | 20 | 3,0 |
-| 13 | aranha_da_mata (Nv 16) | 15,8 | 390 | 74 | 0 | 24 | 3,4 |
-| 14 | aranha_da_mata (Nv 16) | 15,5 | 360 | 90 | 0 | 29 | 3,9 |
-| 15 | aranha_da_mata (Nv 16) | 15,3 | 330 | 55 | 18000 | 21 | 4,2 |
-| 16 | aranha_da_mata (Nv 16) | 15,1 | 300 | 133 | 0 | 42 | 4,9 |
-| 17 | golem_de_pedra (Nv 22) | 30,7 | 1050 | 42 | 0 | 27 | 5,4 |
-| 18 | golem_de_pedra (Nv 22) | 30,1 | 980 | 49 | 0 | 31 | 5,9 |
-| 19 | golem_de_pedra (Nv 22) | 29,5 | 910 | 58 | 0 | 36 | 6,5 |
-| 20 | golem_de_pedra (Nv 22) | 25,4 | 840 | 34 | 28000 | 21 | 6,8 |
-| 21 | espectro (Nv 26) | 18,0 | 1350 | 46 | 0 | 17 | 7,1 |
-| 22 | espectro (Nv 26) | 17,8 | 1260 | 53 | 0 | 20 | 7,5 |
-| 23 | espectro (Nv 26) | 17,6 | 1170 | 61 | 0 | 22 | 7,8 |
-| 24 | cavaleiro_caido (Nv 29) | 26,0 | 2100 | 36 | 0 | 19 | 8,1 |
-| 25 | cavaleiro_caido (Nv 29) | 25,0 | 1960 | 21 | 40000 | 14 | 8,4 |
-| 26 | cavaleiro_caido (Nv 29) | 24,7 | 1820 | 47 | 0 | 24 | 8,8 |
-| 27 | cavaleiro_caido (Nv 29) | 24,3 | 1680 | 55 | 0 | 28 | 9,2 |
-| 28 | cavaleiro_caido (Nv 29) | 24,0 | 1540 | 63 | 0 | 32 | 9,8 |
-| 29 | cavaleiro_caido (Nv 29) | 23,7 | 1400 | 73 | 0 | 36 | 10,4 |
+| 4 | lobo_cinzento (Nv 6) | 12,3 | 84 | 28 | 2300 | 10 | 0,5 |
+| 5 | lobo_cinzento (Nv 6) | 12,0 | 77 | 43 | 3200 | 14 | 0,7 |
+| 6 | lobo_cinzento (Nv 6) | 11,8 | 70 | 66 | 4000 | 19 | 1,0 |
+| 7 | javali_furioso (Nv 12) | 19,1 | 300 | 20 | 4900 | 11 | 1,2 |
+| 8 | javali_furioso (Nv 12) | 17,9 | 280 | 20 | 8000 | 10 | 1,4 |
+| 9 | javali_furioso (Nv 12) | 17,5 | 260 | 41 | 5600 | 18 | 1,7 |
+| 10 | javali_furioso (Nv 12) | 15,7 | 240 | 38 | 10000 | 15 | 1,9 |
+| 11 | aranha_da_mata (Nv 16) | 16,8 | 450 | 25 | 11000 | 12 | 2,1 |
+| 12 | aranha_da_mata (Nv 16) | 16,1 | 420 | 31 | 12700 | 13 | 2,3 |
+| 13 | aranha_da_mata (Nv 16) | 15,8 | 390 | 37 | 14300 | 15 | 2,6 |
+| 14 | aranha_da_mata (Nv 16) | 15,5 | 360 | 45 | 16100 | 18 | 2,9 |
+| 15 | aranha_da_mata (Nv 16) | 15,3 | 330 | 55 | 18000 | 21 | 3,2 |
+| 16 | aranha_da_mata (Nv 16) | 15,1 | 300 | 60 | 21900 | 22 | 3,6 |
+| 17 | golem_de_pedra (Nv 22) | 30,7 | 1050 | 17 | 26200 | 14 | 3,8 |
+| 18 | golem_de_pedra (Nv 22) | 30,1 | 980 | 0 | 67000 | 6 | 3,9 |
+| 19 | golem_de_pedra (Nv 22) | 29,5 | 910 | 38 | 18200 | 26 | 4,4 |
+| 20 | golem_de_pedra (Nv 22) | 25,4 | 840 | 34 | 28000 | 21 | 4,7 |
+| 21 | espectro (Nv 26) | 18,0 | 1350 | 23 | 30500 | 12 | 4,9 |
+| 22 | espectro (Nv 26) | 17,8 | 1260 | 53 | 0 | 20 | 5,2 |
+| 23 | espectro (Nv 26) | 17,6 | 1170 | 31 | 35200 | 14 | 5,5 |
+| 24 | cavaleiro_caido (Nv 29) | 26,0 | 2100 | 18 | 37700 | 13 | 5,7 |
+| 25 | cavaleiro_caido (Nv 29) | 25,0 | 1960 | 21 | 40000 | 14 | 5,9 |
+| 26 | cavaleiro_caido (Nv 29) | 24,7 | 1820 | 24 | 42700 | 15 | 6,2 |
+| 27 | cavaleiro_caido (Nv 29) | 24,3 | 1680 | 25 | 49900 | 16 | 6,4 |
+| 28 | cavaleiro_caido (Nv 29) | 24,0 | 1540 | 25 | 57700 | 16 | 6,7 |
+| 29 | cavaleiro_caido (Nv 29) | 23,7 | 1400 | 30 | 61000 | 18 | 7,0 |
 
-### Arcanista: 10,5 horas
+### Arcanista: 7,0 horas
 
 | Nível | Caça | s/abate | XP/abate | Abates | XP de missão | Minutos | Acumulado (h) |
 |---:|---|---:|---:|---:|---:|---:|---:|
 | 1 | lobo_cinzento (Nv 6) | 13,8 | 105 | 3 | 300 | 4 | 0,1 |
-| 2 | lobo_cinzento (Nv 6) | 13,4 | 98 | 17 | 0 | 5 | 0,1 |
+| 2 | lobo_cinzento (Nv 6) | 13,4 | 98 | 7 | 900 | 5 | 0,1 |
 | 3 | lobo_cinzento (Nv 6) | 12,3 | 91 | 20 | 1200 | 8 | 0,3 |
-| 4 | lobo_cinzento (Nv 6) | 12,0 | 84 | 55 | 0 | 14 | 0,5 |
-| 5 | lobo_cinzento (Nv 6) | 11,7 | 77 | 84 | 0 | 20 | 0,8 |
-| 6 | lobo_cinzento (Nv 6) | 11,5 | 70 | 66 | 4000 | 19 | 1,2 |
-| 7 | javali_furioso (Nv 12) | 18,4 | 300 | 37 | 0 | 14 | 1,4 |
-| 8 | javali_furioso (Nv 12) | 17,9 | 280 | 48 | 0 | 18 | 1,7 |
-| 9 | javali_furioso (Nv 12) | 17,4 | 260 | 63 | 0 | 23 | 2,1 |
-| 10 | javali_furioso (Nv 12) | 15,6 | 240 | 38 | 10000 | 15 | 2,3 |
-| 11 | aranha_da_mata (Nv 16) | 16,7 | 450 | 50 | 0 | 17 | 2,6 |
-| 12 | aranha_da_mata (Nv 16) | 16,2 | 420 | 61 | 0 | 21 | 3,0 |
-| 13 | aranha_da_mata (Nv 16) | 15,9 | 390 | 74 | 0 | 25 | 3,4 |
-| 14 | aranha_da_mata (Nv 16) | 15,7 | 360 | 90 | 0 | 29 | 3,9 |
-| 15 | aranha_da_mata (Nv 16) | 15,4 | 330 | 55 | 18000 | 21 | 4,2 |
-| 16 | aranha_da_mata (Nv 16) | 15,1 | 300 | 133 | 0 | 42 | 4,9 |
-| 17 | golem_de_pedra (Nv 22) | 31,0 | 1050 | 42 | 0 | 27 | 5,4 |
-| 18 | golem_de_pedra (Nv 22) | 30,3 | 980 | 49 | 0 | 31 | 5,9 |
-| 19 | golem_de_pedra (Nv 22) | 29,7 | 910 | 58 | 0 | 36 | 6,5 |
-| 20 | golem_de_pedra (Nv 22) | 25,8 | 840 | 34 | 28000 | 21 | 6,8 |
-| 21 | espectro (Nv 26) | 18,3 | 1350 | 46 | 0 | 18 | 7,1 |
-| 22 | espectro (Nv 26) | 18,0 | 1260 | 53 | 0 | 20 | 7,4 |
-| 23 | espectro (Nv 26) | 17,8 | 1170 | 61 | 0 | 23 | 7,8 |
-| 24 | cavaleiro_caido (Nv 29) | 26,3 | 2100 | 36 | 0 | 20 | 8,2 |
-| 25 | cavaleiro_caido (Nv 29) | 25,9 | 1960 | 21 | 40000 | 14 | 8,4 |
-| 26 | cavaleiro_caido (Nv 29) | 25,5 | 1820 | 47 | 0 | 25 | 8,8 |
-| 27 | cavaleiro_caido (Nv 29) | 25,1 | 1680 | 55 | 0 | 29 | 9,3 |
-| 28 | cavaleiro_caido (Nv 29) | 24,8 | 1540 | 63 | 0 | 33 | 9,8 |
-| 29 | cavaleiro_caido (Nv 29) | 24,4 | 1400 | 73 | 0 | 37 | 10,5 |
+| 4 | lobo_cinzento (Nv 6) | 12,0 | 84 | 28 | 2300 | 10 | 0,4 |
+| 5 | lobo_cinzento (Nv 6) | 11,7 | 77 | 43 | 3200 | 13 | 0,7 |
+| 6 | lobo_cinzento (Nv 6) | 11,5 | 70 | 66 | 4000 | 19 | 1,0 |
+| 7 | javali_furioso (Nv 12) | 18,4 | 300 | 20 | 4900 | 11 | 1,2 |
+| 8 | javali_furioso (Nv 12) | 17,9 | 280 | 20 | 8000 | 10 | 1,3 |
+| 9 | javali_furioso (Nv 12) | 17,4 | 260 | 41 | 5600 | 18 | 1,6 |
+| 10 | javali_furioso (Nv 12) | 15,6 | 240 | 38 | 10000 | 15 | 1,9 |
+| 11 | aranha_da_mata (Nv 16) | 16,7 | 450 | 25 | 11000 | 12 | 2,1 |
+| 12 | aranha_da_mata (Nv 16) | 16,2 | 420 | 31 | 12700 | 13 | 2,3 |
+| 13 | aranha_da_mata (Nv 16) | 15,9 | 390 | 37 | 14300 | 15 | 2,6 |
+| 14 | aranha_da_mata (Nv 16) | 15,7 | 360 | 45 | 16100 | 18 | 2,9 |
+| 15 | aranha_da_mata (Nv 16) | 15,4 | 330 | 55 | 18000 | 21 | 3,2 |
+| 16 | aranha_da_mata (Nv 16) | 15,1 | 300 | 60 | 21900 | 22 | 3,6 |
+| 17 | golem_de_pedra (Nv 22) | 31,0 | 1050 | 17 | 26200 | 14 | 3,8 |
+| 18 | golem_de_pedra (Nv 22) | 30,3 | 980 | 0 | 67000 | 6 | 3,9 |
+| 19 | golem_de_pedra (Nv 22) | 29,7 | 910 | 38 | 18200 | 26 | 4,3 |
+| 20 | golem_de_pedra (Nv 22) | 25,8 | 840 | 34 | 28000 | 21 | 4,7 |
+| 21 | espectro (Nv 26) | 18,3 | 1350 | 23 | 30500 | 12 | 4,9 |
+| 22 | espectro (Nv 26) | 18,0 | 1260 | 53 | 0 | 20 | 5,2 |
+| 23 | espectro (Nv 26) | 17,8 | 1170 | 31 | 35200 | 14 | 5,5 |
+| 24 | cavaleiro_caido (Nv 29) | 26,3 | 2100 | 18 | 37700 | 13 | 5,7 |
+| 25 | cavaleiro_caido (Nv 29) | 25,9 | 1960 | 21 | 40000 | 14 | 5,9 |
+| 26 | cavaleiro_caido (Nv 29) | 25,5 | 1820 | 24 | 42700 | 16 | 6,2 |
+| 27 | cavaleiro_caido (Nv 29) | 25,1 | 1680 | 25 | 49900 | 16 | 6,5 |
+| 28 | cavaleiro_caido (Nv 29) | 24,8 | 1540 | 25 | 57700 | 16 | 6,7 |
+| 29 | cavaleiro_caido (Nv 29) | 24,4 | 1400 | 30 | 61000 | 18 | 7,0 |
 
 ### Sensibilidade
 
 Jogador rápido = 4 s entre monstros, 8% parado, +30% pelo combo; sem pressa = 10 s, 30% parado, +5%.
 
-- Lâmina: jogador rápido 7,1 h, sem pressa 14,3 h
-- Arcanista: jogador rápido 7,1 h, sem pressa 14,4 h
+- Lâmina: jogador rápido 5,1 h, sem pressa 9,2 h
+- Arcanista: jogador rápido 5,2 h, sem pressa 9,2 h
 
-## Economia (2026-10-17)
+## Economia (2026-10-19)
 
 `dotnet run --project Tools/Game.Balance` também estima o Alz de 1 a 30 com a mesma caçada da simulação acima.
 
-- **Entra:** o Alz dos monstros e a venda dos drops na mercadora. Núcleos e pedras não são vendidos: vão para a
-  melhoria.
+- **Entra:** o Alz dos monstros, a recompensa das missões e a venda dos drops na mercadora. Núcleos e pedras não são
+  vendidos: vão para a melhoria (os núcleos das missões também).
 - **Sai:** melhoria das 5 peças de cada grau até o nível médio (+2, +4 e +5), núcleos que faltarem (comprados na
-  loja), 25 poções por hora de caça e o conjunto de Ferro da loja.
+  loja), 25 poções por hora de caça, o conjunto de Ferro da loja e as skills do Mestre Aldric.
 
-| Faixa | Horas | Entra | Sai | Saldo |
-|---|---:|---:|---:|---:|
-| Nv 1–10 (Ferro) | 2,1 | 23.800 | 7.015 | 16.785 |
-| Nv 10–20 (Aço Negro) | 4,4 | 85.119 | 50.778 | 34.341 |
-| Nv 20–30 (Astralita) | 3,9 | 126.595 | 115.494 | 11.101 |
+| Faixa | Horas | Monstros | Missões | Vendas | Sai | Saldo |
+|---|---:|---:|---:|---:|---:|---:|
+| Nv 1–10 (Ferro) | 1,7 | 6.971 | 9.100 | 7.538 | 10.480 | 13.129 |
+| Nv 10–20 (Aço Negro) | 2,7 | 24.945 | 54.300 | 18.495 | 58.844 | 38.896 |
+| Nv 20–30 (Astralita) | 2,6 | 52.305 | 162.700 | 18.766 | 151.453 | 82.318 |
 
 Valores da Lâmina; o Arcanista fica praticamente igual.
 
-- No total entram cerca de 235 mil Alz e saem 74%. Sobram cerca de 62 mil no nível 30, para trocas, para a entrada
+- No total entram cerca de 355 mil Alz e saem 62%. Sobram cerca de 134 mil no nível 30, para trocas, para a entrada
   da dungeon e para tentar passar do +5.
-- Os núcleos baixos que caem bastam para o Ferro. Por isso a compra de núcleos aparece zerada: a loja é só uma
-  reserva para quem tiver azar.
-- A faixa 20–30 é a mais apertada, porque a melhoria de Astralita custa caro. É de propósito: o +6 em diante, com
-  risco de queda, fica para depois do nível 30.
+- Antes, a conta deixava de fora o Alz das missões e as skills do mestre. As missões da história são as que mais
+  pagam (as das regiões dão cerca de 12% da XP em Alz), e as skills custam 40 × nível² (60 mil no total).
+- Os núcleos que caem e os das missões bastam: a compra de núcleos aparece zerada, e a loja fica como reserva.
 - O teste `Economia_fecha_positiva_em_cada_faixa_e_gasta_boa_parte` exige saldo positivo em cada faixa e um gasto
   entre 60% e 90% do que entra.
 - **Revisar** quando a dungeon (entrada e baú) e o PvP entrarem na conta.
