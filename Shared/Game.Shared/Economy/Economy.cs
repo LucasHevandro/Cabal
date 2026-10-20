@@ -54,6 +54,7 @@ namespace Game.Shared.Economy
             new ShopEntry("pocao_hp_m", 160),
             new ShopEntry(ItemCatalog.CoreLow, 1500),
             new ShopEntry("chave_cripta", 300),
+            new ShopEntry("chave_santuario", 1500),
             new ShopEntry("armadura_ferro", 900),
             new ShopEntry("luvas_ferro", 450),
             new ShopEntry("botas_ferro", 450),

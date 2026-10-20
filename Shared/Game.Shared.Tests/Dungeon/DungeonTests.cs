@@ -53,6 +53,24 @@ public class DungeonTests
     }
 
     [Fact]
+    public void Santuario_pede_grupo_mais_forte_e_cabe_no_limite()
+    {
+        var sanctuary = DungeonCatalog.Sanctuary();
+        (Game.Shared.Accounts.CharacterClass, int)[] Group(int level) =>
+        [
+            (Game.Shared.Accounts.CharacterClass.Blade, level), (Game.Shared.Accounts.CharacterClass.Blade, level),
+            (Game.Shared.Accounts.CharacterClass.Arcanist, level), (Game.Shared.Accounts.CharacterClass.Arcanist, level),
+        ];
+        var typical = DungeonEstimate.TotalSeconds(DungeonEstimate.Run(sanctuary, Group(28)));
+        var minimum = DungeonEstimate.TotalSeconds(DungeonEstimate.Run(sanctuary, Group(sanctuary.MinLevel)));
+        System.Console.WriteLine($"santuario: 28 = {DungeonRules.FormatTime(typical)}, 26 = {DungeonRules.FormatTime(minimum)}, 30 = {DungeonRules.FormatTime(DungeonEstimate.TotalSeconds(DungeonEstimate.Run(sanctuary, Group(30))))}, 2x28 = {DungeonRules.FormatTime(DungeonEstimate.TotalSeconds(DungeonEstimate.Run(sanctuary, new[] { Group(28)[0], Group(28)[2] })))}");
+        Assert.InRange(typical, 9 * 60, 13 * 60);
+        Assert.True(minimum < DungeonRules.TimeLimitSeconds);
+        Assert.Equal(new[] { DungeonCatalog.CryptId, DungeonCatalog.SanctuaryId }, DungeonCatalog.All().Select(d => d.Id));
+        Assert.All(DungeonCatalog.All(), d => Assert.NotNull(Game.Shared.Items.ItemCatalog.Find(d.KeyItemId)));
+    }
+
+    [Fact]
     public void Mensagens_da_dungeon_ida_e_volta()
     {
         static T RoundTrip<T>(T message) where T : INetMessage

@@ -120,7 +120,7 @@ public class QuestTests
         Assert.Equal(1, quests.First().MinLevel);
         Assert.Equal(LevelCurve.MaxLevel, quests.Max(q => q.MinLevel));
 
-        var monsters = new HashSet<string>(WorldContent.Spawns().Select(s => s.Data.Id)) { DungeonCatalog.Crypt().BossId };
+        var monsters = new HashSet<string>(WorldContent.Spawns().Select(s => s.Data.Id).Concat(DungeonCatalog.All().Select(d => d.BossId)));
         foreach (var quest in quests)
         {
             Assert.NotNull(NpcCatalog.Find(quest.GiverNpcId));

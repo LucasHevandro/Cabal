@@ -249,6 +249,10 @@ namespace Game.Shared.Items
             {
                 Id = "chave_cripta", Kind = ItemKind.Material, Rarity = ItemRarity.Uncommon, MaxStack = 10,
             });
+            list.Add(new ItemDefinition
+            {
+                Id = "chave_santuario", Kind = ItemKind.Material, Rarity = ItemRarity.Rare, MaxStack = 10,
+            });
 
             var result = new Dictionary<string, ItemDefinition>();
             foreach (var item in list) result.Add(item.Id, item);

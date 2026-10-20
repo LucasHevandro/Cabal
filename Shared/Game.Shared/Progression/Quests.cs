@@ -226,6 +226,14 @@ namespace Game.Shared.Progression
                 RewardXp = 0, RewardAlz = 200000, RewardItems = { (ItemCatalog.CoreHigh, 5) },
             },
 
+            // ----- Santuário das Ruínas -----
+            new QuestDefinition
+            {
+                Id = "o_santuario", GiverNpcId = NpcCatalog.Scholar, MinLevel = 26,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "oraculo_corrompido") },
+                RewardXp = 60000, RewardAlz = 8000, RewardItems = { ("nucleo_alto", 2) },
+            },
+
             // ----- Missões diárias (uma por região e o chefe de campo) -----
             new QuestDefinition
             {

@@ -66,7 +66,26 @@ namespace Game.Shared.Dungeon
         }
     }
 
-    /// <summary>Mecânica própria do chefe da cripta: escudo com servos e golpe no chão avisado.</summary>
+    /// <summary>
+    /// Mecânica do chefe de uma dungeon: nas frações de vida fica imune e chama servos (o escudo cai quando eles
+    /// morrem), e de tempos em tempos joga um golpe no chão com aviso. Cada dungeon tem os seus números.
+    /// </summary>
+    public sealed class DungeonBossRules
+    {
+        public float[] ShieldAtHpFractions = Array.Empty<float>();
+        public int ServantsPerShield;
+        public float ServantRadius = 6f;
+
+        /// <summary>Cria os dados do servo (um objeto novo a cada chamada: o servidor ajusta os números).</summary>
+        public Func<MonsterData> Servant = () => new MonsterData();
+
+        public double SlamIntervalSeconds = 9;
+        public float SlamWarningSeconds = 2f;
+        public float SlamRadius = 5f;
+        public int SlamDamage = 650;
+    }
+
+    /// <summary>Números do chefe da cripta: escudo com servos e golpe no chão avisado.</summary>
     public static class CryptBossRules
     {
         /// <summary>Ao chegar nestas frações de vida, fica imune e chama servos; o escudo cai quando os servos morrem.</summary>
@@ -121,6 +140,12 @@ namespace Game.Shared.Dungeon
 
         public DropTable Chest = new DropTable();
 
+        /// <summary>Escudos, servos e golpe no chão do chefe.</summary>
+        public DungeonBossRules Boss = new DungeonBossRules();
+
+        /// <summary>Visual do lugar no cliente (pisos, céu, cores): "cripta" ou "santuario".</summary>
+        public string Theme = "cripta";
+
         public float Length => Rooms.Count == 0 ? 0 : Rooms[Rooms.Count - 1].EndZ + 4f;
 
         public void Validate()
@@ -136,6 +161,13 @@ namespace Game.Shared.Dungeon
     {
         public const string CryptId = "cripta_esquecida";
         public const string CryptKey = "chave_cripta";
+        public const string SanctuaryId = "santuario_das_ruinas";
+        public const string SanctuaryKey = "chave_santuario";
+
+        /// <summary>Todas as dungeons, na ordem do portal (da mais fácil para a mais difícil).</summary>
+        public static IReadOnlyList<DungeonDefinition> All() => new[] { Crypt(), Sanctuary() };
+
+        public static IEnumerable<string> Ids => new[] { CryptId, SanctuaryId };
 
         public static DungeonDefinition Crypt()
         {
@@ -143,6 +175,13 @@ namespace Game.Shared.Dungeon
             {
                 Id = CryptId, MinLevel = 18, KeyItemId = CryptKey, BossId = "senhor_da_cripta",
                 ChestZ = 172,
+                Boss = new DungeonBossRules
+                {
+                    ShieldAtHpFractions = CryptBossRules.ShieldAtHpFractions, ServantsPerShield = CryptBossRules.ServantsPerShield,
+                    ServantRadius = CryptBossRules.ServantRadius, Servant = Servant,
+                    SlamIntervalSeconds = CryptBossRules.SlamIntervalSeconds, SlamWarningSeconds = CryptBossRules.SlamWarningSeconds,
+                    SlamRadius = CryptBossRules.SlamRadius, SlamDamage = CryptBossRules.SlamDamage,
+                },
                 Chest = new DropTable(800, 1500,
                     new DropEntry(ItemCatalog.CoreMedium, ItemRarity.Rare, 0.6, 1, 2),
                     new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.3),
@@ -174,7 +213,105 @@ namespace Game.Shared.Dungeon
             return crypt;
         }
 
-        public static DungeonDefinition? Find(string id) => id == CryptId ? Crypt() : null;
+        /// <summary>
+        /// Santuário das Ruínas (Nv 26+): sentinelas de pedra que golpeiam em área, espectros ancestrais que somem e
+        /// reaparecem, cavaleiros juramentados que enfurecem e o Oráculo Corrompido, com três escudos e golpes no chão
+        /// mais frequentes. Céu aberto (é um santuário em ruínas).
+        /// </summary>
+        public static DungeonDefinition Sanctuary()
+        {
+            var sanctuary = new DungeonDefinition
+            {
+                Id = SanctuaryId, MinLevel = 26, KeyItemId = SanctuaryKey, BossId = "oraculo_corrompido", Theme = "santuario",
+                ChestZ = 172,
+                Boss = new DungeonBossRules
+                {
+                    ShieldAtHpFractions = new[] { 0.75f, 0.5f, 0.25f }, ServantsPerShield = 3, ServantRadius = 7f, Servant = Echo,
+                    SlamIntervalSeconds = 7, SlamWarningSeconds = 1.8f, SlamRadius = 5.5f, SlamDamage = 900,
+                },
+                Chest = new DropTable(1500, 2800,
+                    new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.6, 1, 2),
+                    new DropEntry("fragmento_guardiao", ItemRarity.Epic, 0.12),
+                    Item("pedra_vigor", 0.2), Item("pedra_furia", 0.2), Item("pedra_precisao", 0.2),
+                    Item("armadura_astralita", 0.15), Item("luvas_astralita", 0.15), Item("botas_astralita", 0.15),
+                    Item("anel_astralita", 0.15), Item("espada_astralita", 0.1), Item("cajado_astralita", 0.1)),
+            };
+            sanctuary.Rooms.Add(new DungeonRoom
+            {
+                Id = "patio_das_sentinelas", StartZ = 0, EndZ = 40,
+                Spawns = { Group(0, 28, 3, 6, Sentinel()), Group(0, 18, 2, 5, AncientSpecter()) },
+            });
+            sanctuary.Rooms.Add(new DungeonRoom
+            {
+                Id = "corredor_dos_lamentos", StartZ = 44, EndZ = 84,
+                Spawns = { Group(0, 68, 4, 7, AncientSpecter()) },
+            });
+            sanctuary.Rooms.Add(new DungeonRoom
+            {
+                Id = "salao_dos_juramentos", StartZ = 88, EndZ = 128,
+                Spawns = { Group(0, 112, 3, 6, SwornKnight()), Group(0, 100, 1, 0, Sentinel()) },
+            });
+            sanctuary.Rooms.Add(new DungeonRoom
+            {
+                Id = "altar_do_oraculo", StartZ = 132, EndZ = 180, IsBossRoom = true,
+                Spawns = { new SpawnDefinition { CenterX = 0, CenterZ = 160, Count = 1, Data = Oracle() } },
+            });
+            return sanctuary;
+        }
+
+        public static DungeonDefinition? Find(string id) => id switch
+        {
+            CryptId => Crypt(),
+            SanctuaryId => Sanctuary(),
+            _ => null,
+        };
+
+        /// <summary>Eco chamado pelo Oráculo durante o escudo.</summary>
+        public static MonsterData Echo() => new MonsterData
+        {
+            Id = "eco_do_oraculo", Level = 28, MaxHp = 25000, AttackDamage = 220, AttackPower = 90,
+            Defense = 140, AttackRange = 1.6f, MoveSpeed = 5f, AggroRadius = 30, LeashRadius = 40, WanderRadius = 0,
+            XpReward = 900, RespawnSeconds = 9999, Drops = new DropTable(30, 60),
+        };
+
+        private static MonsterData Sentinel() => new MonsterData
+        {
+            Id = "sentinela_de_pedra", Level = 27, MaxHp = 58000, AttackDamage = 320, AttackPower = 110,
+            Defense = 300, AttackRange = 2.4f, AttackCooldownSeconds = 3f, AttackWindupSeconds = 1.1f, MoveSpeed = 2.4f,
+            BodyRadius = 1f, AggroRadius = 10, LeashRadius = 26, WanderRadius = 0, XpReward = 3200, RespawnSeconds = 9999,
+            Behavior = MonsterBehavior.AreaSlam,
+            Drops = new DropTable(120, 240,
+                new DropEntry("fragmento_pedra", ItemRarity.Common, 0.6, 1, 3),
+                new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.06)),
+        };
+
+        private static MonsterData AncientSpecter() => new MonsterData
+        {
+            Id = "espectro_ancestral", Level = 27, MaxHp = 42000, AttackDamage = 300, AttackPower = 110,
+            Defense = 140, AttackRange = 2.5f, AttackCooldownSeconds = 1.8f, AttackWindupSeconds = 0.5f, MoveSpeed = 5.5f,
+            AggroRadius = 12, LeashRadius = 26, WanderRadius = 2, XpReward = 2800, RespawnSeconds = 9999,
+            Behavior = MonsterBehavior.Blink,
+            Drops = new DropTable(100, 200, new DropEntry("essencia", ItemRarity.Uncommon, 0.4)),
+        };
+
+        private static MonsterData SwornKnight() => new MonsterData
+        {
+            Id = "cavaleiro_juramentado", Level = 28, MaxHp = 92000, AttackDamage = 380, AttackPower = 130,
+            Defense = 280, AttackRange = 2.4f, AttackCooldownSeconds = 2.4f, AttackWindupSeconds = 0.8f, MoveSpeed = 4f,
+            BodyRadius = 0.8f, AggroRadius = 10, LeashRadius = 26, WanderRadius = 0, XpReward = 4800, RespawnSeconds = 9999,
+            Behavior = MonsterBehavior.Berserk,
+            Drops = new DropTable(150, 300,
+                new DropEntry("essencia", ItemRarity.Uncommon, 0.4),
+                new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.08)),
+        };
+
+        private static MonsterData Oracle() => new MonsterData
+        {
+            Id = "oraculo_corrompido", Level = 30, MaxHp = 560000, AttackDamage = 420, AttackPower = 150,
+            Defense = 280, AttackRange = 3.2f, AttackCooldownSeconds = 2.2f, AttackWindupSeconds = 0.9f, MoveSpeed = 3.5f,
+            BodyRadius = 1.2f, AggroRadius = 18, LeashRadius = 40, WanderRadius = 0, XpReward = 45000, RespawnSeconds = 9999,
+            Drops = new DropTable(1500, 3000),
+        };
 
         /// <summary>Servo chamado pelo chefe durante o escudo.</summary>
         public static MonsterData Servant() => new MonsterData

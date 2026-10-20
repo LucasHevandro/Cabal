@@ -39,6 +39,8 @@ item.pocao_hp_m = Poção de vida (M)
 item.pocao_hp_m.desc = Recupera 1.200 de vida.
 item.chave_cripta = Chave da Cripta
 item.chave_cripta.desc = Cada membro gasta uma para entrar na Cripta Esquecida (Guardiã Selene, na vila).
+item.chave_santuario = Chave do Santuário
+item.chave_santuario.desc = Cada membro gasta uma para entrar no Santuário das Ruínas (Guardiã Selene, na vila). Nv 26+.
 item.pelo_macio = Pelo macio
 item.pele_lobo = Pele de lobo
 item.presa_lobo = Presa de lobo
@@ -79,6 +81,11 @@ monster.esqueleto_guerreiro = Esqueleto Guerreiro
 monster.esqueleto_arqueiro = Esqueleto Arqueiro
 monster.cavaleiro_ossudo = Cavaleiro Ossudo
 monster.senhor_da_cripta = Senhor da Cripta
+monster.sentinela_de_pedra = Sentinela de Pedra
+monster.espectro_ancestral = Espectro Ancestral
+monster.cavaleiro_juramentado = Cavaleiro Juramentado
+monster.eco_do_oraculo = Eco do Oráculo
+monster.oraculo_corrompido = Oráculo Corrompido
 
 # ===== Zonas =====
 zone.vila = Vila de Partida
@@ -107,12 +114,17 @@ skill.cataclismo = Cataclismo
 
 # ===== Dungeons =====
 dungeon.cripta_esquecida = Cripta Esquecida
+dungeon.santuario_das_ruinas = Santuário das Ruínas
 
 # ===== Salas da dungeon =====
 room.salao_dos_ossos = Salão dos Ossos
 room.galeria_das_flechas = Galeria das Flechas
 room.camara_dos_cavaleiros = Câmara dos Cavaleiros
 room.trono_da_cripta = Trono da Cripta
+room.patio_das_sentinelas = Pátio das Sentinelas
+room.corredor_dos_lamentos = Corredor dos Lamentos
+room.salao_dos_juramentos = Salão dos Juramentos
+room.altar_do_oraculo = Altar do Oráculo
 
 # ===== Medalhas =====
 medal.S = S
@@ -336,8 +348,9 @@ dungeon.ranking_out = Fora do top 10 desta vez.
 dungeon.ranking_place = <color=#ffd25a>{0}º lugar no ranking!</color>
 dungeon.chest_hint = O baú apareceu no fundo da sala: os itens com o seu nome são só seus. A cripta fecha sozinha em instantes.
 dungeon.take_chest = Pegar o baú
-dungeon.leave_crypt = Sair da cripta
-dungeon.crypt_intro = Três salas e o Senhor da Cripta, para até {0} jogadores. Vençam em {1}: medalha <b>S</b> até {2} com combo de {3}+, <b>A</b> até {4}. A medalha dá mais sorteios no baú.
+dungeon.leave_crypt = Sair da dungeon
+dungeon.intro.santuario_das_ruinas = Três salas a céu aberto e o Oráculo Corrompido (três escudos com ecos e golpes no chão mais rápidos), para até {0} jogadores. Vençam em {1}: medalha <b>S</b> até {2} com combo de {3}+, <b>A</b> até {4}. Baú com núcleos altos e equipamento de astralita.
+dungeon.intro.cripta_esquecida = Três salas e o Senhor da Cripta, para até {0} jogadores. Vençam em {1}: medalha <b>S</b> até {2} com combo de {3}+, <b>A</b> até {4}. A medalha dá mais sorteios no baú.
 
 # ===== Cliente: loja e troca =====
 shop.title = {0} — loja
@@ -1033,6 +1046,8 @@ quest.honra_perdida = Honra perdida
 quest.honra_perdida.desc = Os cavaleiros guardam o caminho até o Guardião. Abra passagem e traga a essência deles.
 quest.a_cripta_esquecida = A Cripta Esquecida
 quest.a_cripta_esquecida.desc = Algo acordou embaixo da vila. Junte um grupo, entre pela Guardiã Selene e derrote o Senhor da Cripta.
+quest.o_santuario = O Santuário das Ruínas
+quest.o_santuario.desc = Os textos antigos falam de um oráculo que guardava as Ruínas e enlouqueceu. Compre a Chave do Santuário, junte um grupo forte e liberte o Oráculo Corrompido.
 quest.antidoto = Antídoto
 quest.antidoto.desc = Um batedor foi picado. O veneno das aranhas serve para fazer o antídoto: traga quatro frascos.
 quest.o_ultimo_portao = O último portão

@@ -52,11 +52,13 @@ namespace Game.Shared.Dungeon
                 if (room.IsBossRoom)
                 {
                     // Servos dos escudos e a perda do golpe no chão.
-                    var servant = DungeonCatalog.Servant();
-                    var servants = CryptBossRules.ShieldAtHpFractions.Length * CryptBossRules.ServantsPerShield;
+                    var rules = dungeon.Boss;
+                    var servant = rules.Servant();
+                    var servants = rules.ShieldAtHpFractions.Length * rules.ServantsPerShield;
                     estimate.TotalHp += servant.MaxHp * servants;
-                    estimate.FightSeconds = estimate.FightSeconds / (1 - SlamDpsLoss) + servant.MaxHp * servants / GroupDps(group, servant, assumptions);
-                    estimate.OverheadSeconds += CryptBossRules.ShieldAtHpFractions.Length * SecondsPerPack;
+                    if (servants > 0)
+                        estimate.FightSeconds = estimate.FightSeconds / (1 - SlamDpsLoss) + servant.MaxHp * servants / GroupDps(group, servant, assumptions);
+                    estimate.OverheadSeconds += rules.ShieldAtHpFractions.Length * SecondsPerPack;
                 }
                 result.Add(estimate);
             }
