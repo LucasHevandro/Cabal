@@ -254,7 +254,7 @@ public sealed partial class GameWorld
                     Notify(p, LT("dungeon.gate_open", Loc.Ref("room." + instance.Definition.Rooms[instance.Room].Id)), announcement: true);
             }
 
-            if (instance.InBossRoom) TickCryptBoss(instance, now);
+            if (instance.InBossRoom) TickDungeonBoss(instance, now);
             if (instance.Completed) continue;
 
             var left = MonstersLeft(instance);
@@ -267,8 +267,9 @@ public sealed partial class GameWorld
         }
     }
 
-    private void TickCryptBoss(DungeonInstance instance, double now)
+    private void TickDungeonBoss(DungeonInstance instance, double now)
     {
+        var rules = instance.Definition.Boss;
         var boss = FindMonster(instance.BossId);
         if (boss == null) return;
         if (boss.IsDead)
@@ -278,21 +279,21 @@ public sealed partial class GameWorld
         }
 
         // Escudo: nas frações de vida, fica imune e chama servos; cai quando os servos morrem.
-        var fractions = CryptBossRules.ShieldAtHpFractions;
+        var fractions = rules.ShieldAtHpFractions;
         if (!instance.Shield && instance.ShieldsUsed < fractions.Length && boss.Hp.Current <= boss.Hp.Max * fractions[instance.ShieldsUsed])
         {
             instance.Shield = true;
             instance.ShieldsUsed++;
             boss.Invulnerable = true;
             instance.Servants.Clear();
-            for (var i = 0; i < CryptBossRules.ServantsPerShield; i++)
+            for (var i = 0; i < rules.ServantsPerShield; i++)
             {
-                var angle = i * MathF.PI * 2 / CryptBossRules.ServantsPerShield;
-                var data = DungeonCatalog.Servant();
+                var angle = i * MathF.PI * 2 / rules.ServantsPerShield;
+                var data = rules.Servant();
                 Tune(data);
                 var spawn = new SpawnDefinition { Data = data, Count = 1 };
-                var servant = CreateMonster(spawn, boss.X + MathF.Cos(angle) * CryptBossRules.ServantRadius,
-                    boss.Z + MathF.Sin(angle) * CryptBossRules.ServantRadius, instance.Id);
+                var servant = CreateMonster(spawn, boss.X + MathF.Cos(angle) * rules.ServantRadius,
+                    boss.Z + MathF.Sin(angle) * rules.ServantRadius, instance.Id);
                 instance.Servants.Add(servant.Id);
                 instance.RoomMonsters[instance.Room].Add(servant.Id);
             }
@@ -313,11 +314,11 @@ public sealed partial class GameWorld
         {
             if (now < slam.LandsAt) return;
             instance.PendingSlam = null;
-            instance.NextSlamAt = now + CryptBossRules.SlamIntervalSeconds;
-            var damage = Math.Max(1, (int)(CryptBossRules.SlamDamage * _dungeonTuning.DamageScale));
+            instance.NextSlamAt = now + rules.SlamIntervalSeconds;
+            var damage = Math.Max(1, (int)(rules.SlamDamage * _dungeonTuning.DamageScale));
             foreach (var p in InstancePlayers(instance).ToList())
             {
-                if (!p.IsDead && Distance(p.X, p.Z, slam.X, slam.Z) <= CryptBossRules.SlamRadius + PlayerRules.BodyRadius)
+                if (!p.IsDead && Distance(p.X, p.Z, slam.X, slam.Z) <= rules.SlamRadius + PlayerRules.BodyRadius)
                     DamageMonsterToPlayer(boss, p, damage, CombatSource.BossArea, now);
             }
             return;
@@ -325,10 +326,10 @@ public sealed partial class GameWorld
         var fighting = boss.Brain.State is MonsterState.Chase or MonsterState.WindUp;
         var target = ChooseTarget(boss);
         if (!fighting || target == null || now < instance.NextSlamAt) return;
-        instance.PendingSlam = (target.X, target.Z, now + CryptBossRules.SlamWarningSeconds);
+        instance.PendingSlam = (target.X, target.Z, now + rules.SlamWarningSeconds);
         SendNearby(boss.X, boss.Z, new AreaWarning
         {
-            SourceId = boss.Id, X = target.X, Z = target.Z, Radius = CryptBossRules.SlamRadius, Seconds = CryptBossRules.SlamWarningSeconds,
+            SourceId = boss.Id, X = target.X, Z = target.Z, Radius = rules.SlamRadius, Seconds = rules.SlamWarningSeconds,
         });
     }
 

@@ -552,7 +552,8 @@ public sealed partial class GameWorld
         player.Bag.TryAdd("pocao_hp_p", 5, _uids.Next);
         foreach (var skill in player.ClassSkills) player.LearnedSkills.Add(skill.Skill.Id);
         player.Hotbar = SkillTraining.DefaultHotbar(player.ClassSkills, player.LearnedSkills);
-        player.Bag.TryAdd(Game.Shared.Dungeon.DungeonCatalog.CryptKey, 3, _uids.Next); // bots e testes entram na cripta
+        player.Bag.TryAdd(Game.Shared.Dungeon.DungeonCatalog.CryptKey, 3, _uids.Next); // bots e testes entram nas dungeons
+        player.Bag.TryAdd(Game.Shared.Dungeon.DungeonCatalog.SanctuaryKey, 3, _uids.Next);
         player.RecalculateStats();
         player.Hp.Add(player.Hp.Max);
         player.Mp.Add(player.Mp.Max);

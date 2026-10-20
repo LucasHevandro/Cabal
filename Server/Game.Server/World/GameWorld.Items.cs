@@ -250,7 +250,8 @@ public sealed partial class GameWorld
         }
         if (player.Quests.OnTalk(npc.Id).Count > 0) player.QuestsDirty = true;
         _outbox.Send(player.Id, DialogMessage(player, npc));
-        if (npc.Role == NpcRole.DungeonPortal) _outbox.Send(player.Id, InfoMessage(Game.Shared.Dungeon.DungeonCatalog.CryptId));
+        if (npc.Role == NpcRole.DungeonPortal)
+            foreach (var id in Game.Shared.Dungeon.DungeonCatalog.Ids) _outbox.Send(player.Id, InfoMessage(id));
     }
 
     private NpcDialog DialogMessage(ServerPlayer player, NpcDefinition npc)

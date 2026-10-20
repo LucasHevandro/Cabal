@@ -59,8 +59,8 @@ public class DungeonWorldTests
         }
     }
 
-    private void Enter(GameWorld world, ServerPlayer player) =>
-        world.Handle(player.Id, new DungeonCommand { Action = DungeonActionKind.Enter, DungeonId = DungeonCatalog.CryptId }, _now);
+    private void Enter(GameWorld world, ServerPlayer player, string dungeonId = DungeonCatalog.CryptId) =>
+        world.Handle(player.Id, new DungeonCommand { Action = DungeonActionKind.Enter, DungeonId = dungeonId }, _now);
 
     private void Tick(GameWorld world, double seconds = 0.05)
     {
@@ -209,6 +209,45 @@ public class DungeonWorldTests
         Assert.True(Math.Abs(ana.Z - Portal.Z) < 5);
         Assert.DoesNotContain(world.Monsters, m => m.InstanceId == instance.Id);
         Assert.False(outbox.To<DungeonState>(ana.Id).Last().Active);
+    }
+
+    [Fact]
+    public void Santuario_tem_tres_escudos_com_ecos_e_ranking_proprio()
+    {
+        var (world, outbox) = NewWorld();
+        var ana = AddAtPortal(world, "Ana");
+        world.Handle(ana.Id, new TalkToNpc { NpcId = NpcCatalog.DungeonPortal }, _now);
+        Assert.Contains(outbox.To<DungeonInfo>(ana.Id), i => i.DungeonId == DungeonCatalog.SanctuaryId);
+
+        Enter(world, ana, DungeonCatalog.SanctuaryId);
+        var instance = world.Dungeons.Single();
+        Assert.Equal(DungeonCatalog.SanctuaryId, instance.Definition.Id);
+        Assert.Equal(2, ana.Bag.Count(DungeonCatalog.SanctuaryKey)); // a da cripta não é gasta
+        Assert.Equal(3, ana.Bag.Count(DungeonCatalog.CryptKey));
+        for (var i = 0; i < 3; i++) ClearRoom(world, ana, instance);
+        Assert.True(instance.InBossRoom);
+
+        var boss = world.FindMonster(instance.BossId)!;
+        Assert.Equal("oraculo_corrompido", boss.Data.Id);
+        var rules = instance.Definition.Boss;
+        foreach (var fraction in rules.ShieldAtHpFractions)
+        {
+            boss.Hp.Add(-(boss.Hp.Current - (int)(boss.Hp.Max * fraction) + 1));
+            Tick(world);
+            Assert.True(instance.Shield && boss.Invulnerable);
+            Assert.Equal(rules.ServantsPerShield, instance.Servants.Count);
+            Assert.All(instance.Servants, id => Assert.Equal("eco_do_oraculo", world.FindMonster(id)!.Data.Id));
+            foreach (var id in instance.Servants) Kill(world, ana, world.FindMonster(id)!);
+            Tick(world);
+            Assert.False(instance.Shield);
+        }
+        Assert.Equal(3, instance.ShieldsUsed);
+
+        Kill(world, ana, boss);
+        Tick(world);
+        Assert.True(instance.Completed);
+        Assert.Single(world.Ranking(DungeonCatalog.SanctuaryId));
+        Assert.Empty(world.Ranking(DungeonCatalog.CryptId));
     }
 
     [Fact]

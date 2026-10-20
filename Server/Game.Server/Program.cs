@@ -170,7 +170,8 @@ using var host = new ServerHost(options, Log, auth, saver);
 api.Health = () => host.Health;
 
 // Ranking da dungeon: carrega os melhores tempos e grava cada vitória (fora do loop do jogo).
-host.World.SeedRanking(await store.TopDungeonRunsAsync(Game.Shared.Dungeon.DungeonCatalog.CryptId));
+foreach (var dungeonId in Game.Shared.Dungeon.DungeonCatalog.Ids)
+    host.World.SeedRanking(await store.TopDungeonRunsAsync(dungeonId));
 host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueWith(
     t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
 if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");
