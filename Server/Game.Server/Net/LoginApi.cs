@@ -42,7 +42,7 @@ public sealed class LoginApi : IAsyncDisposable
         {
             var body = await ReadAsync<Credentials>(request);
             if (body == null) return Error(new LocalText("auth.bad_request"), 400);
-            var result = await auth.RegisterAsync(body);
+            var result = await auth.RegisterAsync(body, ClientIp(request));
             if (result.Ok) log?.Invoke($"Conta criada: {result.Value}");
             return result.Ok ? Ok(new ApiError()) : Error(result.Error, result.StatusCode);
         });
@@ -69,6 +69,37 @@ public sealed class LoginApi : IAsyncDisposable
             if (result.Ok) log?.Invoke($"Personagem criado: {result.Value!.Name} (id {result.Value.Id})");
             return result.Ok ? Ok(result.Value!) : Error(result.Error, result.StatusCode);
         });
+    }
+
+    /// <summary>
+    /// IP de quem fez o pedido. Atrás do Caddy (que fala com o jogo pela rede interna do Docker), o IP de verdade vem no
+    /// X-Forwarded-For, que o Caddy preenche e não aceita de fora. De um endereço público, o cabeçalho é ignorado:
+    /// assim ninguém escapa do limite por IP inventando o cabeçalho.
+    /// </summary>
+    internal static string? ClientIp(HttpRequest request)
+    {
+        var remote = request.HttpContext.Connection.RemoteIpAddress;
+        if (remote == null) return null;
+        if (remote.IsIPv4MappedToIPv6) remote = remote.MapToIPv4();
+        if (IsInternal(remote))
+        {
+            var forwarded = request.Headers["X-Forwarded-For"].ToString();
+            if (!string.IsNullOrWhiteSpace(forwarded))
+            {
+                // Se houver vários, o último é o que o nosso proxy acrescentou.
+                var last = forwarded.Split(',')[^1].Trim();
+                if (System.Net.IPAddress.TryParse(last, out var client)) return client.ToString();
+            }
+        }
+        return remote.ToString();
+    }
+
+    private static bool IsInternal(System.Net.IPAddress address)
+    {
+        if (System.Net.IPAddress.IsLoopback(address)) return true;
+        if (address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return address.IsIPv6UniqueLocal || address.IsIPv6LinkLocal;
+        var b = address.GetAddressBytes();
+        return b[0] == 10 || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168);
     }
 
     /// <summary>

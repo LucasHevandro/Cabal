@@ -27,6 +27,11 @@ public sealed class AuthService
 
     public static readonly TimeSpan LockDuration = TimeSpan.FromMinutes(5);
 
+    /// <summary>Contas novas que um mesmo IP pode criar em <see cref="AccountWindow"/> (contra quem cria contas sem fim).</summary>
+    public const int MaxAccountsPerIp = 3;
+
+    public static readonly TimeSpan AccountWindow = TimeSpan.FromHours(24);
+
     private static readonly LocalText WrongCredentials = new("auth.wrong_credentials");
 
     private readonly IGameStore _store;
@@ -34,6 +39,7 @@ public sealed class AuthService
     private readonly SessionTokens _tokens;
     private readonly Func<DateTimeOffset> _now;
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset LockedUntil)> _throttle = new();
+    private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _accountsByIp = new();
     private readonly string _dummyHash;
 
     /// <summary>Ids únicos de item do servidor (o mundo usa o mesmo contador).</summary>
@@ -63,21 +69,41 @@ public sealed class AuthService
 
     public SessionTokens Tokens => _tokens;
 
-    public async Task<AuthResult<string>> RegisterAsync(Credentials credentials)
+    /// <param name="clientIp">IP de quem pede (nulo = sem limite por IP, como nos testes e nas ferramentas locais).</param>
+    public async Task<AuthResult<string>> RegisterAsync(Credentials credentials, string? clientIp = null)
     {
         var account = AccountRules.NormalizeAccount(credentials.Account);
         var error = AccountRules.ValidateAccount(account) ?? AccountRules.ValidatePassword(credentials.Password);
         if (error != null) return AuthResult<string>.Fail(error);
         if (_termsVersion != null && credentials.AcceptTerms != _termsVersion) return AuthResult<string>.Fail(new LocalText("auth.terms_required"));
+        var now = _now();
+        if (clientIp != null && RecentAccounts(clientIp, now) >= MaxAccountsPerIp)
+            return AuthResult<string>.Fail(new LocalText("auth.too_many_accounts", MaxAccountsPerIp), 429);
 
         try
         {
             await _store.CreateAccountAsync(account, _hasher.Hash(credentials.Password), _termsVersion ?? credentials.AcceptTerms ?? "");
+            if (clientIp != null)
+            {
+                var created = _accountsByIp.GetOrAdd(clientIp, _ => new List<DateTimeOffset>());
+                lock (created) created.Add(now);
+            }
             return AuthResult<string>.Success(account);
         }
         catch (StoreConflictException ex)
         {
             return AuthResult<string>.Fail(ex.Text, 409);
+        }
+    }
+
+    /// <summary>Quantas contas o IP criou na janela (e esquece as mais velhas).</summary>
+    private int RecentAccounts(string ip, DateTimeOffset now)
+    {
+        if (!_accountsByIp.TryGetValue(ip, out var created)) return 0;
+        lock (created)
+        {
+            created.RemoveAll(at => now - at >= AccountWindow);
+            return created.Count;
         }
     }
 

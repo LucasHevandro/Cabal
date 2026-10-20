@@ -111,6 +111,24 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Mesmo_ip_cria_no_maximo_tres_contas_por_dia()
+    {
+        var (auth, _, _, advance) = Create();
+        for (var i = 0; i < AuthService.MaxAccountsPerIp; i++)
+            Assert.True((await auth.RegisterAsync(Creds($"conta{i}"), "200.1.2.3")).Ok);
+
+        var blocked = await auth.RegisterAsync(Creds("conta9"), "200.1.2.3");
+        Assert.Equal(429, blocked.StatusCode);
+        Assert.Equal("auth.too_many_accounts", blocked.Error.Key);
+        // Outro IP e quem não informa IP (ferramentas locais) continuam podendo.
+        Assert.True((await auth.RegisterAsync(Creds("conta9"), "200.1.2.4")).Ok);
+        Assert.True((await auth.RegisterAsync(Creds("conta8"))).Ok);
+
+        advance(AuthService.AccountWindow);
+        Assert.True((await auth.RegisterAsync(Creds("conta7"), "200.1.2.3")).Ok);
+    }
+
+    [Fact]
     public async Task Lista_de_personagens_leva_o_grau_da_couraca_vestida()
     {
         var (auth, store, _, _) = Create();
