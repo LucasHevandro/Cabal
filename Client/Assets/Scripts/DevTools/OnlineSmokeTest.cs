@@ -30,6 +30,7 @@ namespace Game.Client.DevTools
         private float _perfSeconds;
         private bool _social;
         private bool _dungeon;
+        private string _dungeonId = Shared.Dungeon.DungeonCatalog.CryptId;
         private bool _arena;
         private StreamWriter _report;
 
@@ -48,7 +49,8 @@ namespace Game.Client.DevTools
             test._fight = Array.IndexOf(args, "-onlinefight") >= 0;
             test._uiTour = Array.IndexOf(args, "-onlineui") >= 0;
             test._social = Array.IndexOf(args, "-onlinesocial") >= 0;
-            test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0;
+            test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0 || Array.IndexOf(args, "-onlinesanctuary") >= 0;
+            if (Array.IndexOf(args, "-onlinesanctuary") >= 0) test._dungeonId = Shared.Dungeon.DungeonCatalog.SanctuaryId;
             test._arena = Array.IndexOf(args, "-onlinearena") >= 0;
             var perf = Array.IndexOf(args, "-onlineperf");
             if (perf >= 0) test._perfSeconds = perf + 1 < args.Length && float.TryParse(args[perf + 1], out var s) ? s : 20f;
@@ -748,7 +750,7 @@ namespace Game.Client.DevTools
             var motor = combat.GetComponent<PlayerMotor>();
             var selector = combat.GetComponent<TargetSelector>();
             var windows = UI.GameWindows.Instance;
-            var crypt = Shared.Dungeon.DungeonCatalog.Crypt();
+            var crypt = Shared.Dungeon.DungeonCatalog.Find(_dungeonId);
 
             yield return WalkTo(NpcCatalog.DungeonPortal);
             windows.TalkToNearestNpc();
@@ -758,12 +760,12 @@ namespace Game.Client.DevTools
             yield return new WaitForEndOfFrame();
             yield return null;
 
-            windows.EnterDungeon();
+            windows.EnterDungeon(_dungeonId);
             CharacterState.CloseDialog();
             yield return WaitFor(() => CharacterState.Dungeon != null, 5f);
             if (CharacterState.Dungeon == null)
             {
-                outcome.Message = "não entrou na cripta";
+                outcome.Message = $"não entrou em {crypt.Name}";
                 yield break;
             }
             yield return new WaitForSecondsRealtime(1.5f);
@@ -820,10 +822,10 @@ namespace Game.Client.DevTools
             var final = CharacterState.Dungeon;
             if (final == null || !final.Completed)
             {
-                outcome.Message = $"não venceu a cripta (sala {(final?.Room ?? 0) + 1}, faltando {final?.MonstersLeft})";
+                outcome.Message = $"não venceu {crypt.Name} (sala {(final?.Room ?? 0) + 1}, faltando {final?.MonstersLeft})";
                 yield break;
             }
-            yield return WaitFor(() => CharacterState.DungeonRanking != null && CharacterState.DungeonRanking.Ranking.Count > 0, 3f);
+            yield return WaitFor(() => CharacterState.RankingOf(_dungeonId)?.Ranking.Count > 0, 3f);
             yield return new WaitForSecondsRealtime(0.8f);
             Capture("14-vitoria");
             yield return new WaitForEndOfFrame();
@@ -843,7 +845,7 @@ namespace Game.Client.DevTools
                 yield break;
             }
             outcome.Ok = true;
-            outcome.Message = $"cripta vencida em {time}, medalha {medal}, ranking com {CharacterState.DungeonRanking.Ranking.Count} tempo(s), de volta ao portal";
+            outcome.Message = $"{crypt.Name}: vitória em {time}, medalha {medal}, ranking com {CharacterState.RankingOf(_dungeonId).Ranking.Count} tempo(s), de volta ao portal";
         }
 
         /// <summary>

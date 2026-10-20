@@ -52,7 +52,7 @@ namespace Game.Client.Fx
         /// <summary>Golpe de monstro (esqueletos têm Animator; os bichos em partes só dão o bote).</summary>
         public static int ForMonster(string monsterId)
         {
-            switch (monsterId)
+            switch (VisualCatalog.BaseOf(monsterId))
             {
                 case "esqueleto_arqueiro": return RangedShoot;
                 case "espectro":

@@ -9,7 +9,8 @@ namespace Game.Client.World
     /// <summary>
     /// Modo online: monta o mapa da dungeon (chão, paredes, portões e baú) na origem da instância quando o servidor
     /// manda o <see cref="DungeonState"/>, e desmonta ao sair. O estado chega antes da posição, então o chão já existe
-    /// quando o personagem é levado para lá. Portões e baú acompanham o andamento.
+    /// quando o personagem é levado para lá. Portões e baú acompanham o andamento. A cripta é fechada (teto, tochas,
+    /// caixões); o santuário é a céu aberto (muros baixos de arenito, pedras caídas, braseiros e runas ciano).
     /// </summary>
     [RequireComponent(typeof(NetworkSession))]
     public sealed class DungeonView : MonoBehaviour
@@ -77,10 +78,12 @@ namespace Game.Client.World
             var boss = _session.Material("dungeon_trono", new Color(0.28f, 0.12f, 0.14f));
             var length = definition.Length;
             var width = definition.HalfWidth * 2;
+            var open = definition.Theme == "santuario";
+            var wallPiece = open ? "muro_arena" : "parede";
 
-            // Chão do corredor inteiro (um pouco antes da entrada): lajotas de pedra.
+            // Chão do corredor inteiro (um pouco antes da entrada): lajotas de pedra (arenito no santuário).
             var ground = Block("Chão", new Vector3(0, -0.5f, length / 2 - 2), new Vector3(width, 1, length + 4), floor);
-            Kit.Floor(ground.GetComponent<Renderer>(), "piso_cripta", new Vector2(width, length + 4), 4f);
+            Kit.Floor(ground.GetComponent<Renderer>(), open ? "piso_arena" : "piso_cripta", new Vector2(width, length + 4), open ? 6f : 4f);
             var bossRoom = definition.Rooms[definition.Rooms.Count - 1];
             var bossMiddle = (bossRoom.StartZ + bossRoom.EndZ) / 2;
             var carpet = Block("Piso do trono", new Vector3(0, 0.01f, bossMiddle), new Vector3(3.2f, 0.02f, bossRoom.EndZ - bossRoom.StartZ - 4f), boss, collider: false);
@@ -94,20 +97,20 @@ namespace Game.Client.World
                 Block("Parede do fundo", new Vector3(0, WallHeight / 2, length + 0.5f), new Vector3(width + 2, WallHeight, 1), wall),
                 Block("Parede da entrada", new Vector3(0, WallHeight / 2, -4.5f), new Vector3(width + 2, WallHeight, 1), wall),
             };
-            var hasKit = Kit.Place(_root.transform, "parede", new Vector3(-definition.HalfWidth - 0.3f, 0, -2f), Quaternion.LookRotation(Vector3.left)) != null;
+            var hasKit = Kit.Place(_root.transform, wallPiece, new Vector3(-definition.HalfWidth - 0.3f, 0, -2f), Quaternion.LookRotation(Vector3.left)) != null;
             if (hasKit)
             {
                 foreach (var block in walls) Kit.HideMesh(block);
                 for (var z = 2f; z < length + 2f; z += 4f)
                 {
-                    Kit.Place(_root.transform, "parede", new Vector3(-definition.HalfWidth - 0.3f, 0, z), Quaternion.LookRotation(Vector3.left));
-                    Kit.Place(_root.transform, "parede", new Vector3(definition.HalfWidth + 0.3f, 0, z - 4f), Quaternion.LookRotation(Vector3.right));
+                    Kit.Place(_root.transform, wallPiece, new Vector3(-definition.HalfWidth - 0.3f, 0, z), Quaternion.LookRotation(Vector3.left));
+                    Kit.Place(_root.transform, wallPiece, new Vector3(definition.HalfWidth + 0.3f, 0, z - 4f), Quaternion.LookRotation(Vector3.right));
                 }
-                Kit.Place(_root.transform, "parede", new Vector3(definition.HalfWidth + 0.3f, 0, length - 2f + 4f), Quaternion.LookRotation(Vector3.right));
+                Kit.Place(_root.transform, wallPiece, new Vector3(definition.HalfWidth + 0.3f, 0, length - 2f + 4f), Quaternion.LookRotation(Vector3.right));
                 for (var x = -definition.HalfWidth + 2f; x < definition.HalfWidth; x += 4f)
                 {
-                    Kit.Place(_root.transform, "parede", new Vector3(x, 0, length + 0.3f), Quaternion.identity);
-                    Kit.Place(_root.transform, "parede", new Vector3(x, 0, -4.3f), Quaternion.LookRotation(Vector3.back));
+                    Kit.Place(_root.transform, wallPiece, new Vector3(x, 0, length + 0.3f), Quaternion.identity);
+                    Kit.Place(_root.transform, wallPiece, new Vector3(x, 0, -4.3f), Quaternion.LookRotation(Vector3.back));
                 }
             }
 
@@ -120,6 +123,13 @@ namespace Game.Client.World
                     var pillar = Block("Pilar", new Vector3(side * (definition.HalfWidth - 2), WallHeight / 2, room.GateZ), new Vector3(4, WallHeight, 1.2f), wall);
                     if (!hasKit) continue;
                     Kit.HideMesh(pillar);
+                    if (open)
+                    {
+                        Kit.Place(_root.transform, "pilar_arena", new Vector3(side * (definition.HalfWidth - 1.5f), 0, room.GateZ), Quaternion.identity);
+                        Kit.Place(_root.transform, "pilar_arena", new Vector3(side * (definition.HalfWidth - 3.5f), 0, room.GateZ), Quaternion.identity,
+                            new Vector3(0.8f, 1.6f, 0.8f));
+                        continue;
+                    }
                     Kit.Place(_root.transform, "pilar", new Vector3(side * (definition.HalfWidth - 0.9f), 0, room.GateZ), Quaternion.identity);
                     Kit.Place(_root.transform, "pilar", new Vector3(side * (definition.HalfWidth - 3.1f), 0, room.GateZ), Quaternion.identity);
                 }
@@ -140,7 +150,11 @@ namespace Game.Client.World
                 _gates.Add(gateObject);
             }
 
-            if (hasKit)
+            if (hasKit && open)
+            {
+                DecorateSanctuary(definition, bossRoom, length);
+            }
+            else if (hasKit)
             {
                 // Teto de pedra: o céu não aparece mais por cima. Não faz sombra (as tochas e o ambiente iluminam).
                 var ceiling = Block("Teto", new Vector3(0, WallHeight + 0.5f, length / 2 - 2), new Vector3(width + 2, 1, length + 6), floor, collider: false);
@@ -233,6 +247,61 @@ namespace Game.Client.World
             foreach (var x in new[] { -1f, 1f })
             foreach (var z in new[] { bossRoom.StartZ + 5f, bossRoom.EndZ - 6f })
                 Kit.Place(_root.transform, "braseiro_arena", new Vector3(x * (edge - 2f), 0, z), Quaternion.identity);
+        }
+
+        /// <summary>
+        /// Santuário em ruínas, sem teto: braseiros nos muros, pedras caídas pelo caminho, estandartes rasgados e, no
+        /// altar, um anel de pedras em volta do círculo ciano do Oráculo. Poeira dourada no ar e névoa azulada no chão.
+        /// </summary>
+        private void DecorateSanctuary(DungeonDefinition definition, DungeonRoom bossRoom, float length)
+        {
+            var edge = definition.HalfWidth;
+            var random = new System.Random(definition.Id.GetHashCode());
+            float Range(float min, float max) => (float)(min + random.NextDouble() * (max - min));
+            for (var z = 8f; z < length - 4f; z += 20f)
+            {
+                Kit.Place(_root.transform, "braseiro_arena", new Vector3(-edge + 1.2f, 0, z), Quaternion.identity);
+                Kit.Place(_root.transform, "braseiro_arena", new Vector3(edge - 1.2f, 0, z + 10f), Quaternion.identity);
+            }
+            for (var z = 14f; z < length - 6f; z += 28f)
+            {
+                Kit.Place(_root.transform, "estandarte", new Vector3(-edge + 0.4f, 0, z), Quaternion.LookRotation(Vector3.right));
+                Kit.Place(_root.transform, "estandarte", new Vector3(edge - 0.4f, 0, z), Quaternion.LookRotation(Vector3.left));
+            }
+            foreach (var room in definition.Rooms)
+            {
+                if (room.IsBossRoom) continue;
+                // Pedras caídas (baixas e um pouco tortas) junto aos muros.
+                for (var i = 0; i < 4; i++)
+                {
+                    var side = i % 2 == 0 ? -1f : 1f;
+                    Kit.Place(_root.transform, "pilar_arena", new Vector3(side * Range(edge - 3.5f, edge - 1.6f), 0, Range(room.StartZ + 4, room.EndZ - 4)),
+                        Quaternion.Euler(Range(-6, 6), Range(0, 90), Range(-6, 6)), new Vector3(0.7f, Range(0.25f, 0.7f), 0.7f));
+                }
+                for (var i = 0; i < 2; i++)
+                {
+                    var side = random.Next(2) == 0 ? -1f : 1f;
+                    Kit.Place(_root.transform, "velas", new Vector3(side * (edge - 0.8f), 0, Range(room.StartZ + 2, room.EndZ - 2)), Quaternion.identity);
+                }
+            }
+
+            // Altar: anel de pedras baixas junto aos muros, em volta do círculo rúnico onde o Oráculo luta.
+            var altar = new Vector3(0, 0, (bossRoom.StartZ + bossRoom.EndZ) / 2f);
+            var radius = edge - 1.4f;
+            for (var i = 0; i < 6; i++)
+            {
+                var angle = i * Mathf.PI * 2 / 6 + Mathf.PI / 6;
+                Kit.Place(_root.transform, "pilar_arena", altar + new Vector3(Mathf.Cos(angle) * radius, 0, Mathf.Sin(angle) * radius * 1.4f),
+                    Quaternion.Euler(0, i * 47f, 0), new Vector3(0.5f, i % 2 == 0 ? 0.45f : 0.8f, 0.5f));
+            }
+            Kit.Rune(_root.transform, "Círculo do Oráculo", altar + new Vector3(0, 0.03f, 0), edge * 1.5f, new Color(0.2f, 0.9f, 1.3f, 0.45f), 5.1f);
+            Kit.Rune(_root.transform, "Círculo interno", altar + new Vector3(0, 0.04f, 0), edge * 0.6f, new Color(0.9f, 0.75f, 0.3f, 0.4f), 2.3f);
+
+            var middle = length / 2f;
+            Kit.Haze(_root.transform, "Poeira dourada", new Vector3(0, 2.5f, middle), new Vector3(edge * 2f - 1f, 4.5f, length),
+                new Color(1f, 0.85f, 0.5f, 0.4f), 0.03f, 0.07f, 7f, length * 0.8f, new Vector3(0.12f, 0.05f, 0.04f));
+            Kit.Haze(_root.transform, "Névoa", new Vector3(0, 0.35f, middle), new Vector3(edge * 2f - 1f, 0.4f, length),
+                new Color(0.45f, 0.75f, 0.9f, 0.06f), 3f, 5.5f, 10f, length * 0.3f, new Vector3(0.1f, 0f, 0.05f));
         }
 
         private GameObject Block(string name, Vector3 localPosition, Vector3 size, Material material, bool collider = true)

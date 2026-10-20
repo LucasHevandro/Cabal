@@ -82,6 +82,7 @@ namespace Game.Client.UI
             var prefab = VisualCatalog.Find(VisualCatalog.Item, id);
             if (prefab == null) return null;
             var model = Instantiate(prefab, Stage, Quaternion.Euler(0f, 150f, 0f));
+            VisualCatalog.ApplyVariant(model, VisualCatalog.Item, id);
             foreach (var t in model.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layer;
             foreach (var behaviour in model.GetComponentsInChildren<MonoBehaviour>(true)) behaviour.enabled = false;
 

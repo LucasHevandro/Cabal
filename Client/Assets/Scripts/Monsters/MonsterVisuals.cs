@@ -57,8 +57,13 @@ namespace Game.Client.Monsters
             };
 
         /// <summary>Aparência do tipo, ou uma cápsula cinza se o tipo for desconhecido (servidor mais novo).</summary>
-        public static (MonsterShape Shape, Vector3 Scale, Color Color) LookFor(string typeId) =>
-            Looks.TryGetValue(typeId ?? "", out var look) ? look : (MonsterShape.Capsule, Vector3.one, Color.gray);
+        public static (MonsterShape Shape, Vector3 Scale, Color Color) LookFor(string typeId)
+        {
+            if (Looks.TryGetValue(typeId ?? "", out var look)) return look;
+            if (typeId != null && VisualCatalog.Variants.TryGetValue(typeId, out var variant) && Looks.TryGetValue(variant.BaseId, out var basic))
+                return (basic.Shape, basic.Scale * variant.Scale, basic.Color * variant.Tint);
+            return (MonsterShape.Capsule, Vector3.one, Color.gray);
+        }
 
         /// <summary>
         /// Monta corpo, "olho" (frente), anel de seleção e aviso de golpe como filhos de <paramref name="root"/>. Se o

@@ -49,6 +49,7 @@ namespace Game.Client.Fx
             _current = NewSource();
             _previous = NewSource();
             foreach (var spawn in WorldContent.Spawns()) if (spawn.IsBoss) _bossIds.Add(spawn.Data.Id);
+            foreach (var dungeon in Game.Shared.Dungeon.DungeonCatalog.All()) _bossIds.Add(dungeon.BossId);
             // Começa a gerar as trilhas já: a da vila primeiro, as outras logo depois.
             foreach (var track in new[] { MusicTrack.City, MusicTrack.Field, MusicTrack.Dungeon, MusicTrack.Boss }) Prepare(track);
         }

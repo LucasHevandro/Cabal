@@ -16,40 +16,56 @@ namespace Game.Client.UI
         private static readonly Color MedalB = new Color(0.8f, 0.55f, 0.35f);
 
         private bool _resultClosed;
+        private int _portalDungeon;
 
         private static Msg.DungeonState Dungeon => CharacterState.Dungeon is { Active: true } d ? d : null;
 
         // Usado pelo teste automático.
-        public void EnterDungeon() => Send(new Msg.DungeonCommand { Action = Msg.DungeonActionKind.Enter, DungeonId = DungeonCatalog.CryptId });
+        public void EnterDungeon(string dungeonId = DungeonCatalog.CryptId) =>
+            Send(new Msg.DungeonCommand { Action = Msg.DungeonActionKind.Enter, DungeonId = dungeonId });
 
         // ----- Portal -----
 
         private void DrawPortal(NpcDefinition npc)
         {
-            var crypt = DungeonCatalog.Crypt();
-            var rect = Window(new Rect(VirtualWidth / 2 - 300, 150, 600, 560), Loc.T("dungeon.portal_title", npc.Name, crypt.Name));
+            var dungeons = DungeonCatalog.All();
+            _portalDungeon = Mathf.Clamp(_portalDungeon, 0, dungeons.Count - 1);
+            var dungeon = dungeons[_portalDungeon];
+            var rect = Window(new Rect(VirtualWidth / 2 - 300, 150, 600, 600), Loc.T("dungeon.portal_title", npc.Name, dungeon.Name));
             var x = rect.x + 16;
             var y = rect.y + 46;
-            var keys = CharacterState.Bag.Count(crypt.KeyItemId);
+
+            // Uma aba por dungeon (da mais fácil para a mais difícil), com o nível mínimo.
+            var tabWidth = (rect.width - 32 - (dungeons.Count - 1) * 8) / dungeons.Count;
+            for (var i = 0; i < dungeons.Count; i++)
+            {
+                var tab = new Rect(x + i * (tabWidth + 8), y, tabWidth, 30);
+                GUI.color = i == _portalDungeon ? Color.white : new Color(1, 1, 1, 0.55f);
+                if (GUI.Button(tab, $"{dungeons[i].Name} <size=12>(Nv {dungeons[i].MinLevel}+)</size>", _button)) _portalDungeon = i;
+            }
+            GUI.color = Color.white;
+            y += 40;
+
+            var keys = CharacterState.Bag.Count(dungeon.KeyItemId);
             var level = Player.Level;
             var party = SocialWindows.Instance != null ? SocialWindows.Instance.Party : null;
             var members = party != null && party.Members.Count > 0 ? party.Members.Count : 1;
             var isLeader = party == null || party.Members.Count == 0 || party.LeaderId == NetworkSession.Instance.PlayerId;
 
             GUI.Label(new Rect(x, y, rect.width - 32, 64),
-                Loc.T("dungeon.crypt_intro", DungeonRules.MaxPlayers, DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds),
+                Loc.T("dungeon.intro." + dungeon.Id, DungeonRules.MaxPlayers, DungeonRules.FormatTime(DungeonRules.TimeLimitSeconds),
                     DungeonRules.FormatTime(DungeonRules.MedalSSeconds), DungeonRules.MedalSCombo, DungeonRules.FormatTime(DungeonRules.MedalASeconds)), _small);
             y += 74;
-            GUI.Label(new Rect(x, y, rect.width - 32, 24), Check(level >= crypt.MinLevel, Loc.T("dungeon.req_level", crypt.MinLevel, level)), _small);
+            GUI.Label(new Rect(x, y, rect.width - 32, 24), Check(level >= dungeon.MinLevel, Loc.T("dungeon.req_level", dungeon.MinLevel, level)), _small);
             GUI.Label(new Rect(x, y + 24, rect.width - 32, 24),
-                Check(keys > 0, Loc.T("dungeon.req_key", ItemCatalog.Get(crypt.KeyItemId).Name, keys)), _small);
+                Check(keys > 0, Loc.T("dungeon.req_key", ItemCatalog.Get(dungeon.KeyItemId).Name, keys)), _small);
             GUI.Label(new Rect(x, y + 48, rect.width - 32, 24),
                 Check(isLeader, members > 1 ? Loc.T("dungeon.req_party", members) : Loc.T("dungeon.req_solo")), _small);
             y += 84;
 
             GUI.Label(new Rect(x, y, rect.width - 32, 26), Loc.T("dungeon.best_times"), _label);
             y += 30;
-            var info = CharacterState.DungeonRanking;
+            var info = CharacterState.RankingOf(dungeon.Id);
             if (info == null || info.Ranking.Count == 0)
             {
                 GUI.Label(new Rect(x, y, rect.width - 32, 24), Loc.T("dungeon.no_runs"), _small);
@@ -73,7 +89,7 @@ namespace Game.Client.UI
             GUI.enabled = isLeader;
             if (GUI.Button(new Rect(rect.center.x - 120, rect.yMax - 56, 240, 40), members > 1 ? Loc.T("dungeon.enter_party") : Loc.T("dungeon.enter"), _button))
             {
-                EnterDungeon();
+                EnterDungeon(dungeon.Id);
                 CharacterState.CloseDialog();
                 _resultClosed = false;
             }

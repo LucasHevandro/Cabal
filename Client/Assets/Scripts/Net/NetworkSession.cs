@@ -86,6 +86,14 @@ namespace Game.Client.Net
             // Online o jogo não pode pausar ao perder o foco: pararia de ler o servidor e "congelaria" o mundo.
             Application.runInBackground = true;
             foreach (var spawn in WorldContent.Spawns()) _monsterData[spawn.Data.Id] = spawn.Data;
+            foreach (var dungeon in Game.Shared.Dungeon.DungeonCatalog.All())
+            {
+                foreach (var room in dungeon.Rooms)
+                foreach (var spawn in room.Spawns)
+                    _monsterData.TryAdd(spawn.Data.Id, spawn.Data);
+                var servant = dungeon.Boss.Servant();
+                _monsterData.TryAdd(servant.Id, servant);
+            }
         }
 
         private void Start()

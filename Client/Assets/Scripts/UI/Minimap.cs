@@ -303,7 +303,7 @@ namespace Game.Client.UI
             if (_bossIds == null)
             {
                 _bossIds = new HashSet<string>(WorldContent.Spawns().Where(s => s.IsBoss).Select(s => s.Data.Id));
-                _bossIds.Add(DungeonCatalog.Crypt().BossId);
+                foreach (var dungeon in DungeonCatalog.All()) _bossIds.Add(dungeon.BossId);
             }
             if (_disc == null)
             {

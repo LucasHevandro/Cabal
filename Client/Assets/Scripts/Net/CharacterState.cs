@@ -57,9 +57,12 @@ namespace Game.Client.Net
 
         public static void ClearDuelInvite() => _duelInvite = null;
 
-        /// <summary>Dungeon em que está (nulo ou inativo = fora) e o último ranking recebido.</summary>
+        /// <summary>Dungeon em que está (nulo ou inativo = fora), o último ranking recebido e o de cada dungeon.</summary>
         public static Msg.DungeonState Dungeon { get; private set; }
         public static Msg.DungeonInfo DungeonRanking { get; private set; }
+        private static readonly System.Collections.Generic.Dictionary<string, Msg.DungeonInfo> _rankings = new();
+
+        public static Msg.DungeonInfo RankingOf(string dungeonId) => _rankings.TryGetValue(dungeonId, out var info) ? info : null;
 
         public static void Apply(Msg.DungeonState state)
         {
@@ -70,6 +73,7 @@ namespace Game.Client.Net
         public static void Apply(Msg.DungeonInfo info)
         {
             DungeonRanking = info;
+            _rankings[info.DungeonId] = info;
             Changed?.Invoke();
         }
 
@@ -94,6 +98,7 @@ namespace Game.Client.Net
             _tradeInvite = null;
             Dungeon = null;
             DungeonRanking = null;
+            _rankings.Clear();
             Pvp = null;
             _duelInvite = null;
         }
