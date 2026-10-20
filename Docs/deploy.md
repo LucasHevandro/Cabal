@@ -36,6 +36,45 @@ ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 7777/tcp
 - **SSH:** use chave em vez de senha e desligue o login por senha (`PasswordAuthentication no` em `/etc/ssh/sshd_config`).
 - **Docker e firewall:** o Docker abre as portas publicadas por fora do ufw. Por isso o compose só publica a 7777, a 80 e a 443, e a 7778 fica presa ao 127.0.0.1.
 
+### AWS (EC2), com os créditos de conta nova
+
+A conta nova da AWS ganha créditos que cobrem os primeiros meses. Depois, a `t4g.small` em São Paulo, o disco e o IP
+público custam por volta de US$ 15 a 25 por mês (confira na calculadora da AWS). A imagem do servidor roda em ARM, então
+a máquina Graviton (`t4g`), mais barata, serve.
+
+1. **Alerta de gastos antes de tudo:** Billing and Cost Management → Budgets → Create budget → modelo *Zero spend budget*
+   (ou um de US$ 1), com o seu e-mail. Assim você fica sabendo de qualquer cobrança.
+2. **Região:** no canto de cima, à direita, escolha **South America (São Paulo) sa-east-1**.
+3. **Máquina:** EC2 → Launch instance.
+   - **Nome:** `astralis`.
+   - **Imagem:** Ubuntu Server **24.04 LTS**, arquitetura **64-bit (Arm)**.
+   - **Tipo:** `t4g.small` (2 vCPU e 2 GB).
+   - **Par de chaves:** Create new key pair → nome `astralis`, tipo ED25519, formato `.pem`. Guarde o arquivo baixado:
+     sem ele não dá para entrar na máquina, e a AWS não o envia de novo.
+   - **Rede (Edit):**
+     - SSH com origem **My IP**;
+     - marque HTTPS e HTTP;
+     - Add security group rule → Custom TCP, porta **7777**, origem `0.0.0.0/0`.
+   - **Disco:** 20 GiB, gp3.
+4. **IP fixo:** EC2 → Elastic IPs → Allocate → Actions → Associate → a instância `astralis`. É esse IP que vai no
+   domínio. Sem ele, o IP muda toda vez que a máquina desliga e liga.
+5. **Entrar no Windows (PowerShell):** o SSH recusa a chave se outros usuários puderem lê-la. Rode uma vez:
+
+   ```powershell
+   icacls astralis.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
+   ssh -i astralis.pem ubuntu@IP_ELASTICO
+   ```
+
+6. **Memória:** com 2 GB, vale criar 2 GB de swap, uma vez só:
+
+   ```bash
+   sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+   ```
+
+7. Daí em diante, siga os comandos abaixo. O usuário padrão da AWS é `ubuntu`: dá para pular o `adduser jogo` e usar o
+   `ubuntu`, com `sudo usermod -aG docker ubuntu` e saindo e entrando de novo no SSH.
+
 ### Opção grátis: Oracle Cloud (Always Free)
 
 A camada grátis da Oracle tem máquinas **ARM (Ampere A1)** que sobram para o teste fechado. A imagem do servidor é
