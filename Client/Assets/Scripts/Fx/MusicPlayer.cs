@@ -12,9 +12,9 @@ using PvpMode = Game.Shared.Net.PvpMode;
 namespace Game.Client.Fx
 {
     /// <summary>
-    /// Toca a música do lugar: vila (e menu), mapa de caça, cripta, e chefe (chefe de campo por perto, sala do chefe da
-    /// cripta ou arena). Troca com um cruzamento suave de 2 s. Se existir um arquivo em
-    /// <c>Resources/Audio/music/&lt;city|field|dungeon|boss&gt;</c>, usa o arquivo; senão gera a música em código
+    /// Toca a música do lugar: vila (e menu), uma para cada região de caça (Campos, Mata, Ruínas), cripta, santuário, e
+    /// chefe (chefe de campo por perto, sala do chefe da dungeon ou arena). Troca com um cruzamento suave de 2 s. Se existir
+    /// um arquivo em <c>Resources/Audio/music/&lt;nome da trilha em minúsculas&gt;</c>, usa o arquivo; senão gera a música em código
     /// (<see cref="MusicSynth"/>), fora da thread principal.
     /// </summary>
     public sealed class MusicPlayer : MonoBehaviour
@@ -51,7 +51,12 @@ namespace Game.Client.Fx
             foreach (var spawn in WorldContent.Spawns()) if (spawn.IsBoss) _bossIds.Add(spawn.Data.Id);
             foreach (var dungeon in Game.Shared.Dungeon.DungeonCatalog.All()) _bossIds.Add(dungeon.BossId);
             // Começa a gerar as trilhas já: a da vila primeiro, as outras logo depois.
-            foreach (var track in new[] { MusicTrack.City, MusicTrack.Field, MusicTrack.Dungeon, MusicTrack.Boss }) Prepare(track);
+            foreach (var track in new[]
+                     {
+                         MusicTrack.City, MusicTrack.Field, MusicTrack.Forest, MusicTrack.Ruins, MusicTrack.Dungeon, MusicTrack.Sanctuary,
+                         MusicTrack.Boss,
+                     })
+                Prepare(track);
         }
 
         private AudioSource NewSource()
@@ -137,12 +142,18 @@ namespace Game.Client.Fx
             if (dungeonState != null)
             {
                 var bossRoom = dungeonState.Room >= dungeonState.Rooms - 1;
-                return bossRoom && !dungeonState.Completed ? MusicTrack.Boss : MusicTrack.Dungeon;
+                if (bossRoom && !dungeonState.Completed) return MusicTrack.Boss;
+                return Game.Shared.Dungeon.DungeonCatalog.Find(dungeonState.DungeonId)?.Theme == "santuario" ? MusicTrack.Sanctuary : MusicTrack.Dungeon;
             }
 
             if (BossNearby(position)) return MusicTrack.Boss;
-            var zone = ZoneArea.At(position);
-            return zone != null && zone.Key == "zone.vila" ? MusicTrack.City : MusicTrack.Field;
+            return ZoneArea.At(position)?.Key switch
+            {
+                "zone.vila" => MusicTrack.City,
+                "zone.mata_sombria" => MusicTrack.Forest,
+                "zone.ruinas_esquecidas" or "zone.arena_do_guardiao" => MusicTrack.Ruins,
+                _ => MusicTrack.Field,
+            };
         }
 
         private bool BossNearby(Vector3 position)

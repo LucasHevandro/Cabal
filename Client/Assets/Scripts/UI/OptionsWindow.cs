@@ -186,7 +186,7 @@ namespace Game.Client.UI
             GUI.matrix = Matrix4x4.TRS(new Vector3(_offset.x, _offset.y, 0), Quaternion.identity, new Vector3(_scale, _scale, 1));
             if (Event.current.type == EventType.MouseDown && _rect.Contains(Event.current.mousePosition)) UiSounds.Click();
 
-            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 380, 660, 760);
+            _rect = new Rect(VirtualWidth / 2 - 330, VirtualHeight / 2 - 398, 660, 796);
             Box(new Rect(0, 0, VirtualWidth, VirtualHeight), new Color(0, 0, 0, 0.35f));
             UiTheme.Panel(_rect);
             var x = _rect.x + 28;
@@ -269,6 +269,8 @@ namespace Game.Client.UI
             var effects = Slider(x, y, Loc.T("options.volume_effects"), GameSettings.EffectsVolume);
             y += 36;
             GameSettings.MusicVolume = Slider(x, y, Loc.T("options.volume_music"), GameSettings.MusicVolume);
+            y += 36;
+            GameSettings.AmbientVolume = Slider(x, y, Loc.T("options.volume_ambient"), GameSettings.AmbientVolume);
             y += 46;
             if (!Mathf.Approximately(master, GameSettings.MasterVolume))
             {

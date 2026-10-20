@@ -7,12 +7,13 @@ using UnityEngine;
 namespace Game.Client.Editor
 {
     /// <summary>
-    /// Salva as músicas geradas em código como .wav, para ouvir fora do jogo (ou usar de base numa música de verdade).
+    /// Salva as músicas e as camadas do som ambiente geradas em código como .wav, para ouvir fora do jogo (ou usar de base
+    /// numa gravação de verdade).
     /// Em linha de comando: -executeMethod Game.Client.Editor.MusicExport.ExportAll -musicOut pasta
     /// </summary>
     public static class MusicExport
     {
-        [MenuItem("Jogo/Áudio/Exportar músicas geradas (.wav)")]
+        [MenuItem("Jogo/Áudio/Exportar músicas e ambiente gerados (.wav)")]
         public static void ExportAll()
         {
             var args = Environment.GetCommandLineArgs();
@@ -26,6 +27,13 @@ namespace Game.Client.Editor
                 var path = Path.Combine(folder, "musica_" + track.ToString().ToLowerInvariant() + ".wav");
                 WriteWav(path, samples, MusicSynth.SampleRate, loops: 2);
                 Debug.Log($"[Áudio] {track}: {samples.Length / (float)MusicSynth.SampleRate:0.0} s -> {path}");
+            }
+            foreach (AmbientLayer layer in Enum.GetValues(typeof(AmbientLayer)))
+            {
+                var samples = AmbientSynth.Render(layer);
+                var path = Path.Combine(folder, "ambiente_" + layer.ToString().ToLowerInvariant() + ".wav");
+                WriteWav(path, samples, AmbientSynth.SampleRate, loops: 2);
+                Debug.Log($"[Áudio] ambiente {layer}: {samples.Length / (float)AmbientSynth.SampleRate:0.0} s -> {path}");
             }
         }
 

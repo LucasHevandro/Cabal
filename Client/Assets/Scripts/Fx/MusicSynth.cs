@@ -10,11 +10,20 @@ namespace Game.Client.Fx
         /// <summary>Vila: calma, maior, sem bateria.</summary>
         City,
 
-        /// <summary>Mapa de caça: aventura, dórico, bateria leve.</summary>
+        /// <summary>Campos do Vento: aventura, dórico, bateria leve.</summary>
         Field,
+
+        /// <summary>Mata Sombria: menor, devagar, arpejo baixinho e sinos esparsos.</summary>
+        Forest,
+
+        /// <summary>Ruínas Esquecidas e Arena do Guardião: escala "antiga" (frígio maior), tambores e sinos.</summary>
+        Ruins,
 
         /// <summary>Cripta: sombria, frígio, sinos e um "coração" no grave.</summary>
         Dungeon,
+
+        /// <summary>Santuário das Ruínas: lídio, pad aberto e sinos em todo compasso (sagrado e estranho).</summary>
+        Sanctuary,
 
         /// <summary>Chefe e arena: rápida, menor, baixo marcado e bateria cheia.</summary>
         Boss,
@@ -49,6 +58,8 @@ namespace Game.Client.Fx
         private static readonly int[] Dorian = { 0, 2, 3, 5, 7, 9, 10 };
         private static readonly int[] Phrygian = { 0, 1, 3, 5, 7, 8, 10 };
         private static readonly int[] Minor = { 0, 2, 3, 5, 7, 8, 10 };
+        private static readonly int[] PhrygianDominant = { 0, 1, 4, 5, 7, 8, 10 };
+        private static readonly int[] Lydian = { 0, 2, 4, 6, 7, 9, 11 };
 
         private static Style StyleFor(MusicTrack track) => track switch
         {
@@ -68,6 +79,33 @@ namespace Game.Client.Fx
                 SnarePattern = new[] { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 },
                 HatPattern = new[] { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1 },
                 Seed = 23, Brightness = 0.7f,
+            },
+            MusicTrack.Forest => new Style
+            {
+                Bpm = 76, Root = 57, Scale = Minor, Progression = new[] { 0, 5, 3, 6, 0, 5, 2, 4 }, Bars = 8,
+                Pad = 0.2f, Bass = 0.14f, Pluck = 0.15f, Bell = 0.06f, Kick = 0.12f, Hat = 0.018f,
+                BassPattern = new[] { 1, 0, 0, 0, 1, 0, 0, 1 },
+                KickPattern = new[] { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
+                HatPattern = new[] { 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
+                Seed = 71, Brightness = 0.38f,
+            },
+            MusicTrack.Ruins => new Style
+            {
+                Bpm = 92, Root = 55, Scale = PhrygianDominant, Progression = new[] { 0, 1, 0, 6, 0, 1, 5, 4 }, Bars = 8,
+                Pad = 0.18f, Bass = 0.18f, Bell = 0.1f, Lead = 0.06f, Kick = 0.22f, Snare = 0.06f, Hat = 0.02f,
+                BassPattern = new[] { 1, 0, 0, 1, 0, 0, 1, 0 },
+                KickPattern = new[] { 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0 }, // tambor ritual
+                SnarePattern = new[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 },
+                HatPattern = new[] { 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0 },
+                Seed = 89, Brightness = 0.45f,
+            },
+            MusicTrack.Sanctuary => new Style
+            {
+                Bpm = 72, Root = 62, Scale = Lydian, Progression = new[] { 0, 1, 4, 1, 0, 5, 1, 4 }, Bars = 8,
+                Pad = 0.28f, Bass = 0.1f, Pluck = 0.1f, Bell = 0.13f, Kick = 0.14f,
+                BassPattern = new[] { 1, 0, 0, 0, 0, 0, 0, 0 },
+                KickPattern = new[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                Seed = 97, Brightness = 0.65f,
             },
             MusicTrack.Dungeon => new Style
             {
@@ -132,10 +170,11 @@ namespace Game.Client.Fx
                     }
                 }
 
-                if (style.Bell > 0 && (b % 2 == 0 || track == MusicTrack.Dungeon))
+                var everyBar = track is MusicTrack.Dungeon or MusicTrack.Sanctuary or MusicTrack.Ruins;
+                if (style.Bell > 0 && (b % 2 == 0 || everyBar))
                 {
                     var note = chord[random.Next(3)] + 12;
-                    Bell(buffer, barStart + beat * (track == MusicTrack.Dungeon ? 2 : 0), Hz(note), style.Bell);
+                    Bell(buffer, barStart + beat * (everyBar ? 2 : 0), Hz(note), style.Bell);
                 }
 
                 if (style.Lead > 0)

@@ -21,8 +21,10 @@ namespace Game.Client.UI
         public static float MasterVolume { get; set; } = 0.8f;
         public static float EffectsVolume { get; set; } = 0.9f;
 
-        /// <summary>Guardado já agora; a música entra na parte de áudio da Fase 7.</summary>
         public static float MusicVolume { get; set; } = 0.6f;
+
+        /// <summary>Som ambiente das regiões (vento, pássaros, grilos, chuva...).</summary>
+        public static float AmbientVolume { get; set; } = 0.7f;
 
         /// <summary>Manda ao servidor os passos do tutorial, o FPS e erros (métricas do teste fechado; ClientMetrics).</summary>
         public static bool ClientMetrics { get; set; } = true;
@@ -46,6 +48,7 @@ namespace Game.Client.UI
                 MasterVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "volume", MasterVolume));
                 EffectsVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "efeitos", EffectsVolume));
                 MusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "musica", MusicVolume));
+                AmbientVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "ambiente", AmbientVolume));
                 ClientMetrics = PlayerPrefs.GetInt(Prefix + "metricas", 1) == 1;
             }
             catch (Exception)
@@ -63,6 +66,7 @@ namespace Game.Client.UI
             MasterVolume = 0.8f;
             EffectsVolume = 0.9f;
             MusicVolume = 0.6f;
+            AmbientVolume = 0.7f;
         }
 
         public static void Apply()
@@ -84,6 +88,7 @@ namespace Game.Client.UI
                 PlayerPrefs.SetFloat(Prefix + "volume", MasterVolume);
                 PlayerPrefs.SetFloat(Prefix + "efeitos", EffectsVolume);
                 PlayerPrefs.SetFloat(Prefix + "musica", MusicVolume);
+                PlayerPrefs.SetFloat(Prefix + "ambiente", AmbientVolume);
                 PlayerPrefs.SetInt(Prefix + "metricas", ClientMetrics ? 1 : 0);
                 PlayerPrefs.Save();
             }

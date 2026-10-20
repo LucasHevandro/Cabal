@@ -43,7 +43,6 @@ namespace Game.Client.World
         public static float Gust => 0.4f + 1.4f * Mathf.PerlinNoise(Time.time / 9f, 4.2f);
 
         private readonly List<Layer> _layers = new List<Layer>();
-        private readonly Dictionary<string, ZoneDefinition> _zones = new Dictionary<string, ZoneDefinition>();
         private Material _material;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -61,7 +60,6 @@ namespace Game.Client.World
                 enabled = false;
                 return;
             }
-            foreach (var zone in WorldContent.Zones()) _zones[zone.Id] = zone;
 
             // Campos do Vento: pólen claro e folhinhas levadas pelo vento.
             Add("campos_do_vento", "Pólen", 9f, false, new Color(1f, 0.95f, 0.6f, 0.7f), 0.06f, 0.11f, 9f,
@@ -183,10 +181,19 @@ namespace Game.Client.World
             }
         }
 
-        /// <summary>1 no meio da região, 0 longe dela (some aos poucos na borda).</summary>
-        private float Weight(string zoneId, Vector3 at)
+        private float Weight(string zoneId, Vector3 at) => ZoneWeight(zoneId, at);
+
+        private static Dictionary<string, ZoneDefinition> _zoneMap;
+
+        /// <summary>1 no meio da região, 0 longe dela (some aos poucos na borda). O som ambiente usa a mesma conta.</summary>
+        public static float ZoneWeight(string zoneId, Vector3 at)
         {
-            if (!_zones.TryGetValue(zoneId, out var zone)) return 0f;
+            if (_zoneMap == null)
+            {
+                _zoneMap = new Dictionary<string, ZoneDefinition>();
+                foreach (var definition in WorldContent.Zones()) _zoneMap[definition.Id] = definition;
+            }
+            if (!_zoneMap.TryGetValue(zoneId, out var zone)) return 0f;
             var distance = Vector2.Distance(new Vector2(at.x, at.z), new Vector2(zone.CenterX, zone.CenterZ));
             return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(zone.Radius * 0.8f, zone.Radius * 1.3f, distance));
         }
