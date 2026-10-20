@@ -16,6 +16,39 @@ Tudo em `deploy/`: `docker-compose.prod.yml`, `Caddyfile`, `.env.example`, `serv
 - **Portas internas:** a 7778 (API e `/metrics`) só responde no `127.0.0.1` da própria VPS, e o banco não tem porta nenhuma.
 - **Endereço que o jogador usa:** só o domínio, por exemplo `jogo.exemplo.com.br:7777`. Com domínio, o cliente usa sozinho `https://jogo.exemplo.com.br/api` para o login; com um IP, usa `http://ip:7778/api` (só para teste).
 
+## 0. Servidor no seu PC com Tailscale (grátis, para jogar com amigos)
+
+Sem VPS e sem mexer no roteador (funciona até com CGNAT). O Tailscale cria uma rede privada entre o seu PC e o de cada
+amigo. O jogo só fica no ar com o PC ligado, e cada amigo instala o Tailscale.
+
+1. **No seu PC:** instale o Tailscale (tailscale.com/download), entre com a sua conta e anote o IP `100.x.x.x` que ele
+   mostra.
+2. **Firewall do Windows** (PowerShell como administrador, uma vez só): libera as portas só para quem vem pelo Tailscale.
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "Terras de Astralis (Tailscale)" -Direction Inbound -Protocol TCP -LocalPort 7777,7778 -RemoteAddress 100.64.0.0/10 -Action Allow
+   ```
+
+3. **Ligar o servidor:** com o Docker Desktop aberto, na raiz do projeto:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File deploy\scripts\servidor-pc.ps1
+   ```
+
+   O script liga o banco, mostra o endereço para os amigos e sobe o servidor. Para desligar: Ctrl+C (salva todos antes).
+4. **Cliente:** no `servidor.txt` (ao lado do `TerrasDeAstralis.exe` e em `Client/servidor.txt`, para os próximos builds):
+
+   ```
+   servidor = Servidor do Lucas | 100.x.x.x:7777
+   ```
+
+   Com um IP, o cliente faz o login direto na porta 7778, sem HTTPS: a senha viaja dentro da rede do Tailscale, que já é
+   criptografada.
+5. **Amigos:** no painel do Tailscale → Machines → os três pontinhos do seu PC → **Share**. Cada amigo instala o Tailscale,
+   entra com a conta dele e abre o link: ele enxerga só o seu PC. Mande também o `.zip` do jogo (a pasta do build sem a
+   `*_BackUpThisFolder_*`).
+6. **Enquanto tiver gente jogando:** deixe o PC sem suspensão e o Tailscale aberto.
+
 ## 1. VPS
 
 Para o teste fechado (até umas 50 pessoas), uma VPS Linux com **2 vCPU e 2 a 4 GB de RAM** sobra: 30 bots usam cerca de 1 ms por tick.
