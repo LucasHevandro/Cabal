@@ -36,6 +36,38 @@ ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 7777/tcp
 - **SSH:** use chave em vez de senha e desligue o login por senha (`PasswordAuthentication no` em `/etc/ssh/sshd_config`).
 - **Docker e firewall:** o Docker abre as portas publicadas por fora do ufw. Por isso o compose só publica a 7777, a 80 e a 443, e a 7778 fica presa ao 127.0.0.1.
 
+### Google Cloud (Compute Engine), com o teste grátis
+
+A conta nova do Google Cloud costuma ganhar um crédito de teste (por volta de US$ 300 por 90 dias), e há região em
+**São Paulo**. Durante o teste, o Google não cobra sozinho quando o crédito ou o prazo acabam: as máquinas param, e só
+há cobrança se você ativar a conta paga. Confira as condições na hora do cadastro.
+
+1. **Conta:** cloud.google.com → *Get started for free*. O cartão é pedido só para conferir a identidade.
+2. **Projeto:** no topo do console, crie um projeto `astralis`. Abra Compute Engine e clique em *Enable* para ativar a
+   API (leva um minuto).
+3. **Alerta de gastos:** Billing → Budgets & alerts → Create budget, com alertas por e-mail (por exemplo, a 50%, 90% e
+   100% do crédito).
+4. **Máquina:** Compute Engine → VM instances → Create instance.
+   - **Nome:** `astralis`. **Região:** `southamerica-east1` (São Paulo), zona `-a`.
+   - **Tipo:** série E2, `e2-small` (2 vCPU compartilhadas e 2 GB) ou `e2-medium` (4 GB), que sobra.
+   - **Disco** (OS and storage → Change): Ubuntu, **Ubuntu 24.04 LTS** x86/64 (amd64), *Balanced persistent disk*,
+     **20 GB**.
+   - **Rede (Networking):**
+     - marque *Allow HTTP traffic* e *Allow HTTPS traffic*;
+     - em *Network tags*, escreva `jogo`;
+     - em *Network interfaces* → default → *External IPv4 address*, escolha **Reserve static external IP address**
+       (nome `astralis`). É o IP fixo que vai no domínio.
+5. **Porta do jogo:** VPC network → Firewall → Create firewall rule.
+   - Nome `jogo-7777`, direção *Ingress*, ação *Allow*.
+   - *Targets:* *Specified target tags* → `jogo`.
+   - *Source IPv4 ranges:* `0.0.0.0/0`.
+   - *Protocols and ports:* TCP `7777`.
+6. **Entrar:** na lista de VM instances, clique em **SSH** ao lado da máquina. Abre um terminal no navegador, sem
+   precisar de chave. O usuário é o da sua conta Google, não `ubuntu`.
+7. **Memória:** com a `e2-small`, crie 2 GB de swap como no passo 6 da AWS.
+8. Daí em diante, siga os comandos abaixo, menos a linha do `ufw` (o firewall é o do passo 5). Para usar o Docker sem
+   `sudo`: `sudo usermod -aG docker $USER`, e feche e abra o SSH de novo.
+
 ### AWS (EC2), com os créditos de conta nova
 
 A conta nova da AWS ganha créditos que cobrem os primeiros meses. Depois, a `t4g.small` em São Paulo, o disco e o IP
