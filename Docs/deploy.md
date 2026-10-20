@@ -214,7 +214,7 @@ O arquivo é `.github/workflows/ci.yml`.
 O jogador escolhe o servidor numa lista na tela de entrada, sem digitar o endereço. Cada servidor mostra o status lido
 do `/api/health` dele: no ar (com jogadores e ping), instável, outra versão do jogo ou fora do ar. O último escolhido
 fica salvo. O "Outro endereço…" continua lá para testes. A lista vem do `servidor.txt`, que fica ao lado do
-`Prototipo.exe`:
+`TerrasDeAstralis.exe`:
 
 ```
 # Servidores da lista: nome | host:porta | api (opcional, só se a API não estiver no mesmo domínio)

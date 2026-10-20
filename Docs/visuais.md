@@ -110,7 +110,7 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 - **Morte no jogo:** o personagem cai. Monstros animados somem 2 s depois; jogadores ficam caídos até renascer.
 - **Golpes dos outros:** o golpe de outro jogador também anima o modelo dele, pela skill que veio no evento de combate.
 
-**Conferir as animações no jogo:** `Prototipo.exe -posetest pasta`. Ele põe as classes e os NPCs lado a lado e captura cada estado. Faço a conferência no jogo porque, no Editor em modo batch, a malha não é deformada pelos ossos.
+**Conferir as animações no jogo:** `TerrasDeAstralis.exe -posetest pasta`. Ele põe as classes e os NPCs lado a lado e captura cada estado. Faço a conferência no jogo porque, no Editor em modo batch, a malha não é deformada pelos ossos.
 
 # Monstros
 
@@ -122,7 +122,7 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 
 - **Golpe de cada monstro:** sai de `AttackStyle.ForMonster` (arqueiro dispara, espectro e Senhor da Cripta lançam magia, os chefes guerreiros dão o golpe de duas mãos).
 - **Tamanhos:** os modelos são escalados para a altura definida em `KayKitBuilder.MonsterLooks`. A colisão e o alcance continuam sendo os do servidor.
-- **Conferir no jogo:** `Prototipo.exe -posetest pasta -posemonsters`.
+- **Conferir no jogo:** `TerrasDeAstralis.exe -posetest pasta -posemonsters`.
 
 # Skills: golpe, rastro e impacto
 
@@ -149,7 +149,7 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
   - cristais e geada na Corrente Gélida, implosão e duas ondas na Explosão Arcana;
   - explosão com fumaça no Meteoro, e chuva de pedras com três ondas de choque no Cataclismo.
 
-**Conferir:** `Prototipo.exe -skilltest pasta` toca as 16 skills na frente de um esqueleto. Ele captura o preparo e o acerto de cada uma, alternando Good e Excellent.
+**Conferir:** `TerrasDeAstralis.exe -skilltest pasta` toca as 16 skills na frente de um esqueleto. Ele captura o preparo e o acerto de cada uma, alternando Good e Excellent.
 
 **Clarões:** usam um brilho grande de partícula, que o bloom espalha. Luzes pontuais deixavam um ponto branco solto na tela.
 
@@ -170,7 +170,7 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
 
 - **Outros jogadores:** o servidor manda a arma e a melhoria de cada jogador no `EntitySpawned` e, quando mudam, no `EntityLook` (protocolo v13; desde o v16 também os graus da couraça, das luvas e das botas). Assim todo mundo vê o brilho de todo mundo.
 - **Itens no chão:** os 37 itens têm modelo em `Visuals/item/<id>`: as armas, armadura, luvas, botas e anel por nível, cristais dos núcleos, gemas, poções, materiais e a chave da cripta. Giram e flutuam com o feixe da raridade.
-- **Conferir:** `Prototipo.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, a
+- **Conferir:** `TerrasDeAstralis.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, a
   vitrine de aparência (`aparencia.png`) e depois todos os itens.
 
 # Aparência: couraça, luvas, botas, cabelo e roupa
@@ -239,7 +239,7 @@ nas pernas.
 - **Rio** (`Ground.RiverZ`) cavado no terreno entre a vila e os Campos do Vento, com água correndo e **ponte de madeira** na estrada. Árvores, pedras, cercas e grama ficam fora da água.
 - **Dia e noite:** um dia dura 40 minutos (`Atmosphere.DayMinutes`). Online, a hora vem do relógio do servidor, então todos veem o mesmo céu. Há pôr do sol e amanhecer alaranjados e uma noite azulada. As lanternas da vila (`NightLight`) acendem à noite. Na cripta e na arena o clima é fixo.
 - **Vila:** praça calçada, e cada NPC ganhou o seu canto: forja e bigorna, banca do mercador, estante e tapete, e o arco do portal. Há postes de lanterna na praça, e o treino usa bonecos de palha.
-- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa a praça, a ponte e os campos de dia, no pôr do sol e à noite.
+- **Conferir:** `TerrasDeAstralis.exe -worldtest pasta` fotografa a praça, a ponte e os campos de dia, no pôr do sol e à noite.
 
 # Interface
 
@@ -312,7 +312,7 @@ renderizador do PC. O `RenderLook` liga o shader toda vez que a cena é montada.
 - **Impacto de tela:** borrão radial a partir do alvo, com clarão, que some em cerca de 0,3 s.
   - É forte no finalizador, mais leve no Excellent e nos golpes pesados.
   - Fica no mesmo passo de tela cheia do contorno, sem custo extra.
-- **Conferir:** `Prototipo.exe -skilltest pasta`.
+- **Conferir:** `TerrasDeAstralis.exe -skilltest pasta`.
 
 # NPCs e moradores
 
@@ -342,7 +342,7 @@ centro da sua região (cheia até 80% do raio, some até 130%), então o clima m
     esticadas caindo rápido; enquanto chove, o tempo fecha (`Atmosphere.Overcast`): sol fraco, neblina cinza mais densa,
     cores apagadas e céu mais escuro e cinza.
   - **Rajadas** nos Campos do Vento: o pólen e as folhas aumentam e correm mais rápido quando o vento aperta.
-- **Conferir:** `Prototipo.exe -worldtest pasta` fotografa também a mata (com chuva) e as ruínas, de dia, no pôr do
+- **Conferir:** `TerrasDeAstralis.exe -worldtest pasta` fotografa também a mata (com chuva) e as ruínas, de dia, no pôr do
   sol e à noite, e o céu olhando para a lua (`ceu-noite`).
 
 # Água

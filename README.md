@@ -1,4 +1,4 @@
-# Projeto Action MMORPG (nome provisório)
+# Terras de Astralis
 
 Action MMORPG com combate por combos de timing, inspirado na jogabilidade de jogos como CABAL Online, com mundo, arte e números próprios.
 
@@ -49,26 +49,26 @@ Sem Docker, `--db memory` usa um banco em memória (perde tudo ao desligar). `--
 O servidor decide monstros, combate (incluindo o timing do combo, com compensação de latência), XP, drops e o chefe,
 e salva os personagens a cada 10 s e ao sair.
 
-**Jogar online:** ligue o servidor, abra `Client/Builds/Windows/Prototipo.exe` e no menu inicial escolha
+**Jogar online:** ligue o servidor, abra `Client/Builds/Windows/TerrasDeAstralis.exe` e no menu inicial escolha
 **Conectar** (endereço `127.0.0.1:7777` para o mesmo PC; em outro PC da rede, o IP de quem roda o servidor).
 Para pular o menu:
 
 ```bash
-Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Ana
+Client/Builds/Windows/TerrasDeAstralis.exe -connect 127.0.0.1:7777 -name Ana
 ```
 
 **Teste automático online** (servidor ligado na porta 7777): conecta, luta contra coelhos pelo servidor e grava
 `saida-online/relatorio.txt` (SUCESSO ou FALHA) com screenshots.
 
 ```bash
-Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinefight
+Client/Builds/Windows/TerrasDeAstralis.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinefight
 ```
 
 Com conta (servidor sem `--guests`), o mesmo teste também passeia pela interface: inventário, conversa com o
 ancião, missão "Primeiros passos" e a janela da ferreira.
 
 ```bash
-Client/Builds/Windows/Prototipo.exe -server 127.0.0.1:7777 -autologin teste senha12345 -onlinetest saida-online -onlinefight -onlineui
+Client/Builds/Windows/TerrasDeAstralis.exe -server 127.0.0.1:7777 -autologin teste senha12345 -onlinetest saida-online -onlinefight -onlineui
 ```
 
 **Controles online** (além dos do combate): 1–8 skills da classe (as bloqueadas mostram o nível ou a missão que
@@ -98,7 +98,7 @@ conferindo cada passo. Use um personagem novo (o teste vende 4 das 5 poções in
 
 ```bash
 dotnet run --project Tools/Game.Bots -- --port 7777 --count 3 --seconds 110 --accounts --invite NomeDoPersonagem
-Client/Builds/Windows/Prototipo.exe -server 127.0.0.1:7777 -autologin conta senha12345 -onlinetest saida-online -onlinesocial
+Client/Builds/Windows/TerrasDeAstralis.exe -server 127.0.0.1:7777 -autologin conta senha12345 -onlinetest saida-online -onlinesocial
 ```
 
 **Teste da dungeon:** servidor com `--guests --dungeon-test` (Cripta fácil e sem nível mínimo). O cliente entra
@@ -107,7 +107,7 @@ sua cópia.
 
 ```bash
 dotnet run --project Server/Game.Server -- --port 7777 --db memory --guests --dungeon-test
-Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinedungeon
+Client/Builds/Windows/TerrasDeAstralis.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinedungeon
 dotnet run --project Tools/Game.Bots -- --port 7777 --count 8 --seconds 300 --dungeon
 ```
 
@@ -117,7 +117,7 @@ toma um ponto e sai. Para a carga, 20 bots fazem duas partidas 5v5 ao mesmo temp
 ```bash
 dotnet run --project Server/Game.Server -- --port 7777 --db memory --guests --arena-size 1
 dotnet run --project Tools/Game.Bots -- --port 7777 --count 1 --seconds 240 --arena-passive
-Client/Builds/Windows/Prototipo.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinearena
+Client/Builds/Windows/TerrasDeAstralis.exe -connect 127.0.0.1:7777 -name Teste -onlinetest saida-online -onlinearena
 ```
 
 `--party` nos bots forma grupos de 4 entre eles e conversa no chat (teste de carga do social). `--accounts` faz
@@ -139,7 +139,7 @@ Controles: WASD andar, Shift correr, Espaço esquivar, botão direito gira a câ
 **Protótipo > Gerar build Windows** e rode
 
 ```bash
-Client/Builds/Windows/Prototipo.exe -autodemo saida-demo
+Client/Builds/Windows/TerrasDeAstralis.exe -autodemo saida-demo
 ```
 
 A pasta `saida-demo` recebe screenshots e um `relatorio.txt` terminando em SUCESSO ou FALHA.

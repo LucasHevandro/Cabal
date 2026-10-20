@@ -9,7 +9,7 @@ Servidor, 30 bots juntos no começo dos Campos do Vento e o cliente medindo por 
 ```bash
 dotnet run --project Server/Game.Server -- --port 7777 --db memory --guests
 dotnet run --project Tools/Game.Bots -- --port 7777 --count 30 --seconds 180 --crowd
-Client/Builds/Windows/Prototipo.exe -screen-width 1920 -screen-height 1080 -screen-fullscreen 0 -connect 127.0.0.1:7777 -name Medidor -onlinetest saida-perf -onlineperf 20
+Client/Builds/Windows/TerrasDeAstralis.exe -screen-width 1920 -screen-height 1080 -screen-fullscreen 0 -connect 127.0.0.1:7777 -name Medidor -onlinetest saida-perf -onlineperf 20
 ```
 
 O `relatorio.txt` traz o FPS médio, o 1% pior (o quadro mais lento entre os 99% mais rápidos), o pior quadro, as
