@@ -847,6 +847,7 @@ options.audio = Áudio
 options.volume_master = Volume geral
 options.volume_effects = Efeitos
 options.volume_music = Música
+options.volume_ambient = Ambiente
 options.language = Idioma
 options.language_label = Idioma do jogo
 options.client_metrics = Enviar dados do tutorial, FPS e erros (ajuda a melhorar o jogo)
