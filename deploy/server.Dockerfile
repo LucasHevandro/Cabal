@@ -1,17 +1,20 @@
 # Imagem do servidor do jogo (jogo + API de login no mesmo processo).
 # Construir na raiz do projeto:  docker build -f deploy/server.Dockerfile -t game-server .
 # Portas: 7777 (jogo, TCP) e 7778 (API de login e /api/health; em produção fica atrás do Caddy com HTTPS).
+# Serve para x64 e ARM (a VPS grátis da Oracle é ARM). A compilação roda na arquitetura de quem constrói e gera o código
+# da arquitetura alvo (sem emular o SDK): docker buildx build --platform linux/amd64,linux/arm64 ...
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG TARGETARCH
 WORKDIR /src
 # Primeiro só os projetos: o restore fica em cache enquanto os pacotes não mudam.
 COPY Directory.Build.props ./
 COPY Shared/Game.Shared/Game.Shared.csproj Shared/Game.Shared/
 COPY Server/Game.Server/Game.Server.csproj Server/Game.Server/
-RUN dotnet restore Server/Game.Server/Game.Server.csproj
+RUN dotnet restore Server/Game.Server/Game.Server.csproj -a $TARGETARCH
 COPY Shared/Game.Shared/ Shared/Game.Shared/
 COPY Server/Game.Server/ Server/Game.Server/
-RUN dotnet publish Server/Game.Server/Game.Server.csproj -c Release -o /app --no-restore
+RUN dotnet publish Server/Game.Server/Game.Server.csproj -c Release -a $TARGETARCH --self-contained false -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 # O Npgsql procura a biblioteca do Kerberos ao conectar (sem ela, só um aviso feio no log).
