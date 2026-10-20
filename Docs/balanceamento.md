@@ -178,3 +178,26 @@ comportamento (fuga, fúria, recargas) é de cada monstro, não dos dados, que s
     primeiro, num ângulo sorteado) e o intervalo cai para 60%. Quem está nos dois círculos leva um golpe só.
 - **Simulador:** ele não conta a fuga, a investida nem o recuo. Coelhos fugindo e aranhas recuando deixam a luta um
   pouco mais longa; vale revisar o tempo de subida com jogadores de verdade.
+
+## Missões diárias e chefe de mundo (2026-10-20)
+
+**Diárias** (`QuestDefinition.Daily`): voltam a ficar disponíveis à meia-noite de Brasília (`DailyRules`). Não ocupam as
+5 vagas de missão ativa e ficam fora do simulador de subida (são um bônus para quem volta todo dia). O banco guarda o
+dia da última entrega (`character_quests.CompletedDay`, migração `MissoesDiarias`). Na virada, quem está online recebe
+o aviso e o diário atualiza. No NPC, a história aparece antes; se só houver diária, o "!" fica azul.
+
+| Diária | NPC | Nível | Pede | Recompensa |
+|---|---|---|---|---|
+| Horta em paz | Caçador Rurik | 1 | 12 coelhos | 700 XP, 400 Alz, 3 poções (P) |
+| Ronda da matilha | Caçador Rurik | 6 | 10 lobos | 3.000 XP, 1.000 Alz, núcleo baixo |
+| Trilha segura | Batedora Nara | 12 | 8 touros e 6 aranhas | 11.000 XP, 2.500 Alz, núcleo médio |
+| Vigília nas Ruínas | Erudita Veska | 22 | 6 golens e 6 espectros | 28.000 XP, 5.000 Alz, núcleo alto |
+| O Guardião das Ruínas | Ancião Doran | 28 | o Guardião | 20.000 XP, 10.000 Alz, 2 núcleos altos |
+
+**Chefe de mundo** (`SpawnDefinition.Scheduled`, o Guardião das Ruínas): em vez de renascer a cada 2 minutos, desperta
+de 2 em 2 horas, nas horas pares de Brasília (`WorldBossRules`).
+- O servidor inteiro recebe o aviso 10 minutos antes, quando ele desperta e quando é derrotado.
+- Todo mundo que bateu nele (e está online) ganha a XP inteira e a contagem da diária; o Alz é dividido e o drop fica
+  com quem causou mais dano.
+- Ao ligar o servidor, ele espera o próximo horário. `/gm chefe` desperta na hora (testes e eventos); `/chefe` no
+  chat mostra o próximo horário (o cliente calcula sozinho).
