@@ -519,6 +519,7 @@ auth.terms_required = Para criar a conta, aceite os Termos de Uso e a Política 
 auth.terms_updated = Os Termos de Uso ou a Política de Privacidade mudaram (versão {0}). Leia e aceite para entrar.
 auth.wrong_credentials = Conta ou senha incorreta.
 auth.locked = Muitas tentativas erradas. Tente de novo em {0:0} min.
+auth.too_many_accounts = Este endereço já criou {0} contas hoje. Tente de novo amanhã.
 auth.session_expired = Sessão expirada. Entre de novo.
 auth.bad_class = Classe inválida.
 auth.character_not_found = Personagem não encontrado.
