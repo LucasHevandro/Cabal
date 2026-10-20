@@ -226,6 +226,14 @@ nas pernas.
 # Polimento do combate
 
 - **Clarão no acerto** (`HitFlash`): o modelo atingido clareia por 0,12 s.
+- **Recuo de quem apanha** (`Fx/HitRecoil`): o modelo é empurrado para longe de quem bateu e cambaleia para trás, e volta
+  com uma mola em uns 0,3 s. Só o modelo se mexe; a posição do servidor não muda.
+  - A força cresce com o crítico, o Excellent e o peso da skill; o finalizador empurra mais que tudo.
+  - Monstros grandes recuam menos (a força é dividida pela altura). O golpe de outros jogadores empurra pela metade.
+- **Pausa no impacto e tremor de câmera** (`HitStop` e `OrbitCamera.Shake`): o crítico segura e treme mais que um golpe
+  comum, além do Excellent e do finalizador.
+- **Tom do combo:** o som de cada acerto do combo sobe um semitom (até uma oitava), para sentir o ritmo sem olhar a
+  barra (`SoundPlayer.PlayPitched`).
 - **Poeira nos pés** (`Fx/FootDust`): uma nuvenzinha a cada passada de quem corre e um punhado na arrancada (esquiva,
   investida). Vale para o jogador, os outros jogadores e os monstros, maior nos monstros grandes.
 - **Lascas no impacto:** junto das faíscas, riscos curtos e quentes esticados na direção do voo, como metal batendo.
