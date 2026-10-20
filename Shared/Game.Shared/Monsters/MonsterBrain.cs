@@ -13,6 +13,18 @@ namespace Game.Shared.Monsters
         WindUp,
         Return,
         Dead,
+
+        /// <summary>Fugindo de quem bate (coelho com pouca vida).</summary>
+        Flee,
+
+        /// <summary>Preparando a investida: abaixa a cabeça e mira (o aviso aparece).</summary>
+        ChargeWindUp,
+
+        /// <summary>Correndo em linha reta até o ponto mirado.</summary>
+        Charge,
+
+        /// <summary>Recuando depois de bater (aranha).</summary>
+        Retreat,
     }
 
     /// <summary>O que a IA pede ao corpo do monstro neste tick.</summary>
@@ -21,7 +33,7 @@ namespace Game.Shared.Monsters
         /// <summary>Ficar parado.</summary>
         None,
 
-        /// <summary>Andar até <see cref="MonsterAction.Point"/>.</summary>
+        /// <summary>Andar até <see cref="MonsterAction.Point"/> (na velocidade vezes <see cref="MonsterAction.SpeedFactor"/>).</summary>
         MoveTo,
 
         /// <summary>Parar e virar para <see cref="MonsterAction.Point"/>.</summary>
@@ -35,6 +47,9 @@ namespace Game.Shared.Monsters
 
         /// <summary>Voltou para casa: recuperar a vida.</summary>
         ResetHealth,
+
+        /// <summary>Some e reaparece em <see cref="MonsterAction.Point"/> (espectro).</summary>
+        Blink,
     }
 
     /// <summary>Pedido da IA para este tick.</summary>
@@ -43,21 +58,27 @@ namespace Game.Shared.Monsters
         public MonsterActionKind Kind { get; }
         public Vector2 Point { get; }
 
-        public MonsterAction(MonsterActionKind kind, Vector2 point = default)
+        /// <summary>Multiplica a velocidade de andar (investida, fuga, fúria).</summary>
+        public float SpeedFactor { get; }
+
+        public MonsterAction(MonsterActionKind kind, Vector2 point = default, float speedFactor = 1f)
         {
             Kind = kind;
             Point = point;
+            SpeedFactor = speedFactor;
         }
 
         public static MonsterAction None => new MonsterAction(MonsterActionKind.None);
     }
 
     /// <summary>
-    /// IA do monstro, sem motor gráfico: recebe posições no plano do chão (X, Z do mundo como X, Y)
-    /// e devolve o que o corpo deve fazer. O cliente usa no modo offline; o servidor vai usar a mesma IA.
+    /// IA do monstro, sem motor gráfico: recebe posições no plano do chão (X, Z do mundo como X, Y) e devolve o que o
+    /// corpo deve fazer. O cliente usa no modo offline; o servidor usa a mesma IA.
     ///
-    /// Parado/passeando → (alvo perto e agressivo, ou provocado) → persegue → no alcance prepara o golpe →
-    /// o golpe sai → persegue de novo. Longe demais de casa → volta, recupera a vida e esquece a provocação.
+    /// Base: parado/passeando → (alvo perto e agressivo, ou provocado) → persegue → no alcance prepara o golpe → o golpe
+    /// sai → persegue de novo. Longe demais de casa → volta, recupera a vida e esquece a provocação.
+    /// Cada <see cref="MonsterBehavior"/> muda um pedaço disso (fugir, investir, recuar, sumir e reaparecer, enfurecer).
+    /// O estado do comportamento fica aqui, e não no <see cref="MonsterData"/>, que é o mesmo para o grupo inteiro.
     /// </summary>
     public sealed class MonsterBrain
     {
@@ -71,12 +92,28 @@ namespace Game.Shared.Monsters
         private double _nextWanderAt;
         private Vector2 _wanderPoint;
 
+        // Comportamentos
+        private double _stateEndsAt;
+        private Vector2 _runPoint;
+        private bool _fled;
+        private double _nextChargeAt;
+        private double _nextBlinkAt;
+
         public MonsterState State { get; private set; } = MonsterState.Idle;
         public Vector2 Home { get; private set; }
         public MonsterData Data => _data;
 
         /// <summary>Quando o golpe em preparo vai sair (válido em <see cref="MonsterState.WindUp"/>).</summary>
         public double WindupEndsAt => _windupEndsAt;
+
+        /// <summary>Preparando um golpe (normal ou a investida): o aviso fica visível.</summary>
+        public bool IsWindingUp => State is MonsterState.WindUp or MonsterState.ChargeWindUp;
+
+        /// <summary>Furioso: o cavaleiro com pouca vida bate mais rápido e anda mais rápido.</summary>
+        public bool Enraged { get; private set; }
+
+        /// <summary>Já foi provocado (perseguindo quem bateu).</summary>
+        public bool Provoked => _provoked;
 
         public MonsterBrain(MonsterData data, Vector2 home, IRandomSource random)
         {
@@ -100,13 +137,29 @@ namespace Game.Shared.Monsters
             _provoked = false;
             _nextAttackAt = double.NegativeInfinity;
             _nextWanderAt = now + 2;
+            ForgetFight(now);
         }
 
         /// <summary>
-        /// Um passo da IA. <paramref name="target"/> é a posição do alvo (jogador) ou nulo se não há alvo válido.
+        /// Um passo da IA. <paramref name="target"/> é a posição do alvo (jogador) ou nulo se não há alvo válido;
+        /// <paramref name="hpFraction"/> é a vida do monstro de 0 a 1 (alguns comportamentos dependem dela).
         /// </summary>
-        public MonsterAction Tick(double now, Vector2 self, Vector2? target)
+        public MonsterAction Tick(double now, Vector2 self, Vector2? target, float hpFraction = 1f)
         {
+            if (State != MonsterState.Dead && _data.Behavior == MonsterBehavior.Berserk && !Enraged && hpFraction <= MonsterBehaviors.BerserkAtHp)
+                Enraged = true;
+
+            // Coelho com pouca vida entra em pânico e foge, até no meio do preparo do golpe (uma vez por luta).
+            if (_data.Behavior == MonsterBehavior.Skittish && !_fled && target.HasValue && hpFraction <= MonsterBehaviors.FleeAtHp &&
+                State is MonsterState.Chase or MonsterState.WindUp)
+            {
+                _fled = true;
+                State = MonsterState.Flee;
+                _stateEndsAt = now + MonsterBehaviors.FleeSeconds;
+                _runPoint = Away(self, target.Value, MonsterBehaviors.FleeDistance);
+                return new MonsterAction(MonsterActionKind.MoveTo, _runPoint, MonsterBehaviors.FleeSpeed);
+            }
+
             switch (State)
             {
                 case MonsterState.Dead:
@@ -117,6 +170,7 @@ namespace Game.Shared.Monsters
                     {
                         State = MonsterState.Idle;
                         _nextWanderAt = now + 2;
+                        ForgetFight(now);
                         return new MonsterAction(MonsterActionKind.ResetHealth);
                     }
                     return new MonsterAction(MonsterActionKind.MoveTo, Home);
@@ -126,6 +180,9 @@ namespace Game.Shared.Monsters
                     if (target.HasValue && WantsToFight(self, target.Value))
                     {
                         State = MonsterState.Chase;
+                        // Começo da luta: a investida e o sumiço só ficam prontos depois de um respiro.
+                        _nextChargeAt = Math.Max(_nextChargeAt, now + MonsterBehaviors.OpeningSeconds);
+                        _nextBlinkAt = Math.Max(_nextBlinkAt, now + MonsterBehaviors.OpeningSeconds);
                         return Chase(now, self, target.Value);
                     }
                     return Wander(now, self);
@@ -137,14 +194,62 @@ namespace Game.Shared.Monsters
                 case MonsterState.WindUp:
                     if (now < _windupEndsAt)
                         return target.HasValue ? new MonsterAction(MonsterActionKind.Face, target.Value) : MonsterAction.None;
-                    _nextAttackAt = now + _data.AttackCooldownSeconds;
-                    State = MonsterState.Chase;
+                    _nextAttackAt = now + AttackCooldown;
+                    if (_data.Behavior == MonsterBehavior.HitAndRun && target.HasValue)
+                    {
+                        // Bate e recua: corre um pouco para longe antes de voltar.
+                        State = MonsterState.Retreat;
+                        _stateEndsAt = now + MonsterBehaviors.RetreatSeconds;
+                        _runPoint = Away(self, target.Value, MonsterBehaviors.RetreatDistance);
+                    }
+                    else
+                    {
+                        State = MonsterState.Chase;
+                    }
                     return new MonsterAction(MonsterActionKind.AttackLanded, target ?? self);
+
+                case MonsterState.Flee:
+                case MonsterState.Retreat:
+                    if (now >= _stateEndsAt || Vector2.Distance(self, _runPoint) <= ArriveDistance)
+                    {
+                        State = target.HasValue ? MonsterState.Chase : MonsterState.Idle;
+                        return MonsterAction.None;
+                    }
+                    if (Vector2.Distance(self, Home) > _data.LeashRadius) return GoHome();
+                    return new MonsterAction(MonsterActionKind.MoveTo, _runPoint,
+                        State == MonsterState.Flee ? MonsterBehaviors.FleeSpeed : MonsterBehaviors.RetreatSpeed);
+
+                case MonsterState.ChargeWindUp:
+                    if (now < _stateEndsAt)
+                        return target.HasValue ? new MonsterAction(MonsterActionKind.Face, target.Value) : MonsterAction.None;
+                    // Mira onde o alvo está agora e passa um pouco do ponto: quem não sair da frente leva.
+                    var aim = target ?? _runPoint;
+                    var line = aim - self;
+                    var length = line.Length();
+                    _runPoint = length > 0.01f ? aim + line / length * MonsterBehaviors.ChargeOvershoot : aim;
+                    State = MonsterState.Charge;
+                    _stateEndsAt = now + MonsterBehaviors.ChargeMaxSeconds;
+                    return new MonsterAction(MonsterActionKind.MoveTo, _runPoint, MonsterBehaviors.ChargeSpeed);
+
+                case MonsterState.Charge:
+                    var hit = target.HasValue && Vector2.Distance(self, target.Value) <= _data.AttackRange;
+                    if (hit || now >= _stateEndsAt || Vector2.Distance(self, _runPoint) <= ArriveDistance)
+                    {
+                        State = MonsterState.Chase;
+                        _nextAttackAt = now + AttackCooldown;
+                        // O golpe da investida só sai se ela pegou o alvo no caminho.
+                        return hit ? new MonsterAction(MonsterActionKind.AttackLanded, target!.Value) : MonsterAction.None;
+                    }
+                    return new MonsterAction(MonsterActionKind.MoveTo, _runPoint, MonsterBehaviors.ChargeSpeed);
 
                 default:
                     return MonsterAction.None;
             }
         }
+
+        private float AttackCooldown => _data.AttackCooldownSeconds * (Enraged ? MonsterBehaviors.BerserkCooldownFactor : 1f);
+
+        private float ChaseSpeed => Enraged ? MonsterBehaviors.BerserkSpeed : 1f;
 
         private bool WantsToFight(Vector2 self, Vector2 target) =>
             _provoked || (_data.Aggressive && Vector2.Distance(self, target) <= _data.AggroRadius);
@@ -152,15 +257,47 @@ namespace Game.Shared.Monsters
         private MonsterAction Chase(double now, Vector2 self, Vector2 target)
         {
             if (Vector2.Distance(self, Home) > _data.LeashRadius) return GoHome();
+            var distance = Vector2.Distance(self, target);
 
-            if (Vector2.Distance(self, target) <= _data.AttackRange)
+            // Touro: de longe, prepara a investida.
+            if (_data.Behavior == MonsterBehavior.Charger && now >= _nextChargeAt &&
+                distance >= MonsterBehaviors.ChargeMinDistance && distance <= MonsterBehaviors.ChargeMaxDistance)
+            {
+                _nextChargeAt = now + MonsterBehaviors.ChargeCooldownSeconds;
+                State = MonsterState.ChargeWindUp;
+                _stateEndsAt = now + MonsterBehaviors.ChargeWindupSeconds;
+                _runPoint = target;
+                return new MonsterAction(MonsterActionKind.AttackStarted, target);
+            }
+
+            // Espectro: se o alvo se afasta, some e reaparece perto dele.
+            if (_data.Behavior == MonsterBehavior.Blink && now >= _nextBlinkAt && distance >= MonsterBehaviors.BlinkMinDistance)
+            {
+                _nextBlinkAt = now + MonsterBehaviors.BlinkCooldownSeconds;
+                // Reaparece do outro lado do alvo (atrás dele, visto de onde o espectro estava).
+                return new MonsterAction(MonsterActionKind.Blink, Away(target, self, MonsterBehaviors.BlinkLandDistance));
+            }
+
+            if (distance <= _data.AttackRange)
             {
                 if (now < _nextAttackAt) return new MonsterAction(MonsterActionKind.Face, target);
                 State = MonsterState.WindUp;
                 _windupEndsAt = now + _data.AttackWindupSeconds;
                 return new MonsterAction(MonsterActionKind.AttackStarted, target);
             }
-            return new MonsterAction(MonsterActionKind.MoveTo, target);
+            return new MonsterAction(MonsterActionKind.MoveTo, target, ChaseSpeed);
+        }
+
+        /// <summary>Ponto a <paramref name="distance"/> metros de <paramref name="from"/>, do lado oposto a <paramref name="threat"/>.</summary>
+        private Vector2 Away(Vector2 from, Vector2 threat, float distance)
+        {
+            var direction = from - threat;
+            if (direction.LengthSquared() < 0.0001f)
+            {
+                var angle = _random.NextDouble() * Math.PI * 2;
+                direction = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+            }
+            return from + Vector2.Normalize(direction) * distance;
         }
 
         private MonsterAction GoHome()
@@ -168,6 +305,15 @@ namespace Game.Shared.Monsters
             State = MonsterState.Return;
             _provoked = false;
             return new MonsterAction(MonsterActionKind.MoveTo, Home);
+        }
+
+        /// <summary>A luta acabou (morreu ou voltou para casa): fuga, fúria e recargas voltam ao começo.</summary>
+        private void ForgetFight(double now)
+        {
+            _fled = false;
+            Enraged = false;
+            _nextChargeAt = now + MonsterBehaviors.OpeningSeconds;
+            _nextBlinkAt = now + MonsterBehaviors.OpeningSeconds;
         }
 
         private MonsterAction Wander(double now, Vector2 self)

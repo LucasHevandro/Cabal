@@ -76,6 +76,7 @@ namespace Game.Shared.World
             {
                 Id = "coelho_saltador", Level = 2, MaxHp = 700, AttackDamage = 25,
                 AttackPower = 5, Defense = 20, AttackRange = 1.2f, MoveSpeed = 3.5f, BodyRadius = 0.35f, Aggressive = false,
+                Behavior = MonsterBehavior.Skittish,
                 XpReward = 30, RespawnSeconds = 6,
                 Drops = new DropTable(3, 8,
                     new DropEntry("pelo_macio", ItemRarity.Common, 0.6, 1, 2),
@@ -85,7 +86,7 @@ namespace Game.Shared.World
             Spawn(10, 46, 4, 7, new MonsterData
             {
                 Id = "lobo_cinzento", Level = 6, MaxHp = 1800, AttackDamage = 60,
-                AttackPower = 15, Defense = 40, AttackRange = 1.5f, MoveSpeed = 4.5f, AggroRadius = 8,
+                AttackPower = 15, Defense = 40, AttackRange = 1.5f, MoveSpeed = 4.5f, AggroRadius = 8, Behavior = MonsterBehavior.Pack,
                 XpReward = 70, RespawnSeconds = 8,
                 Drops = new DropTable(10, 25,
                     new DropEntry("pele_lobo", ItemRarity.Common, 0.5, 1, 2),
@@ -99,7 +100,7 @@ namespace Game.Shared.World
             Spawn(36, 79, 4, 8, new MonsterData
             {
                 Id = "javali_furioso", Level = 12, MaxHp = 4400, AttackDamage = 120,
-                AttackPower = 40, Defense = 90, AttackRange = 1.6f, AttackWindupSeconds = 0.7f, MoveSpeed = 5f,
+                AttackPower = 40, Defense = 90, AttackRange = 1.6f, AttackWindupSeconds = 0.7f, MoveSpeed = 5f, Behavior = MonsterBehavior.Charger,
                 AggroRadius = 9, XpReward = 200, RespawnSeconds = 10,
                 Drops = new DropTable(30, 70,
                     new DropEntry("couro_javali", ItemRarity.Common, 0.5, 1, 3),
@@ -110,6 +111,7 @@ namespace Game.Shared.World
             {
                 Id = "aranha_da_mata", Level = 16, MaxHp = 5200, AttackDamage = 150,
                 AttackPower = 55, Defense = 80, AttackRange = 2f, AttackWindupSeconds = 0.5f, MoveSpeed = 4f, BodyRadius = 0.8f,
+                Behavior = MonsterBehavior.HitAndRun,
                 AggroRadius = 10, XpReward = 300, RespawnSeconds = 10,
                 Drops = new DropTable(40, 90,
                     new DropEntry("seda", ItemRarity.Common, 0.5, 1, 2),
@@ -125,6 +127,7 @@ namespace Game.Shared.World
                 Id = "golem_de_pedra", Level = 22, MaxHp = 12000, AttackDamage = 240,
                 AttackPower = 80, Defense = 260, AttackRange = 2.2f, AttackCooldownSeconds = 3f,
                 AttackWindupSeconds = 1.0f, MoveSpeed = 2.2f, BodyRadius = 0.8f, AggroRadius = 7, XpReward = 700, RespawnSeconds = 15,
+                Behavior = MonsterBehavior.AreaSlam,
                 Drops = new DropTable(80, 160,
                     new DropEntry("fragmento_pedra", ItemRarity.Common, 0.6, 1, 3),
                     new DropEntry("nucleo_medio", ItemRarity.Rare, 0.08),
@@ -135,6 +138,7 @@ namespace Game.Shared.World
                 Id = "espectro", Level = 26, MaxHp = 9000, AttackDamage = 280,
                 AttackPower = 100, Defense = 120, AttackRange = 2.5f, AttackCooldownSeconds = 1.6f,
                 AttackWindupSeconds = 0.45f, MoveSpeed = 5.5f, AggroRadius = 11, XpReward = 900, RespawnSeconds = 12,
+                Behavior = MonsterBehavior.Blink,
                 Drops = new DropTable(100, 200,
                     new DropEntry("essencia", ItemRarity.Uncommon, 0.4),
                     new DropEntry("nucleo_alto", ItemRarity.Rare, 0.05),
@@ -147,6 +151,7 @@ namespace Game.Shared.World
                 Id = "cavaleiro_caido", Level = 29, MaxHp = 14000, AttackDamage = 330,
                 AttackPower = 120, Defense = 230, AttackRange = 2.4f, AttackCooldownSeconds = 2.2f,
                 AttackWindupSeconds = 0.7f, MoveSpeed = 4f, BodyRadius = 0.7f, AggroRadius = 9, XpReward = 1400, RespawnSeconds = 15,
+                Behavior = MonsterBehavior.Berserk,
                 Drops = new DropTable(150, 300,
                     new DropEntry("essencia", ItemRarity.Uncommon, 0.3),
                     new DropEntry("nucleo_alto", ItemRarity.Rare, 0.07),
@@ -192,6 +197,14 @@ namespace Game.Shared.World
         public const float AreaWarningSeconds = 1.6f;
         public const float AreaRadius = 4f;
         public const int AreaDamage = 350;
+
+        /// <summary>Terceira fase (desespero): dois golpes em área por vez e com menos intervalo.</summary>
+        public const float PhaseThreeAtHpFraction = 0.25f;
+
+        public const float PhaseThreeIntervalFactor = 0.6f;
+
+        /// <summary>O segundo círculo cai a esta distância do primeiro, para quem fugir pelo caminho mais óbvio.</summary>
+        public const float PhaseThreeSecondAreaOffset = 4.5f;
     }
 
     /// <summary>Regras do personagem que o cliente offline e o servidor precisam concordar.</summary>

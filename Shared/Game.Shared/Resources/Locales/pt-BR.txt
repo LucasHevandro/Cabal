@@ -192,6 +192,7 @@ loot.picked = {0} x{1}
 
 # ===== Cliente: combate offline =====
 boss.enraged = {0} ficou furioso!
+boss.desperate = {0} está desesperado: os golpes no chão agora caem em dobro!
 
 # ===== Cliente: combate offline =====
 ui.name_level = {0} (Nv {1})
