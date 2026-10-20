@@ -22,7 +22,13 @@ namespace Game.Client.Fx
         /// <summary>Toca um som. Não faz nada se não houver SoundPlayer na cena.</summary>
         public static void Play(SoundId id, float volume = 1f, float pitchJitter = 0.06f)
         {
-            if (_instance != null) _instance.PlayInternal(id, volume, pitchJitter);
+            if (_instance != null) _instance.PlayInternal(id, volume, pitchJitter, 1f);
+        }
+
+        /// <summary>Toca num tom escolhido (1 = normal; 2 = uma oitava acima), sem variação aleatória.</summary>
+        public static void PlayPitched(SoundId id, float volume, float pitch)
+        {
+            if (_instance != null) _instance.PlayInternal(id, volume, 0f, pitch);
         }
 
         private void Awake()
@@ -43,7 +49,7 @@ namespace Game.Client.Fx
             if (_instance == this) _instance = null;
         }
 
-        private void PlayInternal(SoundId id, float volume, float pitchJitter)
+        private void PlayInternal(SoundId id, float volume, float pitchJitter, float pitch)
         {
             if (!_clips.TryGetValue(id, out var clip))
             {
@@ -55,7 +61,7 @@ namespace Game.Client.Fx
             // Reaproveita as vozes em rodízio; o som mais antigo é cortado se todas estiverem ocupadas.
             var source = _sources[_next];
             _next = (_next + 1) % _sources.Length;
-            source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+            source.pitch = pitch + Random.Range(-pitchJitter, pitchJitter);
             source.volume = volume * masterVolume * UI.GameSettings.EffectsVolume;
             source.clip = clip;
             source.Play();

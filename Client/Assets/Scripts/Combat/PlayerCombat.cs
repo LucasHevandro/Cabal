@@ -306,6 +306,7 @@ namespace Game.Client.Combat
             DamageNumbers.Spawn(target.HeadPosition, Loc.T("fx.final", dealt), new Color(1f, 0.45f, 0.1f), 38f);
             SoundPlayer.Play(SoundId.Finisher, 1f, 0f);
             if (CombatFx.Instance != null) CombatFx.Instance.Sparks(target.CenterPosition, new Color(1f, 0.5f, 0.15f), 45);
+            if (target.IsAlive) HitRecoil.Push(target, transform.position, 2.2f);
 
             BestChain = Mathf.Max(BestChain, chain);
             HitStop.Trigger(0.12f);
@@ -374,7 +375,9 @@ namespace Game.Client.Combat
                 {
                     grade = result.Grade;
                     multiplier = result.DamageMultiplier;
-                    SoundPlayer.Play(grade == ComboGrade.Excellent ? SoundId.Excellent : SoundId.Good, 0.7f, 0.02f);
+                    // O tom sobe um semitom a cada acerto (até uma oitava): o ritmo do combo se ouve sem olhar a barra.
+                    var semitones = Mathf.Min(result.HitCount - 1, 12);
+                    SoundPlayer.PlayPitched(grade == ComboGrade.Excellent ? SoundId.Excellent : SoundId.Good, 0.7f, Mathf.Pow(2f, semitones / 12f));
                 }
                 if (result.Route != null)
                 {
@@ -472,30 +475,38 @@ namespace Game.Client.Combat
         {
             var totalHits = DealSkillDamage(skill, target, multiplier, grade);
             if (!inCombo && totalHits > 0) Sp.Add(spPerHit);
-            ImpactFeedback(skill, grade == ComboGrade.Excellent, _lastImpactWeight);
+            ImpactFeedback(skill, grade == ComboGrade.Excellent, _lastImpactWeight, _lastImpactCritical);
         }
 
         private float _lastImpactWeight;
+        private bool _lastImpactCritical;
+
+        /// <summary>Quanto o golpe empurra quem apanha: crítico, Excellent e golpes grandes empurram mais.</summary>
+        private static float RecoilStrength(bool critical, bool excellent, float weight) =>
+            0.7f + (critical ? 0.6f : 0f) + (excellent ? 0.35f : 0f) + Mathf.Min(weight, 2f) * 0.35f;
 
         /// <summary>
         /// Som, hit stop e tremida de um golpe que acertou, pelo peso da skill (<see cref="SkillFx"/>): golpes grandes
         /// (Execução, Meteoro, Cataclismo, Fenda Sísmica) param mais o quadro, tremem mais a câmera e soam mais graves.
         /// </summary>
-        private void ImpactFeedback(SkillData skill, bool excellent, float weight)
+        private void ImpactFeedback(SkillData skill, bool excellent, float weight, bool critical)
         {
-            var heavy = excellent || weight >= 1f;
+            var heavy = excellent || critical || weight >= 1f;
             SoundPlayer.Play(heavy ? SoundId.HitHeavy : SoundId.Hit, 0.9f);
             if (skill != null && skill.Kind == SkillKind.Magical) SoundPlayer.Play(SoundId.MagicImpact, 0.35f + 0.25f * Mathf.Min(1f, weight));
-            HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f) + weight * 0.04f);
+            // O crítico segura um pouco mais e treme mais: tem de se sentir diferente de um golpe comum.
+            HitStop.Trigger(hitStopSeconds + (excellent ? excellentHitStopBonus : 0f) + (critical ? 0.035f : 0f) + weight * 0.04f);
             // Excellent e golpes grandes: um leve borrão radial com clarão dourado (o finalizador é bem mais forte).
             if (excellent || weight >= 1.2f)
                 MagicFx.ScreenImpact(excellent ? 0.4f : 0.25f, new Color(1f, 0.85f, 0.4f), Target != null ? Target.CenterPosition : transform.position);
-            if (_camera != null) _camera.Shake(shakeAmplitude * ((excellent ? 2f : 1f) + weight * 1.5f), 0.12f + weight * 0.1f);
+            if (_camera != null)
+                _camera.Shake(shakeAmplitude * ((excellent ? 2f : 1f) + (critical ? 1.2f : 0f) + weight * 1.5f), 0.12f + weight * 0.1f + (critical ? 0.05f : 0f));
         }
 
         private int DealSkillDamage(SkillData skill, Targetable mainTarget, double multiplier, ComboGrade? grade)
         {
             _lastImpactWeight = 0f;
+            _lastImpactCritical = false;
             _hitBuffer.Clear();
             if (skill.AreaRadius > 0)
             {
@@ -518,7 +529,10 @@ namespace Game.Client.Combat
                 var color = DamageColor(grade, hit.Critical);
                 DamageNumbers.Spawn(target.HeadPosition, hit.Critical ? $"{dealt}!" : dealt.ToString(),
                     color, hit.Critical ? 32f : 26f);
-                _lastImpactWeight = Mathf.Max(_lastImpactWeight, SkillFx.OnImpact(skill, target.CenterPosition, grade, hit.Critical));
+                var weight = SkillFx.OnImpact(skill, target.CenterPosition, grade, hit.Critical);
+                _lastImpactWeight = Mathf.Max(_lastImpactWeight, weight);
+                _lastImpactCritical |= hit.Critical;
+                if (target.IsAlive) HitRecoil.Push(target, transform.position, RecoilStrength(hit.Critical, grade == ComboGrade.Excellent, weight));
             }
             return _hitBuffer.Count;
         }
@@ -749,6 +763,13 @@ namespace Game.Client.Combat
             if (skill != null) weight = SkillFx.OnImpact(skill, target.CenterPosition, grade, hit.Critical);
             else if (CombatFx.Instance != null)
                 CombatFx.Instance.Sparks(target.CenterPosition, color, finisher ? 45 : grade == ComboGrade.Excellent || hit.Critical ? 22 : 12);
+            // Quem apanha recua (o golpe dos outros também, só que menos). Quem morreu cai sem empurrão.
+            if (target.IsAlive)
+            {
+                var attacker = mine ? transform.position : target.transform.position - target.transform.forward;
+                var strength = finisher ? 2.2f : RecoilStrength(hit.Critical, grade == ComboGrade.Excellent, weight);
+                HitRecoil.Push(target, attacker, mine ? strength : strength * 0.5f);
+            }
             if (!mine) return;
 
             if (!string.IsNullOrEmpty(hit.RouteId) && (LastRoute == null || LastRoute.Id != hit.RouteId || Time.unscaledTime - LastRouteAt > 0.5f))
@@ -764,7 +785,7 @@ namespace Game.Client.Combat
                 MagicFx.ScreenImpact(1f, new Color(1f, 0.55f, 0.2f), target.CenterPosition);
                 return;
             }
-            ImpactFeedback(skill, grade == ComboGrade.Excellent, weight);
+            ImpactFeedback(skill, grade == ComboGrade.Excellent, weight, hit.Critical);
         }
 
         /// <summary>Golpe de monstro em mim, decidido pelo servidor (a vida chega em PlayerStats).</summary>
