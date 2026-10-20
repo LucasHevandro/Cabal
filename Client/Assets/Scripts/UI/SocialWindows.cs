@@ -508,6 +508,16 @@ namespace Game.Client.UI
                 case ChatInputKind.Help:
                     AddLine(ChatChannel.System, ChatParser.HelpText);
                     break;
+                case ChatInputKind.BossTime:
+                {
+                    // O horário é fixo (horas pares de Brasília): dá para calcular aqui mesmo.
+                    var now = System.DateTimeOffset.UtcNow;
+                    var next = Game.Shared.World.WorldBossRules.NextSlot(now);
+                    var minutes = System.Math.Max(1, (int)System.Math.Ceiling((next - now).TotalMinutes));
+                    AddLine(ChatChannel.System, Loc.T("chat.boss_time", Loc.T("monster.guardiao_das_ruinas"),
+                        next.ToOffset(System.TimeSpan.FromHours(-3)).ToString("HH'h'mm"), minutes));
+                    break;
+                }
                 case ChatInputKind.Gm:
                     _session.Send(new GmCommand { Text = input.Text });
                     break;

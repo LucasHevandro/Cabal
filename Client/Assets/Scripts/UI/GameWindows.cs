@@ -785,7 +785,7 @@ namespace Game.Client.UI
 
             if (dialog.Offered.Count == 0 && dialog.ReadyToTurnIn.Count == 0)
             {
-                var next = QuestCatalog.All.Where(q => q.GiverNpcId == npc.Id && !CharacterState.QuestCompleted(q.Id)
+                var next = QuestCatalog.All.Where(q => q.GiverNpcId == npc.Id && !q.Daily && !CharacterState.QuestCompleted(q.Id)
                     && CharacterState.CountsOf(q.Id) == null).OrderBy(q => q.MinLevel).FirstOrDefault();
                 // "Termine o que pedi" só se a missão aberta é deste NPC.
                 var active = CharacterState.Quests.Active.Any(q => QuestCatalog.Find(q.QuestId)?.GiverNpcId == npc.Id);
@@ -906,7 +906,7 @@ namespace Game.Client.UI
             var y = 0f;
             if (active.Count == 0)
             {
-                var next = QuestCatalog.All.FirstOrDefault(q => !CharacterState.QuestCompleted(q.Id));
+                var next = QuestCatalog.All.FirstOrDefault(q => !q.Daily && !CharacterState.QuestCompleted(q.Id));
                 GUI.Label(new Rect(0, y, width, 60),
                     next == null ? Loc.T("questlog.all_done") : Loc.T("questlog.none_active", Loc.T("npc." + next.GiverNpcId), KeyBindings.Label(GameAction.Talk)), _small);
             }
@@ -921,7 +921,8 @@ namespace Game.Client.UI
             }
             GUI.EndScrollView();
             GUI.Label(new Rect(x, rect.yMax - 44, width, 30),
-                Loc.T("questlog.completed", CharacterState.Quests.Completed.Count, QuestCatalog.All.Count), _small);
+                Loc.T("questlog.completed", CharacterState.Quests.Completed.Count(id => QuestCatalog.Find(id) is { Daily: false }),
+                    QuestCatalog.All.Count(q => !q.Daily)), _small);
         }
 
         // ----- Atributos -----
@@ -1047,6 +1048,7 @@ namespace Game.Client.UI
 
         private static readonly Color MarkerGold = new Color(1f, 0.85f, 0.2f);
         private static readonly Color MarkerGray = new Color(0.75f, 0.75f, 0.78f);
+        private static readonly Color MarkerDaily = new Color(0.45f, 0.78f, 1f);
 
         /// <summary>
         /// Marcador em cima de quem dá missões: "?" amarelo = tem missão dele pronta para entregar; "!" amarelo = tem missão
@@ -1067,12 +1069,17 @@ namespace Game.Client.UI
                 if (ready) return ("?", MarkerGold);
             }
             var level = Player.Level;
+            var daily = false;
             foreach (var quest in QuestCatalog.All)
             {
                 if (quest.GiverNpcId != npc.Id || quest.MinLevel > level || CharacterState.QuestCompleted(quest.Id) || CharacterState.CountsOf(quest.Id) != null)
                     continue;
-                if (string.IsNullOrEmpty(quest.PreviousQuestId) || CharacterState.QuestCompleted(quest.PreviousQuestId)) return ("!", MarkerGold);
+                if (!string.IsNullOrEmpty(quest.PreviousQuestId) && !CharacterState.QuestCompleted(quest.PreviousQuestId)) continue;
+                if (!quest.Daily) return ("!", MarkerGold);
+                daily = true;
             }
+            // Só diária disponível: "!" azul (a história, em dourado, tem prioridade).
+            if (daily) return ("!", MarkerDaily);
             return active ? ("?", MarkerGray) : ((string, Color)?)null;
         }
 
