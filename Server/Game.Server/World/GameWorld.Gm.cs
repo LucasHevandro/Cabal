@@ -56,6 +56,13 @@ public sealed partial class GameWorld
             SystemChat(gm, LT("gm.help"));
             return;
         }
+        if (verb == "chefe")
+        {
+            var boss = _monsters.Values.FirstOrDefault(m => m.Spawn.Scheduled);
+            if (SummonWorldBoss(now) && boss != null) SystemChat(gm, LT("gm.boss_spawned", Loc.Ref("monster." + boss.Data.Id)));
+            else SystemChat(gm, LT("gm.help"));
+            return;
+        }
         if (verb == "suspeitos")
         {
             var suspects = _players.Values.Where(p => p.Suspicions.Count > 0).ToList();

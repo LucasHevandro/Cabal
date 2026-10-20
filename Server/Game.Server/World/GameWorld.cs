@@ -137,7 +137,9 @@ public sealed partial class GameWorld
         foreach (var (slot, item) in player.Bag.Items()) items.Add(ToRecord(item, ItemContainerKind.Bag, slot));
         foreach (var (slot, item) in player.Warehouse.Items()) items.Add(ToRecord(item, ItemContainerKind.Warehouse, slot));
         foreach (var (slot, item) in player.Equipment.Worn) items.Add(ToRecord(item, ItemContainerKind.Equipment, (int)slot));
-        var quests = player.Quests.Completed.Select(id => new QuestRecord(id, true, Array.Empty<int>()))
+        // As diárias salvam o dia da entrega (no dia seguinte voltam a ficar disponíveis).
+        var quests = player.Quests.Completed.Where(id => !QuestCatalog.Get(id).Daily).Select(id => new QuestRecord(id, true, Array.Empty<int>()))
+            .Concat(player.Quests.DailyDone.Select(d => new QuestRecord(d.Key, true, Array.Empty<int>(), d.Value)))
             .Concat(player.Quests.Active.Select(q => new QuestRecord(q.QuestId, false, q.Counts.ToArray())))
             .ToList();
         var snapshot = new CharacterSnapshot(
@@ -280,8 +282,28 @@ public sealed partial class GameWorld
         TickArenas(now, (float)dt);
         ExpireLoot(now);
         TickTrades();
+        TickDailyReset();
 
         foreach (var player in _players.Values) SendView(player, now);
+    }
+
+    /// <summary>Relógio de verdade (as diárias e o horário do chefe de mundo); os testes trocam.</summary>
+    public Func<DateTimeOffset> Clock { get; init; } = () => DateTimeOffset.UtcNow;
+
+    private int _questDay = DailyRules.Today();
+
+    /// <summary>Meia-noite em Brasília: as diárias voltam para todo mundo que está online, com um aviso.</summary>
+    private void TickDailyReset()
+    {
+        if (_tick % TickRate != 0) return; // uma conferência por segundo basta
+        var today = DailyRules.Day(Clock());
+        if (today == _questDay) return;
+        _questDay = today;
+        foreach (var player in _players.Values)
+        {
+            player.QuestsDirty = true;
+            Notify(player, LT("quest.daily_reset"), announcement: true);
+        }
     }
 
     private void HandleMove(ServerPlayer player, MoveInput move, double now)
@@ -432,6 +454,11 @@ public sealed partial class GameWorld
             BaseAttackCooldown = spawn.Data.AttackCooldownSeconds,
         };
         monster.Brain.Revive(0);
+        if (spawn.Scheduled)
+        {
+            // Chefe de mundo: começa dormindo e só desperta no próximo horário (ou pelo /gm chefe).
+            monster.Brain.Kill();
+        }
         _monsters.Add(monster.Id, monster);
         return monster;
     }
@@ -484,8 +511,9 @@ public sealed partial class GameWorld
         }
 
         player.Quests.Restore(
-            character.Quests.Where(q => q.Completed).Select(q => q.QuestId),
-            character.Quests.Where(q => !q.Completed).Select(q => new QuestProgress(q.QuestId, q.Counts.ToArray())));
+            character.Quests.Where(q => q.Completed && q.CompletedDay == 0).Select(q => q.QuestId),
+            character.Quests.Where(q => !q.Completed).Select(q => new QuestProgress(q.QuestId, q.Counts.ToArray())),
+            character.Quests.Where(q => q.Completed && q.CompletedDay != 0).Select(q => new KeyValuePair<string, int>(q.QuestId, q.CompletedDay)));
 
         // Relações repetidas ou consigo mesmo (dados estragados) ficam de fora.
         foreach (var relation in character.Relations)

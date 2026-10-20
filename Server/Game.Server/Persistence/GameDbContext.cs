@@ -139,6 +139,9 @@ public sealed class CharacterQuestEntity
     public string QuestId { get; set; } = "";
     public bool Completed { get; set; }
     public string Counts { get; set; } = "";
+
+    /// <summary>Diárias: o dia da última entrega (0 nas outras missões).</summary>
+    public int CompletedDay { get; set; }
 }
 
 public sealed class ItemLogEntity

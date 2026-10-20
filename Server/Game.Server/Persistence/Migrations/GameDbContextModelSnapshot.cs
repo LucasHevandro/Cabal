@@ -192,6 +192,9 @@ namespace Game.Server.Persistence.Migrations
                     b.Property<bool>("Completed")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("CompletedDay")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Counts")
                         .IsRequired()
                         .HasMaxLength(200)

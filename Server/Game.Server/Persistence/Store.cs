@@ -42,7 +42,8 @@ public sealed record ItemRecord(
     int Upgrade = 0, int PityFails = 0, int PityLevel = 0, bool RegainGuaranteed = false, string OptionId = "");
 
 /// <summary>Missão aceita (com contadores) ou concluída.</summary>
-public sealed record QuestRecord(string QuestId, bool Completed, IReadOnlyList<int> Counts);
+/// <param name="CompletedDay">Diárias: o dia (<see cref="Game.Shared.Progression.DailyRules"/>) da última entrega; 0 nas outras.</param>
+public sealed record QuestRecord(string QuestId, bool Completed, IReadOnlyList<int> Counts, int CompletedDay = 0);
 
 public enum RelationKind
 {

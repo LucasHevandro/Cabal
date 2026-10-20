@@ -269,6 +269,10 @@ public sealed class ServerMonster
     public bool PhaseTwo { get; set; }
     public bool PhaseThree { get; set; }
 
+    // Chefe de mundo com horário: o último horário em que despertou e o próximo já avisado.
+    public DateTimeOffset LastSlot { get; set; }
+    public DateTimeOffset WarnedSlot { get; set; }
+
     /// <summary>Segundo círculo do golpe em área (só na terceira fase).</summary>
     public (float X, float Z)? PendingSecondArea { get; set; }
     public double BaseAttackCooldown { get; init; }

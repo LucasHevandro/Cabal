@@ -109,8 +109,8 @@ public class ProgressionWorldTests
         world.Handle(player.Id, new TalkToNpc { NpcId = NpcCatalog.Hunter }, 1);
 
         var dialog = outbox.To<NpcDialog>(player.Id).Last();
-        // Nível 5, sem nada da história feito: as do caçador que não pedem outra antes.
-        Assert.Equal(new[] { "coelhos_na_horta", "uivos_na_noite" }, dialog.Offered);
+        // Nível 5, sem nada da história feito: as do caçador que não pedem outra antes e, por último, a diária.
+        Assert.Equal(new[] { "coelhos_na_horta", "uivos_na_noite", "diaria_coelhos" }, dialog.Offered);
 
         world.Handle(player.Id, new QuestCommand { Action = QuestActionKind.Accept, QuestId = "uivos_na_noite" }, 2);
         Assert.True(player.Quests.IsActive("uivos_na_noite"));

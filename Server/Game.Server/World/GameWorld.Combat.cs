@@ -320,7 +320,8 @@ public sealed partial class GameWorld
     {
         if (monster.IsDead)
         {
-            if (monster.InstanceId == 0 && now >= monster.RespawnAt) RespawnMonster(monster, now);
+            if (monster.Spawn.Scheduled) TickScheduledBoss(monster, now);
+            else if (monster.InstanceId == 0 && now >= monster.RespawnAt) RespawnMonster(monster, now);
             return;
         }
 
@@ -451,21 +452,28 @@ public sealed partial class GameWorld
 
         // Quem causou mais dano (somando o grupo) fica com o XP e o drop; dentro do grupo, quem bateu mais é o "dono".
         var killer = TopDamager(monster);
+        // Chefe de mundo: todo mundo que bateu (e está online) ganha o crédito, cada um com a XP inteira.
+        var fighters = monster.Spawn.Scheduled
+            ? monster.DamageBy.Where(d => d.Value > 0).Select(d => _players.GetValueOrDefault(d.Key)).OfType<ServerPlayer>().ToList()
+            : null;
         monster.DamageBy.Clear();
         monster.AggroPlayerId = 0;
         if (killer == null) return;
 
         // Divide com os membros vivos perto do monstro; quem matou vem primeiro (fica com o resto do Alz).
-        var sharing = PartyMembers(killer)
-            .Where(m => m == killer || (!m.IsDead && InRange(m.X, m.Z, monster.X, monster.Z, PartyRules.ShareRadius)))
-            .OrderBy(m => m == killer ? 0 : 1)
-            .ToList();
+        var sharing = fighters != null
+            ? fighters.OrderBy(m => m == killer ? 0 : 1).ToList()
+            : PartyMembers(killer)
+                .Where(m => m == killer || (!m.IsDead && InRange(m.X, m.Z, monster.X, monster.Z, PartyRules.ShareRadius)))
+                .OrderBy(m => m == killer ? 0 : 1)
+                .ToList();
+        if (fighters != null) AnnounceBossDefeated(monster, killer, sharing.Count);
         var loot = monster.Data.Drops.Roll(_random);
         var alzParts = PartyRules.SplitAlz(loot.Alz, sharing.Count);
         for (var i = 0; i < sharing.Count; i++)
         {
             var member = sharing[i];
-            var xp = sharing.Count == 1
+            var xp = sharing.Count == 1 || fighters != null
                 ? XpRules.Adjusted(monster.Data.XpReward, member.Progress.Level, monster.Data.Level)
                 : PartyRules.SharedXp(monster.Data.XpReward, monster.Data.Level, member.Progress.Level, sharing.Count);
             GrantXp(member, xp);
@@ -516,6 +524,52 @@ public sealed partial class GameWorld
         monster.Hp.Add(monster.Hp.Max);
         monster.Brain.Revive(now);
         if (monster.Spawn.IsBoss) EndBossPhaseTwo(monster);
+    }
+
+    // ===== Chefe de mundo com horário =====
+
+    /// <summary>Dormindo: avisa o servidor 10 min antes e desperta na hora marcada.</summary>
+    private void TickScheduledBoss(ServerMonster boss, double now)
+    {
+        var clock = Clock();
+        // Primeira conferência (o servidor acabou de ligar): o horário atual já passou; espera o próximo.
+        if (boss.LastSlot == default) boss.LastSlot = WorldBossRules.CurrentSlot(clock);
+        var next = WorldBossRules.NextSlot(clock);
+        if (next != boss.WarnedSlot && next - clock <= TimeSpan.FromMinutes(WorldBossRules.WarningMinutes))
+        {
+            boss.WarnedSlot = next;
+            var minutes = Math.Max(1, (int)Math.Ceiling((next - clock).TotalMinutes));
+            foreach (var player in _players.Values)
+                Notify(player, LT("boss.warning", Loc.Ref("monster." + boss.Data.Id), minutes), announcement: true);
+        }
+        var slot = WorldBossRules.CurrentSlot(clock);
+        if (slot <= boss.LastSlot) return;
+        WakeScheduledBoss(boss, now, slot);
+    }
+
+    private void WakeScheduledBoss(ServerMonster boss, double now, DateTimeOffset slot)
+    {
+        boss.LastSlot = slot;
+        RespawnMonster(boss, now);
+        foreach (var player in _players.Values)
+            Notify(player, LT("boss.awake", Loc.Ref("monster." + boss.Data.Id)), announcement: true);
+    }
+
+    /// <summary>/gm chefe: desperta o chefe de mundo agora (para testar ou para um evento).</summary>
+    private bool SummonWorldBoss(double now)
+    {
+        var boss = _monsters.Values.FirstOrDefault(m => m.Spawn.Scheduled);
+        if (boss == null || !boss.IsDead) return false;
+        WakeScheduledBoss(boss, now, WorldBossRules.CurrentSlot(Clock()));
+        return true;
+    }
+
+    private void AnnounceBossDefeated(ServerMonster boss, ServerPlayer top, int fighters)
+    {
+        var text = fighters > 1
+            ? LT("boss.defeated", Loc.Ref("monster." + boss.Data.Id), top.Name, fighters - 1)
+            : LT("boss.defeated_solo", Loc.Ref("monster." + boss.Data.Id), top.Name);
+        foreach (var player in _players.Values) Notify(player, text, announcement: true);
     }
 
     // ===== Chefe =====

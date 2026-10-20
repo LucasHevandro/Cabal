@@ -266,6 +266,7 @@ public sealed class EfGameStore : IGameStore
             if (row == null) character.Quests.Add(row = new CharacterQuestEntity { CharacterId = character.Id, QuestId = quest.QuestId });
             row.Completed = quest.Completed;
             row.Counts = string.Join(",", quest.Counts);
+            row.CompletedDay = quest.CompletedDay;
         }
 
         var relations = snapshot.Relations.ToDictionary(r => ((int)r.Kind, r.OtherId));
@@ -364,7 +365,7 @@ public sealed class EfGameStore : IGameStore
             i.Upgrade, i.PityFails, i.PityLevel, i.RegainGuaranteed, i.OptionId)).ToList(),
         new Attributes { Strength = c.Strength, Dexterity = c.Dexterity, Intelligence = c.Intelligence },
         c.AwakeningGauge,
-        c.Quests.Select(q => new QuestRecord(q.QuestId, q.Completed, ParseCounts(q.Counts))).ToList())
+        c.Quests.Select(q => new QuestRecord(q.QuestId, q.Completed, ParseCounts(q.Counts), q.CompletedDay)).ToList())
     {
         Relations = c.Relations.OrderBy(r => r.Kind).ThenBy(r => r.OtherName)
             .Select(r => new RelationRecord((RelationKind)r.Kind, r.OtherId, r.OtherName)).ToList(),
