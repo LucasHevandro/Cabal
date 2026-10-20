@@ -36,9 +36,48 @@ ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 7777/tcp
 - **SSH:** use chave em vez de senha e desligue o login por senha (`PasswordAuthentication no` em `/etc/ssh/sshd_config`).
 - **Docker e firewall:** o Docker abre as portas publicadas por fora do ufw. Por isso o compose só publica a 7777, a 80 e a 443, e a 7778 fica presa ao 127.0.0.1.
 
+### Opção grátis: Oracle Cloud (Always Free)
+
+A camada grátis da Oracle tem máquinas **ARM (Ampere A1)** que sobram para o teste fechado. A imagem do servidor é
+publicada para x64 e ARM, então o passo 3 funciona igual.
+
+1. **Conta:** crie em cloud.oracle.com. O cartão é pedido só para conferir a identidade; a camada grátis não cobra.
+   - **Região de casa:** escolha **Brazil East (São Paulo)** no cadastro. Ela não muda depois, e os recursos grátis
+     só existem nela.
+2. **Máquina:** Compute → Instances → Create instance.
+   - **Imagem:** Canonical Ubuntu 24.04 (a versão aarch64 aparece sozinha com o shape ARM).
+   - **Shape:** Ampere → `VM.Standard.A1.Flex`, com 2 OCPU e 12 GB (o limite grátis é 4 OCPU e 24 GB no total).
+   - **Rede:** deixe criar a VCN com sub-rede pública e IP público.
+   - **SSH:** cole a sua chave pública (`ssh-keygen -t ed25519` no seu PC, se ainda não tiver).
+   - **"Out of capacity"?** Falta máquina livre naquele momento. Tente outro domínio de disponibilidade ou de novo mais
+     tarde.
+3. **Portas na nuvem:** Networking → Virtual cloud networks → a sua VCN → Security Lists → Default → Add Ingress Rules.
+   Crie três regras com origem `0.0.0.0/0`, protocolo TCP e portas de destino **80**, **443** e **7777**.
+4. **Portas na máquina:** o Ubuntu da Oracle já vem com regras de `iptables` que bloqueiam tudo além do SSH. **Não use
+   o ufw** do passo seguinte nessa máquina; em vez dele, rode:
+
+   ```bash
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 7777 -j ACCEPT
+   sudo netfilter-persistent save
+   ```
+
+5. **Usuário:** entre com `ssh ubuntu@IP_DA_MAQUINA`. Daí em diante, siga os comandos abaixo, menos a linha do `ufw`.
+6. **Máquina parada:** a Oracle pode recolher instâncias grátis que ficam ociosas por muito tempo. Um servidor com gente
+   jogando não fica ocioso. Se acontecer, os backups fora da VPS (passo 4) permitem subir outra.
+
 ## 2. Domínio
 
 No painel do domínio, crie um registro **A** apontando para o IP da VPS, por exemplo `jogo.exemplo.com.br`. O Caddy pega o certificado HTTPS sozinho na primeira vez que sobe, e para isso o DNS já precisa estar apontando.
+
+**Sem domínio pago: DuckDNS (grátis).**
+1. Entre em duckdns.org com uma conta do GitHub ou do Google.
+2. Crie um subdomínio, por exemplo `meujogo`, e no campo *current ip* ponha o IP público da VPS.
+3. No `.env`, use `GAME_DOMAIN=meujogo.duckdns.org`. O Caddy tira o certificado HTTPS para esse endereço do mesmo jeito.
+4. No `servidor.txt` do cliente: `servidor = Servidor Brasil | meujogo.duckdns.org:7777`.
+
+O IP público da Oracle não muda enquanto a instância existir, então não precisa do script de atualização do DuckDNS.
 
 ## 3. Subir o servidor
 
@@ -209,6 +248,6 @@ curl -sk https://localhost/api/health
 
 ## Limites conhecidos
 
-- **Criação de contas sem limite por IP.** A API ainda não limita quantas contas o mesmo IP cria; o login já trava a conta após 5 senhas erradas. Para o teste fechado com convite, isso basta. Antes de abrir para o público, vale um limite por IP, usando o `X-Forwarded-For` que o Caddy envia.
+- **Contas por IP:** cada IP cria no máximo 3 contas em 24 horas (`AuthService.MaxAccountsPerIp`). O IP vem do `X-Forwarded-For` que o Caddy envia, aceito só quando o pedido chega pela rede interna. O limite fica na memória e zera quando o servidor reinicia. O login trava a conta após 5 senhas erradas.
 - **Termos e privacidade:** preencha os campos `<<preencher>>` dos textos antes de abrir o teste (veja `Docs/metricas.md`).
 - **Uma VPS só:** se ela cair, o jogo cai. O monitoramento avisa, e o backup fora da VPS garante que nada se perde.
