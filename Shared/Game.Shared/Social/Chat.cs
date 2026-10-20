@@ -182,6 +182,9 @@ namespace Game.Shared.Social
         /// <summary>Abre ou fecha a janela de amigos.</summary>
         FriendsWindow,
 
+        /// <summary>/chefe: quando o chefe de mundo desperta (calculado no próprio cliente).</summary>
+        BossTime,
+
         /// <summary>Pede troca a <see cref="ChatInput.Target"/>.</summary>
         TradeRequest,
 
@@ -279,6 +282,8 @@ namespace Game.Shared.Social
                     return first.Length == 0 ? Invalid(Loc.T("chat.use_trade")) : Command(ChatInputKind.TradeRequest, first);
                 case "amigos":
                     return Command(ChatInputKind.FriendsWindow, "");
+                case "chefe":
+                    return Command(ChatInputKind.BossTime, "");
                 case "gm":
                     return new ChatInput { Kind = ChatInputKind.Gm, Target = "", Text = rest };
                 case "ajuda":

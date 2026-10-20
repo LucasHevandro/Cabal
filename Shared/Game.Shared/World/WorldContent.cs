@@ -34,6 +34,12 @@ namespace Game.Shared.World
         public bool IsBoss;
 
         /// <summary>
+        /// Chefe de mundo com horário (<see cref="WorldBossRules"/>): em vez de renascer depois de um tempo, desperta nas
+        /// horas marcadas, com aviso para o servidor inteiro, e todo mundo que bateu nele ganha o crédito.
+        /// </summary>
+        public bool Scheduled;
+
+        /// <summary>
         /// Pontos de nascimento, sempre os mesmos para a mesma semente (o servidor e as ferramentas concordam).
         /// </summary>
         public List<(float X, float Z)> SpawnPoints(int seed)
@@ -162,7 +168,7 @@ namespace Game.Shared.World
             // Chefe de campo
             new SpawnDefinition
             {
-                CenterX = 0, CenterZ = 170, Count = 1, Radius = 0, IsBoss = true,
+                CenterX = 0, CenterZ = 170, Count = 1, Radius = 0, IsBoss = true, Scheduled = true,
                 Data = new MonsterData
                 {
                     Id = "guardiao_das_ruinas", Level = 30, MaxHp = 60000,
@@ -205,6 +211,29 @@ namespace Game.Shared.World
 
         /// <summary>O segundo círculo cai a esta distância do primeiro, para quem fugir pelo caminho mais óbvio.</summary>
         public const float PhaseThreeSecondAreaOffset = 4.5f;
+    }
+
+    /// <summary>
+    /// Horário do chefe de mundo: desperta de <see cref="IntervalHours"/> em <see cref="IntervalHours"/> horas, nas horas
+    /// pares de Brasília (0h, 2h, 4h...), com aviso <see cref="WarningMinutes"/> minutos antes. Cliente e servidor calculam
+    /// do mesmo jeito (o /chefe do chat não precisa perguntar ao servidor).
+    /// </summary>
+    public static class WorldBossRules
+    {
+        public const int IntervalHours = 2;
+        public const int WarningMinutes = 10;
+        private static readonly TimeSpan Brasilia = TimeSpan.FromHours(-3);
+
+        /// <summary>O último horário de despertar até <paramref name="now"/> (inclusive).</summary>
+        public static DateTimeOffset CurrentSlot(DateTimeOffset now)
+        {
+            var local = now.ToOffset(Brasilia);
+            var hour = local.Hour - local.Hour % IntervalHours;
+            return new DateTimeOffset(local.Year, local.Month, local.Day, hour, 0, 0, Brasilia);
+        }
+
+        /// <summary>O próximo horário de despertar depois de <paramref name="now"/>.</summary>
+        public static DateTimeOffset NextSlot(DateTimeOffset now) => CurrentSlot(now).AddHours(IntervalHours);
     }
 
     /// <summary>Regras do personagem que o cliente offline e o servidor precisam concordar.</summary>

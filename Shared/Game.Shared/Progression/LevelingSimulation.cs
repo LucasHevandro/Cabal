@@ -72,7 +72,8 @@ namespace Game.Shared.Progression
                 var questMinutes = 0.0;
                 foreach (var quest in QuestCatalog.All)
                 {
-                    if (completed.Contains(quest.Id) || quest.MinLevel > level) continue;
+                    // As diárias ficam de fora: são um bônus para quem volta todo dia.
+                    if (quest.Daily || completed.Contains(quest.Id) || quest.MinLevel > level) continue;
                     if (!string.IsNullOrEmpty(quest.PreviousQuestId) && !completed.Contains(quest.PreviousQuestId)) continue;
                     completed.Add(quest.Id);
                     questXp += quest.RewardXp;

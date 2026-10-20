@@ -126,6 +126,24 @@ namespace Game.Shared.Progression
 
         /// <summary>Texto curto do que a missão libera, para mostrar na janela (vazio = nada).</summary>
         public string Unlocks => Loc.Optional(Loc.Key("quest.", Id, ".unlocks"));
+
+        /// <summary>
+        /// Diária: depois de entregue, volta a ficar disponível no dia seguinte (<see cref="DailyRules"/>). Não ocupa as
+        /// vagas de missão ativa e não entra na conta da subida de nível (o jogador pode fazer ou não).
+        /// </summary>
+        public bool Daily;
+    }
+
+    /// <summary>Quando um dia de missões diárias começa: à meia-noite de Brasília (UTC−3, sem horário de verão).</summary>
+    public static class DailyRules
+    {
+        public const int UtcOffsetHours = -3;
+
+        /// <summary>Número do dia (dias desde 1970 no horário de Brasília): muda à meia-noite de lá.</summary>
+        public static int Day(DateTimeOffset now) =>
+            (int)Math.Floor((now.UtcDateTime.AddHours(UtcOffsetHours) - DateTime.UnixEpoch).TotalDays);
+
+        public static int Today() => Day(DateTimeOffset.UtcNow);
     }
 
     /// <summary>
@@ -206,6 +224,46 @@ namespace Game.Shared.Progression
                 Id = "o_guardiao", MinLevel = 30, PreviousQuestId = "ecos_espectrais",
                 Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "guardiao_das_ruinas") },
                 RewardXp = 0, RewardAlz = 200000, RewardItems = { (ItemCatalog.CoreHigh, 5) },
+            },
+
+            // ----- Missões diárias (uma por região e o chefe de campo) -----
+            new QuestDefinition
+            {
+                Id = "diaria_coelhos", GiverNpcId = NpcCatalog.Hunter, MinLevel = 1, Daily = true,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "coelho_saltador", 12) },
+                RewardXp = 700, RewardAlz = 400, RewardItems = { ("pocao_hp_p", 3) },
+            },
+            new QuestDefinition
+            {
+                Id = "diaria_lobos", GiverNpcId = NpcCatalog.Hunter, MinLevel = 6, Daily = true,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "lobo_cinzento", 10) },
+                RewardXp = 3000, RewardAlz = 1000, RewardItems = { ("nucleo_baixo", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "diaria_mata", GiverNpcId = NpcCatalog.Scout, MinLevel = 12, Daily = true,
+                Objectives =
+                {
+                    new QuestObjective(QuestObjectiveKind.Kill, "javali_furioso", 8),
+                    new QuestObjective(QuestObjectiveKind.Kill, "aranha_da_mata", 6),
+                },
+                RewardXp = 11000, RewardAlz = 2500, RewardItems = { ("nucleo_medio", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "diaria_ruinas", GiverNpcId = NpcCatalog.Scholar, MinLevel = 22, Daily = true,
+                Objectives =
+                {
+                    new QuestObjective(QuestObjectiveKind.Kill, "golem_de_pedra", 6),
+                    new QuestObjective(QuestObjectiveKind.Kill, "espectro", 6),
+                },
+                RewardXp = 28000, RewardAlz = 5000, RewardItems = { ("nucleo_alto", 1) },
+            },
+            new QuestDefinition
+            {
+                Id = "diaria_guardiao", GiverNpcId = NpcCatalog.Elder, MinLevel = 28, Daily = true,
+                Objectives = { new QuestObjective(QuestObjectiveKind.Kill, "guardiao_das_ruinas", 1) },
+                RewardXp = 20000, RewardAlz = 10000, RewardItems = { ("nucleo_alto", 2) },
             },
 
             // ----- Missões das regiões e da Cripta -----
@@ -389,23 +447,47 @@ namespace Game.Shared.Progression
     {
         private readonly Dictionary<string, QuestProgress> _active = new Dictionary<string, QuestProgress>();
         private readonly HashSet<string> _completed = new HashSet<string>();
+        private readonly Dictionary<string, int> _dailyDone = new Dictionary<string, int>();
+        private readonly Func<int> _today;
+
+        /// <param name="today">Dia atual das diárias (<see cref="DailyRules.Today"/>; os testes passam outro).</param>
+        public QuestLog(Func<int>? today = null)
+        {
+            _today = today ?? DailyRules.Today;
+        }
 
         public IEnumerable<QuestProgress> Active => _active.Values;
-        public IEnumerable<string> Completed => _completed;
 
-        public bool IsCompleted(string questId) => _completed.Contains(questId);
+        /// <summary>Concluídas: as normais e as diárias entregues hoje (as de outros dias estão disponíveis de novo).</summary>
+        public IEnumerable<string> Completed
+        {
+            get
+            {
+                var today = _today();
+                return _completed.Concat(_dailyDone.Where(d => d.Value == today).Select(d => d.Key));
+            }
+        }
+
+        /// <summary>Dia em que cada diária foi entregue pela última vez (para salvar).</summary>
+        public IReadOnlyDictionary<string, int> DailyDone => _dailyDone;
+
+        public bool IsCompleted(string questId) =>
+            _completed.Contains(questId) || (_dailyDone.TryGetValue(questId, out var day) && day == _today());
         public bool IsActive(string questId) => _active.ContainsKey(questId);
         public QuestProgress? ProgressOf(string questId) => _active.TryGetValue(questId, out var p) ? p : null;
 
         /// <summary>Nulo se pode aceitar; senão o motivo.</summary>
         public LocalText? CanAccept(QuestDefinition quest, int level)
         {
+            if (quest.Daily && IsCompleted(quest.Id)) return new LocalText("quest.daily_done");
             if (_completed.Contains(quest.Id)) return new LocalText("quest.done_already");
             if (_active.ContainsKey(quest.Id)) return new LocalText("quest.active_already");
             if (level < quest.MinLevel) return new LocalText("quest.level", quest.MinLevel);
             if (!string.IsNullOrEmpty(quest.PreviousQuestId) && !_completed.Contains(quest.PreviousQuestId))
                 return new LocalText("quest.previous", Loc.Ref("quest." + quest.PreviousQuestId));
-            if (_active.Count >= QuestCatalog.MaxActive) return new LocalText("quest.max_active", QuestCatalog.MaxActive);
+            // As diárias não ocupam as vagas: dá para fazer a história e as diárias juntas.
+            if (!quest.Daily && _active.Keys.Count(id => !QuestCatalog.Get(id).Daily) >= QuestCatalog.MaxActive)
+                return new LocalText("quest.max_active", QuestCatalog.MaxActive);
             return null;
         }
 
@@ -421,9 +503,9 @@ namespace Game.Shared.Progression
 
         public bool Abandon(string questId) => _active.Remove(questId);
 
-        /// <summary>Missões que o NPC pode oferecer agora.</summary>
+        /// <summary>Missões que o NPC pode oferecer agora (as da história primeiro, depois as diárias).</summary>
         public IEnumerable<QuestDefinition> AvailableFrom(string npcId, int level) =>
-            QuestCatalog.All.Where(q => q.GiverNpcId == npcId && CanAccept(q, level) == null);
+            QuestCatalog.All.Where(q => q.GiverNpcId == npcId && CanAccept(q, level) == null).OrderBy(q => q.Daily);
 
         /// <summary>Conta um monstro derrotado. Retorna as missões que mudaram.</summary>
         public List<string> OnKill(string monsterId) => Advance(QuestObjectiveKind.Kill, monsterId);
@@ -488,17 +570,26 @@ namespace Game.Shared.Progression
             foreach (var (itemId, quantity) in quest.RewardItems) bag.TryAdd(itemId, quantity, newUid);
 
             _active.Remove(questId);
-            _completed.Add(questId);
+            if (quest.Daily) _dailyDone[questId] = _today();
+            else _completed.Add(questId);
             reward = new QuestReward(quest.RewardXp, quest.RewardAlz);
             return null;
         }
 
-        /// <summary>Restaura do banco.</summary>
-        public void Restore(IEnumerable<string> completed, IEnumerable<QuestProgress> active)
+        /// <summary>Restaura do banco. <paramref name="dailyDone"/>: dia em que cada diária foi entregue.</summary>
+        public void Restore(IEnumerable<string> completed, IEnumerable<QuestProgress> active,
+            IEnumerable<KeyValuePair<string, int>>? dailyDone = null)
         {
             _completed.Clear();
             _active.Clear();
-            foreach (var id in completed) if (QuestCatalog.Find(id) != null) _completed.Add(id);
+            _dailyDone.Clear();
+            foreach (var id in completed)
+            {
+                var quest = QuestCatalog.Find(id);
+                if (quest != null && !quest.Daily) _completed.Add(id);
+            }
+            foreach (var (id, day) in dailyDone ?? Array.Empty<KeyValuePair<string, int>>())
+                if (QuestCatalog.Find(id) is { Daily: true }) _dailyDone[id] = day;
             foreach (var progress in active)
                 if (QuestCatalog.Find(progress.QuestId) != null && !_completed.Contains(progress.QuestId))
                     _active[progress.QuestId] = progress;

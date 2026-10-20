@@ -782,6 +782,8 @@ option.no_stone = Você não tem essa pedra.
 
 # ===== Missões =====
 quest.done_already = Missão já concluída.
+quest.daily_done = Você já fez esta missão diária hoje. Ela volta amanhã.
+quest.daily_reset = As missões diárias foram renovadas!
 quest.active_already = Missão já aceita.
 quest.level = Precisa do nível {0}.
 quest.previous = Conclua antes: {0}.
@@ -795,7 +797,13 @@ team.blue = Azul
 team.red = Vermelho
 
 # ===== Comandos do chat =====
-chat.help = /m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · /convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · /bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome · /duelo nome · /arena
+chat.help = /m texto: mapa · /g texto: grupo · /s nome texto: sussurro · /r texto: responder · /convidar nome · /sair · /expulsar nome · /lider nome · /amigo nome · /remover nome · /bloquear nome · /desbloquear nome · /denunciar nome motivo · /amigos · /trocar nome · /duelo nome · /arena · /chefe
+chat.boss_time = {0} desperta de 2 em 2 horas, nas horas pares. Próximo despertar: {1} (em {2} min), na Arena do Guardião.
+boss.warning = {0} desperta em {1} minutos na Arena do Guardião!
+boss.awake = {0} despertou na Arena do Guardião! Todos que lutarem ganham a recompensa.
+boss.defeated = {0} foi derrotado por {1} e mais {2} aventureiro(s)!
+boss.defeated_solo = {0} foi derrotado por {1}!
+gm.boss_spawned = {0} foi chamado agora.
 chat.use_whisper = Use /s nome mensagem
 chat.no_whisper = Ninguém sussurrou para você ainda
 chat.use_invite = Use /convidar nome
@@ -911,7 +919,7 @@ tutorial.routes = Dica: a ordem das skills forma <b>rotas</b> com bônus extra. 
 tutorial.done = Pronto, você já sabe fazer combo! Dá para rever o tutorial nas opções (<b>{0}</b>).
 
 # ===== Servidor: GM e moderação =====
-gm.help = Comandos de GM: /gm info nome · kick nome motivo · ban nome horas motivo (0 = para sempre) · unban nome · mute nome minutos motivo · unmute nome · ir nome · trazer nome · dar nome item quantidade · tirar nome item quantidade · alz nome valor (ex.: -500) · suspeitos
+gm.help = Comandos de GM: /gm info nome · kick nome motivo · ban nome horas motivo (0 = para sempre) · unban nome · mute nome minutos motivo · unmute nome · ir nome · trazer nome · dar nome item quantidade · tirar nome item quantidade · alz nome valor (ex.: -500) · suspeitos · chefe (chama o chefe de mundo agora)
 gm.usage_ban = Use /gm ban nome horas motivo (0 horas = para sempre)
 gm.usage_mute = Use /gm mute nome minutos motivo
 gm.usage_alz = Use /gm alz nome valor (ex.: 1000 ou -500)
@@ -975,6 +983,16 @@ servers.checking = <color=#aaaaaa>● Verificando…</color>
 npc.cacador_rurik = Caçador Rurik
 npc.batedora_nara = Batedora Nara
 npc.erudita_veska = Erudita Veska
+quest.diaria_coelhos = Diária: horta em paz
+quest.diaria_coelhos.desc = Os coelhos voltam à horta todo dia. Espante doze deles e o Caçador Rurik paga pelo serviço.
+quest.diaria_lobos = Diária: ronda da matilha
+quest.diaria_lobos.desc = A matilha de lobos cinzentos ronda a trilha. Afaste dez lobos antes que cheguem à vila.
+quest.diaria_mata = Diária: trilha segura
+quest.diaria_mata.desc = Os touros e as aranhas fecham a trilha da Mata Sombria. Derrube oito touros e seis aranhas.
+quest.diaria_ruinas = Diária: vigília nas Ruínas
+quest.diaria_ruinas.desc = Golens e espectros acordam toda noite nas Ruínas. Acalme seis de cada para a Erudita Veska estudar em paz.
+quest.diaria_guardiao = Diária: o Guardião das Ruínas
+quest.diaria_guardiao.desc = O Guardião das Ruínas desperta de novo. Ajude a derrotá-lo hoje.
 quest.coelhos_na_horta = Coelhos na horta
 quest.coelhos_na_horta.desc = Os coelhos saltadores estão comendo a horta da vila. Espante uns oito deles.
 quest.pelos_para_o_inverno = Pelos para o inverno
