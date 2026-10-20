@@ -153,3 +153,28 @@ dois escudos e 15% de dano perdido fugindo do golpe no chão.
   - o grupo no nível mínimo termine antes do limite;
   - um grupo bom (+7, 35% de bônus de combo) tire S.
 - **Revisar** com grupos de verdade: os 12 s por grupo de monstros são um chute.
+
+## Comportamento dos monstros (2026-10-20)
+
+Cada tipo luta de um jeito (`MonsterData.Behavior`). A decisão fica no `MonsterBrain` (o mesmo no servidor e no modo
+offline); o servidor cuida da matilha e do golpe em área. Os números ficam em `MonsterBehaviors`. O estado de cada
+comportamento (fuga, fúria, recargas) é de cada monstro, não dos dados, que são os mesmos para o grupo inteiro.
+
+| Monstro | Comportamento | Como é |
+|---|---|---|
+| Coelho Saltador | Foge (`Skittish`) | Com 30% de vida entra em pânico, até no meio do preparo, e corre 7 m para longe por 3,5 s. Uma vez por luta. |
+| Lobo Cinzento | Matilha (`Pack`) | Quando apanha, os lobos a até 12 m entram na briga contra quem bateu. |
+| Touro Furioso | Investida (`Charger`) | Entre 4,5 e 11 m, prepara 0,9 s (com aviso) e dispara a 3,2× a velocidade, passando 2,5 m do ponto mirado. Só dá dano se pegar o jogador no caminho. Recarga de 7 s. |
+| Aranha da Mata | Bate e recua (`HitAndRun`) | Depois de cada golpe, recua 3,5 m por 1,1 s. |
+| Golem de Pedra | Golpe em área (`AreaSlam`) | O chão avisa num raio de 3,2 m em volta dele, pelo tempo do preparo (1 s). Acerta todos lá dentro. |
+| Espectro | Some e reaparece (`Blink`) | Se o alvo se afasta 6 m, reaparece 1,8 m atrás dele, com um clarão. Recarga de 8 s. |
+| Cavaleiro Caído | Fúria (`Berserk`) | Com 35% de vida: recarga do golpe × 0,55 e 25% mais rápido. Mostra a aura de furioso. |
+
+- **Respiro:** no começo de cada luta, a investida e o sumiço só ficam prontos depois de 1,5 s.
+- **Voltar para casa** (ou morrer) esquece a fuga, a fúria e as recargas.
+- **Guardião das Ruínas:**
+  - fase 2 (50% de vida): enfurece e passa a jogar golpes em área;
+  - fase 3 (25%): avisa que está desesperado; cada golpe em área vem em dobro (o segundo círculo cai a 4,5 m do
+    primeiro, num ângulo sorteado) e o intervalo cai para 60%. Quem está nos dois círculos leva um golpe só.
+- **Simulador:** ele não conta a fuga, a investida nem o recuo. Coelhos fugindo e aranhas recuando deixam a luta um
+  pouco mais longa; vale revisar o tempo de subida com jogadores de verdade.
