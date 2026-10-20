@@ -83,7 +83,8 @@ namespace Game.Client.Monsters
 
             var player = PlayerCombat.Local;
             Vector2? playerPoint = player != null && !player.IsDead ? ToPlane(player.transform.position) : (Vector2?)null;
-            var action = _brain.Tick(Time.time, ToPlane(transform.position), playerPoint);
+            var hp = _target.Hp.Max > 0 ? _target.Hp.Current / (float)_target.Hp.Max : 1f;
+            var action = _brain.Tick(Time.time, ToPlane(transform.position), playerPoint, hp);
 
             var horizontal = Vector3.zero;
             switch (action.Kind)
@@ -93,7 +94,7 @@ namespace Game.Client.Monsters
                     toPoint.y = 0;
                     if (toPoint.sqrMagnitude > 0.01f)
                     {
-                        horizontal = toPoint.normalized * _data.MoveSpeed;
+                        horizontal = toPoint.normalized * (_data.MoveSpeed * action.SpeedFactor);
                         Face(toPoint);
                     }
                     break;
@@ -112,9 +113,18 @@ namespace Game.Client.Monsters
                 case MonsterActionKind.ResetHealth:
                     _target.RestoreFullHealth();
                     break;
+                case MonsterActionKind.Blink:
+                    // Espectro: some e reaparece atrás do jogador, com um brilho nos dois lugares.
+                    if (CombatFx.Instance != null) CombatFx.Instance.Flash(transform.position + Vector3.up, new Color(0.6f, 0.8f, 1f), 2f, 4f, 0.25f);
+                    _controller.enabled = false;
+                    transform.position = World.Ground.Point(action.Point.X, action.Point.Y);
+                    _controller.enabled = true;
+                    if (CombatFx.Instance != null) CombatFx.Instance.Flash(transform.position + Vector3.up, new Color(0.6f, 0.8f, 1f), 2f, 4f, 0.25f);
+                    if (player != null) Face(player.transform.position - transform.position);
+                    break;
             }
 
-            if (_brain.State != MonsterState.WindUp) HideTelegraph();
+            if (!_brain.IsWindingUp) HideTelegraph();
             else UpdateTelegraph();
 
             if (_controller.isGrounded && _verticalVelocity < 0) _verticalVelocity = -2f;
@@ -126,9 +136,11 @@ namespace Game.Client.Monsters
         {
             if (player == null || player.IsDead) return;
 
-            // Um pouco de folga: o jogador precisa sair de fato do alcance (ou esquivar) para escapar.
+            // Um pouco de folga: o jogador precisa sair de fato do alcance (ou esquivar) para escapar. O golem acerta em
+            // volta dele, até onde o aviso mostrou.
             var distance = Vector3.Distance(transform.position, player.transform.position) - player.BodyRadius;
-            if (distance > _data.AttackRange * 1.3f) return;
+            var reach = _data.Behavior == MonsterBehavior.AreaSlam ? MonsterBehaviors.SlamRadius : _data.AttackRange * 1.3f;
+            if (distance > reach) return;
 
             var hit = DamageFormula.Calculate(
                 new DamageInput(_data.AttackDamage, _data.AttackPower, 1.0, 0.05, 1.5, player.Defense), Random);

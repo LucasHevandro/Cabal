@@ -104,6 +104,16 @@ namespace Game.Client.Net
             IsEnraged = (state.Flags & EntityState.FlagEnraged) != 0;
         }
 
+        /// <summary>Velocidade a partir da qual um deslocamento entre dois retratos é um salto, não uma corrida (m/s).</summary>
+        private const float BlinkSpeed = 25f;
+
+        private double _blinkedTo;
+
+        private static void BlinkFlash(Vector3 at)
+        {
+            if (Fx.CombatFx.Instance != null) Fx.CombatFx.Instance.Flash(at + Vector3.up, new Color(0.6f, 0.8f, 1f), 2f, 4f, 0.25f);
+        }
+
         /// <summary>Teleporta sem interpolar (ex.: renasceu longe).</summary>
         public void SnapTo(Vector3 position)
         {
@@ -132,6 +142,18 @@ namespace Game.Client.Net
 
             var span = to.ServerTime - from.ServerTime;
             var t = span > 0 ? Mathf.Clamp01((float)((renderTime - from.ServerTime) / span)) : 1f;
+            // Andou mais rápido do que qualquer um corre (o espectro some e reaparece): pula em vez de deslizar.
+            var jump = Vector3.Distance(from.Position, to.Position);
+            if (span > 0 && jump > 3f && jump / span > BlinkSpeed)
+            {
+                if (t >= 0.5f && _blinkedTo != to.ServerTime)
+                {
+                    _blinkedTo = to.ServerTime;
+                    BlinkFlash(from.Position);
+                    BlinkFlash(to.Position);
+                }
+                t = t < 0.5f ? 0f : 1f;
+            }
             transform.position = Vector3.Lerp(from.Position, to.Position, t);
             transform.rotation = Quaternion.Euler(0, Mathf.LerpAngle(from.Yaw, to.Yaw, t), 0);
 
