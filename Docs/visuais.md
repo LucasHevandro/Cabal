@@ -221,7 +221,16 @@ nas pernas.
 - **Runas da arena** (`Kit.Rune`, o shader das marcas das skills parado):
   - cada ponto tem um círculo rúnico na cor do dono;
   - cada base tem três círculos na cor do time, com piso escuro puxado para ela e as bandeiras do time nos cantos.
-- **Conferir:** teste online com `-onlinedungeon` (cripta inteira) e `-onlinearena`.
+- **Santuário das Ruínas** (`DungeonDefinition.Theme = "santuario"`): sem teto, com o céu do mundo.
+  - Usa as peças da arena: piso de arenito, muros e rochas. Pelo caminho, pedras caídas (baixas e tortas),
+    braseiros nos muros e estandartes.
+  - No altar, um anel de seis pedras baixas junto aos muros, em volta de um círculo rúnico ciano com um dourado por dentro.
+  - No ar, poeira dourada; no chão, névoa azulada.
+- **Variantes de modelo** (`VisualCatalog.Variants`): um id sem prefab próprio usa o modelo de outro, maior e tingido.
+  - O tom multiplica a cor e a emissão dos materiais, em cópias reaproveitadas para cada par de material e tom.
+  - Os monstros do santuário usam: golem → Sentinela de Pedra (arenito), espectro → Espectro Ancestral (ciano),
+    Cavaleiro Caído → Cavaleiro Juramentado (dourado), servo → Eco do Oráculo, Senhor da Cripta → Oráculo Corrompido.
+- **Conferir:** teste online com `-onlinedungeon` (cripta inteira), `-onlinesanctuary` (santuário inteiro) e `-onlinearena`.
 
 # Polimento do combate
 

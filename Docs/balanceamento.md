@@ -154,6 +154,37 @@ dois escudos e 15% de dano perdido fugindo do golpe no chão.
   - um grupo bom (+7, 35% de bônus de combo) tire S.
 - **Revisar** com grupos de verdade: os 12 s por grupo de monstros são um chute.
 
+## Santuário das Ruínas (2026-10-20)
+
+Segunda dungeon, para o fim da subida: nível 26+, Chave do Santuário (1.500 Alz na Guardiã Selene), a céu aberto. Cada
+dungeon tem as regras do próprio chefe (`DungeonDefinition.Boss`); o portal mostra uma aba para cada uma e o ranking é
+separado.
+
+| Sala | Monstros |
+|---|---|
+| Pátio das Sentinelas | 3 Sentinelas de Pedra (golpe em área) e 2 Espectros Ancestrais (somem e reaparecem) |
+| Corredor dos Lamentos | 4 Espectros Ancestrais |
+| Salão dos Juramentos | 3 Cavaleiros Juramentados (fúria) e 1 Sentinela |
+| Altar do Oráculo | Oráculo Corrompido (560 mil de vida) |
+
+- **Oráculo:** três escudos (75%, 50% e 25%), cada um com 3 Ecos do Oráculo; golpe no chão a cada 7 s (aviso de 1,8 s,
+  raio de 5,5 m, 900 de dano). Na cripta são dois escudos e o golpe vem a cada 9 s.
+- **Baú:** 1.500 a 2.800 Alz, núcleos altos, pedras de refino, fragmento do Guardião e peças de astralita.
+- **Missão** "O Santuário das Ruínas" (Erudita Veska, Nv 26): derrotar o Oráculo; 60.000 XP, 8.000 Alz e 2 núcleos altos.
+
+Estimativa (mesmo cálculo da cripta):
+
+| Grupo | Tempo |
+|---|---:|
+| 4 no nível 28 | 11:26 |
+| 4 no nível 26 (mínimo) | 11:47 |
+| 4 no nível 30 | 11:07 |
+| 2 no nível 28 | 20:05 (não termina) |
+
+- A primeira versão dava 13 minutos com o grupo típico, perto demais do limite; a vida caiu uns 15%.
+- O teste `Santuario_pede_grupo_mais_forte_e_cabe_no_limite` cobra o grupo típico entre 9 e 13 minutos e o grupo no
+  nível mínimo antes do limite.
+
 ## Comportamento dos monstros (2026-10-20)
 
 Cada tipo luta de um jeito (`MonsterData.Behavior`). A decisão fica no `MonsterBrain` (o mesmo no servidor e no modo
