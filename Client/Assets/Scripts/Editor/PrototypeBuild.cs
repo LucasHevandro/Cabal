@@ -11,7 +11,7 @@ namespace Game.Client.Editor
     /// </summary>
     public static class PrototypeBuild
     {
-        private const string OutputPath = "Builds/Windows/Prototipo.exe";
+        private const string OutputPath = "Builds/Windows/TerrasDeAstralis.exe";
 
         /// <summary>
         /// Servidor padrão do build: a variável GAME_SERVER (o GitHub Actions passa, ex.: "jogo.com.br:7777") vira o
