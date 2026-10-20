@@ -256,6 +256,7 @@ public sealed partial class GameWorld
         var dealt = monster.Invulnerable ? 0 : -monster.Hp.Add(-hit.Amount);
         monster.DamageBy[player.Id] = monster.DamageBy.GetValueOrDefault(player.Id) + dealt;
         monster.AggroPlayerId = player.Id;
+        if (monster.Data.Behavior == MonsterBehavior.Pack && !monster.Brain.Provoked) CallPack(monster, player);
         monster.Brain.Provoke();
 
         SendNearby(monster.X, monster.Z, new CombatEvent
@@ -325,24 +326,48 @@ public sealed partial class GameWorld
 
         var target = ChooseTarget(monster);
         var action = monster.Brain.Tick(now, new Vector2(monster.X, monster.Z),
-            target != null ? new Vector2(target.X, target.Z) : (Vector2?)null);
+            target != null ? new Vector2(target.X, target.Z) : (Vector2?)null, monster.Hp.Current / (float)monster.Hp.Max);
 
         switch (action.Kind)
         {
             case MonsterActionKind.MoveTo:
-                MoveMonster(monster, action.Point, dt);
+                MoveMonster(monster, action.Point, dt, action.SpeedFactor);
                 break;
             case MonsterActionKind.Face:
-            case MonsterActionKind.AttackStarted:
                 Face(monster, action.Point);
                 break;
+            case MonsterActionKind.AttackStarted:
+                Face(monster, action.Point);
+                // Golem: o golpe acerta em volta dele; o chão avisa onde, pelo tempo do preparo.
+                if (monster.Data.Behavior == MonsterBehavior.AreaSlam)
+                    SendNearby(monster.X, monster.Z, new AreaWarning
+                    {
+                        SourceId = monster.Id, X = monster.X, Z = monster.Z, Radius = MonsterBehaviors.SlamRadius,
+                        Seconds = monster.Data.AttackWindupSeconds,
+                    });
+                break;
             case MonsterActionKind.AttackLanded:
-                if (target != null && !target.IsDead &&
+                if (monster.Data.Behavior == MonsterBehavior.AreaSlam)
+                {
+                    foreach (var player in _players.Values.ToList())
+                    {
+                        if (!player.IsDead && SameInstance(monster, player) &&
+                            Distance(monster.X, monster.Z, player.X, player.Z) <= MonsterBehaviors.SlamRadius + PlayerRules.BodyRadius)
+                            DamageMonsterToPlayer(monster, player, monster.Data.AttackDamage, CombatSource.MonsterAttack, now);
+                    }
+                }
+                else if (target != null && !target.IsDead &&
                     Distance(monster.X, monster.Z, target.X, target.Z) - PlayerRules.BodyRadius
                     <= monster.Data.AttackRange * PlayerRules.MonsterReachTolerance)
                 {
                     DamageMonsterToPlayer(monster, target, monster.Data.AttackDamage, CombatSource.MonsterAttack, now);
                 }
+                break;
+            case MonsterActionKind.Blink:
+                // Espectro: some e reaparece (o cliente vê o salto entre um retrato e outro).
+                monster.X = action.Point.X;
+                monster.Z = action.Point.Y;
+                if (target != null) Face(monster, new Vector2(target.X, target.Z));
                 break;
             case MonsterActionKind.ResetHealth:
                 ResetMonster(monster);
@@ -373,13 +398,31 @@ public sealed partial class GameWorld
         return nearest;
     }
 
-    private static void MoveMonster(ServerMonster monster, Vector2 point, float dt)
+    /// <summary>
+    /// Lobo apanhou: os lobos da mesma espécie por perto (e no mesmo lugar: mundo aberto ou a mesma dungeon) entram na
+    /// briga contra quem bateu.
+    /// </summary>
+    private void CallPack(ServerMonster caller, ServerPlayer player)
+    {
+        foreach (var other in _monsters.Values)
+        {
+            if (other == caller || other.IsDead || other.Data.Id != caller.Data.Id || other.InstanceId != caller.InstanceId) continue;
+            if (other.Brain.Provoked || !InRange(other.X, other.Z, caller.X, caller.Z, MonsterBehaviors.PackCallRadius)) continue;
+            other.AggroPlayerId = player.Id;
+            other.Brain.Provoke();
+        }
+    }
+
+    private static bool SameInstance(ServerMonster monster, ServerPlayer player) =>
+        player.DungeonId == monster.InstanceId;
+
+    private static void MoveMonster(ServerMonster monster, Vector2 point, float dt, float speedFactor = 1f)
     {
         var dx = point.X - monster.X;
         var dz = point.Y - monster.Z;
         var distance = MathF.Sqrt(dx * dx + dz * dz);
         if (distance < 0.01f) return;
-        var step = MathF.Min(distance, monster.Data.MoveSpeed * dt);
+        var step = MathF.Min(distance, monster.Data.MoveSpeed * speedFactor * dt);
         monster.X += dx / distance * step;
         monster.Z += dz / distance * step;
         monster.Yaw = MathF.Atan2(dx, dz) * 180f / MathF.PI;
@@ -492,16 +535,31 @@ public sealed partial class GameWorld
             }
         }
         if (!boss.PhaseTwo) return;
+        if (!boss.PhaseThree && fraction <= BossRules.PhaseThreeAtHpFraction)
+        {
+            boss.PhaseThree = true;
+            boss.NextAreaAt = Math.Min(boss.NextAreaAt, now + 1.0);
+            foreach (var player in _players.Values)
+            {
+                if (InRange(player.X, player.Z, boss.X, boss.Z, InterestRadius))
+                    Notify(player, LT("boss.desperate", Loc.Ref("monster." + boss.Data.Id)), announcement: true);
+            }
+        }
 
         if (boss.PendingArea is { } area)
         {
             if (now < area.LandsAt) return;
+            var second = boss.PendingSecondArea;
             boss.PendingArea = null;
-            boss.NextAreaAt = now + BossRules.AreaIntervalSeconds;
+            boss.PendingSecondArea = null;
+            boss.NextAreaAt = now + BossRules.AreaIntervalSeconds * (boss.PhaseThree ? BossRules.PhaseThreeIntervalFactor : 1f);
             foreach (var player in _players.Values.ToList())
             {
-                if (!player.IsDead && Distance(player.X, player.Z, area.X, area.Z) <= BossRules.AreaRadius + PlayerRules.BodyRadius)
-                    DamageMonsterToPlayer(boss, player, BossRules.AreaDamage, CombatSource.BossArea, now);
+                if (player.IsDead) continue;
+                var inFirst = Distance(player.X, player.Z, area.X, area.Z) <= BossRules.AreaRadius + PlayerRules.BodyRadius;
+                var inSecond = second is { } s && Distance(player.X, player.Z, s.X, s.Z) <= BossRules.AreaRadius + PlayerRules.BodyRadius;
+                // Quem está nos dois círculos leva um golpe só.
+                if (inFirst || inSecond) DamageMonsterToPlayer(boss, player, BossRules.AreaDamage, CombatSource.BossArea, now);
             }
             return;
         }
@@ -513,12 +571,24 @@ public sealed partial class GameWorld
         {
             SourceId = boss.Id, X = target.X, Z = target.Z, Radius = BossRules.AreaRadius, Seconds = BossRules.AreaWarningSeconds,
         });
+        if (!boss.PhaseThree) return;
+        // Terceira fase: um segundo círculo ao lado do primeiro, num ângulo sorteado.
+        var angle = _random.NextDouble() * Math.PI * 2;
+        var secondX = target.X + (float)Math.Cos(angle) * BossRules.PhaseThreeSecondAreaOffset;
+        var secondZ = target.Z + (float)Math.Sin(angle) * BossRules.PhaseThreeSecondAreaOffset;
+        boss.PendingSecondArea = (secondX, secondZ);
+        SendNearby(boss.X, boss.Z, new AreaWarning
+        {
+            SourceId = boss.Id, X = secondX, Z = secondZ, Radius = BossRules.AreaRadius, Seconds = BossRules.AreaWarningSeconds,
+        });
     }
 
     private static void EndBossPhaseTwo(ServerMonster boss)
     {
         boss.PhaseTwo = false;
+        boss.PhaseThree = false;
         boss.PendingArea = null;
+        boss.PendingSecondArea = null;
         boss.Data.AttackCooldownSeconds = (float)boss.BaseAttackCooldown;
     }
 

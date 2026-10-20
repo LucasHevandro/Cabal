@@ -346,8 +346,8 @@ public sealed partial class GameWorld
             if (player.KnownEntities.Add(monster.Id)) _outbox.Send(player.Id, SpawnMessage(monster));
             byte flags = 0;
             if (monster.IsDead) flags |= EntityState.FlagDead;
-            if (monster.Brain.State == MonsterState.WindUp) flags |= EntityState.FlagWindUp;
-            if (monster.PhaseTwo) flags |= EntityState.FlagEnraged;
+            if (monster.Brain.IsWindingUp) flags |= EntityState.FlagWindUp;
+            if (monster.PhaseTwo || monster.Brain.Enraged) flags |= EntityState.FlagEnraged;
             snapshot.Entities.Add(new EntityState
             {
                 Id = monster.Id, X = monster.X, Z = monster.Z, Yaw = monster.Yaw, Hp = monster.Hp.Current, Flags = flags,

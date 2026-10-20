@@ -267,6 +267,10 @@ public sealed class ServerMonster
 
     // Chefe
     public bool PhaseTwo { get; set; }
+    public bool PhaseThree { get; set; }
+
+    /// <summary>Segundo círculo do golpe em área (só na terceira fase).</summary>
+    public (float X, float Z)? PendingSecondArea { get; set; }
     public double BaseAttackCooldown { get; init; }
     public double NextAreaAt { get; set; }
     public (float X, float Z, double LandsAt)? PendingArea { get; set; }
