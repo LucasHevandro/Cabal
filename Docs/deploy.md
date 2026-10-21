@@ -191,8 +191,8 @@ O IP público da Oracle não muda enquanto a instância existir, então não pre
 Entre como o usuário `jogo`:
 
 ```bash
-git clone https://github.com/LucasHevandro/Cabal.git
-cd Cabal/deploy
+git clone -b main https://github.com/LucasHevandro/TerrasDeAstralis.git
+cd TerrasDeAstralis/deploy
 cp .env.example .env
 nano .env
 ```
@@ -206,7 +206,7 @@ curl -s https://jogo.exemplo.com.br/api/health
 ```
 
 - **Saúde:** a resposta deve trazer `"status":"ok"`. As migrações do banco rodam sozinhas quando o servidor liga.
-- **Imagem privada:** o pacote no GHCR nasce privado. Antes do `pull`, rode `docker login ghcr.io` com um token do GitHub que tenha `read:packages`. Outra saída é deixar o pacote público em GitHub → Packages → cabal-server → Settings.
+- **Imagem privada:** o pacote no GHCR nasce privado. Antes do `pull`, rode `docker login ghcr.io` com um token do GitHub que tenha `read:packages`. Outra saída é deixar o pacote público em GitHub → Packages → astralis-server → Settings.
 - **Sem imagem publicada:** dá para construir na própria VPS com `docker compose -f docker-compose.prod.yml build game`.
 
 Comandos do dia a dia (dentro de `deploy/`, com `C="docker compose -f docker-compose.prod.yml"`):
@@ -284,11 +284,11 @@ $C exec -T postgres psql -U game -d restore_test -c "select count(*) from accoun
 ## 6. Atualizar em menos de 1 hora
 
 1. **Corrija e teste no PC:** `dotnet test Game.slnx` e o teste online do cliente.
-2. **Mande para a `main`** (merge ou push). O GitHub Actions roda os testes e publica a imagem `ghcr.io/lucashevandro/cabal-server:latest`, com o commit como tag. Isso leva uns 10 minutos.
+2. **Mande para a `main`** (merge ou push). O GitHub Actions roda os testes e publica a imagem `ghcr.io/lucashevandro/astralis-server:latest`, com o commit como tag. Isso leva uns 10 minutos.
 3. **Avise no Discord** que o servidor vai reiniciar em 5 minutos.
 4. **Na VPS:**
    ```bash
-   cd ~/Cabal/deploy
+   cd ~/TerrasDeAstralis/deploy
    docker compose -f docker-compose.prod.yml exec backup sh /scripts/backup.sh   # se a atualização mexe no banco
    docker compose -f docker-compose.prod.yml pull game
    docker compose -f docker-compose.prod.yml up -d game
@@ -297,7 +297,7 @@ $C exec -T postgres psql -U game -d restore_test -c "select count(*) from accoun
    Os jogadores ficam fora por uns 10 segundos. Todos são salvos ao desligar, porque o `docker stop` dá 30 s para isso.
 5. **Confira** que o `build` no `/api/health` é o commit novo.
 
-**Deu errado? Volte à versão anterior.** No `.env`, ponha `GAME_IMAGE=ghcr.io/lucashevandro/cabal-server:<commit-anterior>` e rode `up -d game`. Se a versão nova mudou o banco (migração), restaure o backup feito no passo 4.
+**Deu errado? Volte à versão anterior.** No `.env`, ponha `GAME_IMAGE=ghcr.io/lucashevandro/astralis-server:<commit-anterior>` e rode `up -d game`. Se a versão nova mudou o banco (migração), restaure o backup feito no passo 4.
 
 **Mudou o protocolo** (`Protocol.Version`)? Aí o cliente também precisa ser atualizado, porque o servidor recusa cliente de versão diferente. Crie uma tag `v0.x.y`: o Actions gera o cliente e, se o itch.io estiver configurado, envia. O jogador só precisa baixar de novo.
 

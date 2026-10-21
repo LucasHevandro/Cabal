@@ -1,6 +1,6 @@
 # Terras de Astralis
 
-Action MMORPG com combate por combos de timing, inspirado na jogabilidade de jogos como CABAL Online, com mundo, arte e números próprios.
+Action MMORPG com combate por combos de timing, inspirado nos MMORPGs de ação clássicos, com mundo, arte e números próprios.
 
 - Game Design Document e Backlog do MVP: [GDD — Action MMORPG](https://claude.ai/code/artifact/12dab18b-3ed5-4653-a90f-4d0624814832)
 
