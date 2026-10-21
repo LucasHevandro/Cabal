@@ -243,9 +243,6 @@ namespace Game.Launcher
                 g.DrawString("Terras de Astralis", title, shadow, 152, 30);
                 g.DrawString("Terras de Astralis", title, gold, 150, 28);
             }
-            using (var subtitle = new Font("Segoe UI", 10.5f))
-            using (var muted = new SolidBrush(Muted))
-                g.DrawString("Launcher · atualiza o jogo sozinho", subtitle, muted, 154, 80);
 
             // Barra de progresso.
             var bar = new Rectangle(28, 372, 504, 18);
