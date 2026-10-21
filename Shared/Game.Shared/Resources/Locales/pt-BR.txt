@@ -257,6 +257,7 @@ login.head_3 = Cavanhaque
 login.head_4 = Volumoso
 login.head_5 = Barba
 login.show_helmet = Mostrar o elmo (o chapéu, no Arcanista)
+login.version = Versão {0}
 login.color_original = Original
 login.preview_hint = A armadura muda a cor do metal: Ferro, Aço Negro e Astralita.
 login.preview_select = Passe o mouse num personagem para vê-lo; clique para jogar.
