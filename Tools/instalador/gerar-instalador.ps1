@@ -10,6 +10,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $build = Join-Path $root 'Client\Builds\Windows\TerrasDeAstralis.exe'
 if (-not (Test-Path $build)) { throw "Sem build em $build. Gere antes: menu Protótipo > Gerar build Windows." }
+dotnet build (Join-Path $root 'Tools\Game.Launcher\Game.Launcher.csproj') -c Release --nologo -v q
+if ($LASTEXITCODE -ne 0) { throw 'O launcher não compilou.' }
 
 $iscc = @(
     "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
