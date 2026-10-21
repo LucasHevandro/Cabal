@@ -86,6 +86,7 @@ monster.espectro_ancestral = Espectro Ancestral
 monster.cavaleiro_juramentado = Cavaleiro Juramentado
 monster.eco_do_oraculo = Eco do Oráculo
 monster.oraculo_corrompido = Oráculo Corrompido
+monster.elite_name = {0} (Elite)
 
 # ===== Zonas =====
 zone.vila = Vila de Partida

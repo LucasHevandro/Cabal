@@ -78,7 +78,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 17;
+        public const int Version = 18;
         public const int DefaultPort = 7777;
     }
 
@@ -296,6 +296,9 @@ namespace Game.Shared.Net
         public byte Skin;
         public bool HideHelmet;
 
+        /// <summary>Monstros: elite (maior, dourado e com "(Elite)" no nome).</summary>
+        public bool Elite;
+
         public void Write(PacketWriter w)
         {
             w.WriteInt(Id);
@@ -316,6 +319,7 @@ namespace Game.Shared.Net
             w.WriteByte(Head);
             w.WriteByte(Skin);
             w.WriteBool(HideHelmet);
+            w.WriteBool(Elite);
         }
 
         public static EntitySpawned Read(PacketReader r) => new EntitySpawned
@@ -324,7 +328,7 @@ namespace Game.Shared.Net
             Level = r.ReadInt(), MaxHp = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
             WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
             ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(), Hair = r.ReadByte(), Cloth = r.ReadByte(),
-            Head = r.ReadByte(), Skin = r.ReadByte(), HideHelmet = r.ReadBool(),
+            Head = r.ReadByte(), Skin = r.ReadByte(), HideHelmet = r.ReadBool(), Elite = r.ReadBool(),
         };
     }
 

@@ -236,6 +236,41 @@ namespace Game.Shared.World
         public static DateTimeOffset NextSlot(DateTimeOffset now) => CurrentSlot(now).AddHours(IntervalHours);
     }
 
+    /// <summary>
+    /// Monstro elite: ao nascer ou renascer no mundo aberto, um monstro comum tem <see cref="Chance"/> de vir mais forte
+    /// (mais vida e dano) e de pagar mais (XP, Alz e uma rolagem de drop a mais). Chefes e monstros de dungeon nunca são elite.
+    /// </summary>
+    public static class EliteRules
+    {
+        public const double Chance = 0.05;
+        public const int HpMultiplier = 4;
+        public const float DamageMultiplier = 1.5f;
+        public const int XpMultiplier = 4;
+        public const int AlzMultiplier = 3;
+        public const int ExtraDropRolls = 1;
+
+        /// <summary>Só monstros comuns do mundo aberto (instância 0) podem ser elite.</summary>
+        public static bool CanBeElite(SpawnDefinition spawn, int instanceId) =>
+            spawn != null && !spawn.IsBoss && !spawn.Scheduled && instanceId == 0;
+
+        /// <summary>Sorteia se o monstro nasce elite.</summary>
+        public static bool Roll(SpawnDefinition spawn, int instanceId, IRandomSource random, double chance = Chance) =>
+            CanBeElite(spawn, instanceId) && random.NextDouble() < chance;
+
+        public static int MaxHp(int baseHp) => baseHp * HpMultiplier;
+        public static int Damage(int baseDamage) => (int)Math.Round(baseDamage * DamageMultiplier);
+        public static int Xp(int baseXp) => baseXp * XpMultiplier;
+
+        /// <summary>Drop do elite: a rolagem normal mais <see cref="ExtraDropRolls"/> (só os itens) e o Alz multiplicado.</summary>
+        public static LootResult RollLoot(DropTable drops, IRandomSource random)
+        {
+            var loot = drops.Roll(random);
+            for (var i = 0; i < ExtraDropRolls; i++) loot.Items.AddRange(drops.Roll(random).Items);
+            loot.Alz *= AlzMultiplier;
+            return loot;
+        }
+    }
+
     /// <summary>Regras do personagem que o cliente offline e o servidor precisam concordar.</summary>
     public static class PlayerRules
     {
