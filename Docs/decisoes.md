@@ -166,6 +166,9 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   e Execução são pesadas (mais hit stop, mais tremida, som grave).
 - **Arcanista:** Faísca e Lança de Força saem como lança (menores e mais rápidas); Corrente Gélida é gelo; Raio Duplo
   são dois projéteis; Meteoro e Cataclismo caem do céu e são os golpes mais pesados do jogo.
+- **Ranger:** as flechas são o modelo `arrow_bow` do pacote (`Visuals/fx/flecha`), retas e rápidas; Tiro Duplo solta
+  duas; Chuva de Flechas e Saraivada fazem a flecha subir e a chuva cair em cima da área; Flecha Flamejante é fogo;
+  Tiro do Falcão abre penas douradas e é a mais pesada da classe.
 - **Áreas:** toda skill de área desenha no chão um anel do tamanho real da área, uma vez por uso (mesmo acertando
   vários monstros), para o jogador aprender o alcance.
 - **Peso:** o peso da skill soma no hit stop (até +0,07 s), multiplica a tremida da câmera e escolhe o som de impacto.
@@ -200,3 +203,20 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
 - **Esc:** fecha primeiro o que estiver aberto (janela, conversa com NPC, mapa grande, amigos, alvo). Sem nada aberto,
   abre as opções. O F1 saiu, e os controles continuam na aba Controles. O F10 segue como atalho alternativo.
 - **Sair do jogo** pelas opções, com confirmação. Online, o servidor salva o personagem quando a conexão cai.
+
+## 2026-10-21 — Terceira classe: Ranger
+
+- **Quem é:** arqueira, física e de longe. O ataque vem do arco e da Força, como na Lâmina, mas as flechas acertam de
+  11 a 14 m, como as magias do Arcanista. Para quem chega perto, tem o Chute de Recuo.
+- **Começo:** Força 8, Destreza 8 e Inteligência 2 (o mesmo total de 18 das outras), com o Arco de Ferro.
+- **Arcos:** Ferro (Nv 1), Aço Negro (Nv 10) e Astralita (Nv 20). Têm um pouco menos de ataque que a espada do mesmo
+  grau, mas dão crítico (2%, 3% e 4%). Caem nos mesmos lugares que as espadas e os cajados.
+- **Skills:** Tiro Certeiro e Flecha Perfurante (Nv 1), Chute de Recuo (3), Chuva de Flechas (5, área), Tiro Duplo (12)
+  e Flecha Flamejante (15, área) com o rank 2, e Saraivada (20, área) e Tiro do Falcão (25) com o rank 3. A rota da
+  classe é a Rajada Certeira (físico, físico, físico; +20%).
+- **Modelo:** o `Ranger.fbx` do KayKit, com o arco (`bow_withString`) na mão esquerda, como pedem as animações de arco
+  do pacote (`Ranged_Bow_Draw` e `Ranged_Bow_Release`). O `WeaponFx` ganhou a mão da arma (`handslot.l` na Ranger).
+- **Identificação:** `ClassInfo` (Shared) concentra o que muda por classe fora das skills: o TypeId (`ranger`), a
+  chave do nome, a arma inicial e o prefixo das armas. Ninguém mais compara a classe com o Arcanista para decidir.
+- **Testes:** o servidor aceita `--guest-class ranger` para os convidados entrarem como Ranger nos testes do exe.
+- **Protocolo:** nenhuma mensagem mudou (a classe já ia como número). Vai junto com o protocolo 18 dos monstros elite.

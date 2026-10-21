@@ -233,6 +233,12 @@ de 2 em 2 horas, nas horas pares de Brasília (`WorldBossRules`).
 - Ao ligar o servidor, ele espera o próximo horário. `/gm chefe` desperta na hora (testes e eventos); `/chefe` no
   chat mostra o próximo horário (o cliente calcula sozinho).
 
+## Ranger (2026-10-21)
+
+No simulador, a Ranger sobe do 1 ao 30 em **6,8 horas**, igual à Lâmina (6,8 h) e ao Arcanista (6,9 h). Os arcos têm
+um pouco menos de ataque que as espadas (22, 54 e 100 contra 25, 60 e 110), e o crítico do arco compensa. As skills
+de área (Chuva de Flechas, Flecha Flamejante e Saraivada) seguem a régua das do Arcanista, com custo de MP parecido.
+
 ## Monstros elite (2026-10-21)
 
 Todo monstro comum do mundo aberto tem **5%** de chance de nascer (ou renascer) elite (`EliteRules`, no

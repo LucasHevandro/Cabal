@@ -12,7 +12,7 @@ Crie um **prefab** com o nome exato do id dentro de `Client/Assets/Resources/Vis
 |---|---|---|
 | Monstros e chefes | `Visuals/monster/` | `coelho_saltador`, `lobo_cinzento`, `guardiao_das_ruinas`, `senhor_da_cripta` |
 | NPCs | `Visuals/npc/` | `anciao_doran`, `ferreira_ilsa`, `guarda_volumes_bento`, `mercadora_lia`, `guardia_selene` |
-| Personagem do jogador (por classe) | `Visuals/class/` | `blade` (Lâmina), `arcanist` (Arcanista) |
+| Personagem do jogador (por classe) | `Visuals/class/` | `blade` (Lâmina), `arcanist` (Arcanista), `ranger` (Ranger) |
 | Itens no chão | `Visuals/item/` | `espada_ferro`, `pocao_hp_p`, `nucleo_baixo` |
 
 Os ids de todos os monstros, NPCs e itens estão no arquivo de textos `Shared/Game.Shared/Resources/Locales/pt-BR.txt`
@@ -48,7 +48,7 @@ Motion" fica desligado: quem move o personagem é o jogo (o servidor, no online)
 
 Com animações do **Mixamo**: importe o personagem como Humanoid, crie um Animator Controller com um Blend Tree de
 `Speed` (parado, andar, correr) e estados de ataque, dano e esquiva ligados aos triggers. Mantendo o mesmo esqueleto
-Humanoid, as mesmas animações servem para as duas classes.
+Humanoid, as mesmas animações servem para as três classes.
 
 ## Conferir
 
@@ -97,6 +97,7 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 |---|---|---|
 | `Visuals/class/blade` (Lâmina) | Knight | espada e escudo |
 | `Visuals/class/arcanist` (Arcanista) | Mage | cajado |
+| `Visuals/class/ranger` (Ranger) | Ranger | arco na mão esquerda |
 | `Visuals/npc/anciao_doran` | Rogue_Hooded | livro aberto |
 | `Visuals/npc/ferreira_ilsa` | Barbarian | machado |
 | `Visuals/npc/guarda_volumes_bento` | Ranger | caneca |
@@ -186,13 +187,13 @@ Só as malhas com esqueleto (o corpo) são repintadas; a arma na mão tem o bril
 uma malha separada do modelo, então o metal segue peças diferentes: a couraça no corpo, as luvas nos braços e as botas
 nas pernas.
 
-| Parte | Knight (Lâmina) | Mage (Arcanista) |
-|---|---|---|
-| Metal (em todas as malhas) | células (3,0), (7,0) e (7,1) | (3,0) e a capa (2,1) |
-| Só nos braços (luvas) | manopla (4,0) | punhos (4,0) |
-| Só nas pernas (botas) | — | sapatos (3,2) |
-| Cabelo | (1,0) | (1,0) |
-| Roupa | tabardo e capa (0,1) | túnica e chapéu (0,1) e (1,1) |
+| Parte | Knight (Lâmina) | Mage (Arcanista) | Ranger |
+|---|---|---|---|
+| Metal (em todas as malhas) | células (3,0), (7,0) e (7,1) | (3,0) e a capa (2,1) | placas (3,0) e couro (7,0) |
+| Só nos braços (luvas) | manopla (4,0) | punhos (4,0) | luvas (7,2) |
+| Só nas pernas (botas) | — | sapatos (3,2) | pernas e botas (3,2) |
+| Cabelo | (1,0) | (1,0) | (1,0) |
+| Roupa | tabardo e capa (0,1) | túnica e chapéu (0,1) e (1,1) | túnica e capa (0,1) |
 
 - **Metal por grau da peça vestida:**
   - sem a peça: cor original;
@@ -224,7 +225,7 @@ nas pernas.
   - `-geartest` (`aparencia.png`): Lâmina e Arcanista com o conjunto de cada grau, peças misturadas e algumas cores;
     `penteados.png`: os seis penteados sem elmo, com tons de pele diferentes;
   - `-onlineui` (`5b-elmo.png`): esconde o elmo pelo servidor e volta a mostrar;
-  - `-logintest`: `criacao_arcanista.png`, `criacao_lamina.png` e `selecao.png`.
+  - `-logintest`: `criacao_arcanista.png`, `criacao_lamina.png`, `criacao_ranger.png` e `selecao.png`.
 
 # Cripta e arena PvP
 

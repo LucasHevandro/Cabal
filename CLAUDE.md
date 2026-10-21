@@ -23,7 +23,7 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   anda junto, por fast-forward. A branch padrão antiga do GitHub ainda pode ser `feat/fase3-rede`.
 - **Pastas:** `Shared/Game.Shared` (netstandard2.1, também usada pelo Unity como pacote local), `Server/Game.Server`,
   `Client/` (Unity), `Tools/` (Bots, Balance, Launcher, instalador, publicar) e `deploy/` (VPS).
-- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 231 no Shared e 172 no Servidor). Os testes de textos
+- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 236 no Shared e 173 no Servidor). Os testes de textos
   exigem chaves literais no código: nada de `"login.head_" + i`, use um array de chaves literais.
 - **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 18`. Se mudar alguma mensagem, suba a
   versão e atualize o cliente e o servidor juntos. O `FuzzTests` conta os tipos de mensagem.
@@ -52,7 +52,8 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   - Rode um jogo por vez: duas instâncias ao mesmo tempo atrapalham o teste.
 - **Modelos:** KayKit Adventurers (Knight, Mage, Ranger, Rogue e Barbarian) usam o mesmo `Rig_Medium`. As cabeças
   trocam entre eles (penteados), e na textura a pele fica na célula (0,0) e o cabelo na (1,0).
-  - Há um `Ranger.fbx`, que serve para a classe Ranger.
+  - O zip `KayKit_Adventurers_2.0_FREE.zip` (em Downloads) tem mais armas na pasta `Assets/fbx(unity)`. De lá vieram
+    o arco e a flecha da Ranger.
 
 ## Armadilhas já vistas
 
@@ -107,7 +108,8 @@ O usuário pediu, nesta ordem: **4, 6, 7, 8, 3 e 5**.
   `EntitySpawned` e, no cliente, modelo 20% maior, dourado, com luz e o nome "{0} (Elite)". O servidor aceita `--elites`
   (todo monstro comum nasce elite) para testar o visual. Falta: publicar a versão no launcher e atualizar o servidor na VM
   (os dois juntos, por causa do protocolo).
+- **3: classe Ranger (feito no código em 2026-10-21).** Arqueira com `Ranger.fbx` e arco na mão esquerda, 8 skills de
+  flecha, três arcos, `ClassInfo` no Shared e `--guest-class ranger` no servidor para testar com o exe. Detalhes em
+  `Docs/decisoes.md`. Falta, junto com os elites: publicar a versão no launcher e atualizar o servidor na VM.
 - **Próximo:**
-  - 3: classe **Ranger** (arqueira, com `Ranger.fbx`). Entra em Shared, Servidor e Cliente: classe, skills, arco e
-    flechas, e criação de personagem.
   - 5: **barraca ou mercado de jogadores na vila.**
