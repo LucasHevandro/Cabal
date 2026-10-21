@@ -64,7 +64,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/lucashevandro/cabal-server
+          images: ghcr.io/lucashevandro/astralis-server
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=tag

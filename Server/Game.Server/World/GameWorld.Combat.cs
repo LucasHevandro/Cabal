@@ -125,7 +125,7 @@ public sealed partial class GameWorld
             case SkillUseCheck.OnCooldown:
                 if (player.Combo.State == ComboPhase.Active)
                 {
-                    // Como no CABAL: skill em recarga durante o combo quebra a corrente.
+                    // Skill em recarga durante o combo quebra a corrente.
                     player.Combo.Cancel();
                     player.ComboDirty = true;
                     Notify(player, LT("combo.ended_cooldown", Loc.Ref("skill." + skill.Id)));

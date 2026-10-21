@@ -33,7 +33,7 @@ services:
     <<: *logs
 
   game:
-    image: ${GAME_IMAGE:-ghcr.io/lucashevandro/cabal-server:latest}
+    image: ${GAME_IMAGE:-ghcr.io/lucashevandro/astralis-server:latest}
     # Sem imagem publicada, dá para construir aqui mesmo: docker compose -f docker-compose.prod.yml build game
     build:
       context: ..
