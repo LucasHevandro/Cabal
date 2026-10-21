@@ -33,6 +33,7 @@ namespace Game.Shared.Net
         ClientReport = 24,
         LearnSkill = 25,
         SetHotbar = 26,
+        AppearanceCommand = 27,
 
         // Servidor → cliente
         Welcome = 100,
@@ -77,7 +78,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 16;
+        public const int Version = 17;
         public const int DefaultPort = 7777;
     }
 
@@ -284,13 +285,16 @@ namespace Game.Shared.Net
 
         /// <summary>
         /// Jogadores: grau da couraça, das luvas e das botas vestidas (cor do metal do corpo, dos braços e das pernas) e as
-        /// cores de cabelo e roupa da criação.
+        /// cores de cabelo e roupa, o penteado e o tom de pele da criação, e se o elmo está escondido.
         /// </summary>
         public byte ArmorGrade;
         public byte GlovesGrade;
         public byte BootsGrade;
         public byte Hair;
         public byte Cloth;
+        public byte Head;
+        public byte Skin;
+        public bool HideHelmet;
 
         public void Write(PacketWriter w)
         {
@@ -309,6 +313,9 @@ namespace Game.Shared.Net
             w.WriteByte(BootsGrade);
             w.WriteByte(Hair);
             w.WriteByte(Cloth);
+            w.WriteByte(Head);
+            w.WriteByte(Skin);
+            w.WriteBool(HideHelmet);
         }
 
         public static EntitySpawned Read(PacketReader r) => new EntitySpawned
@@ -317,12 +324,13 @@ namespace Game.Shared.Net
             Level = r.ReadInt(), MaxHp = r.ReadInt(), X = r.ReadFloat(), Z = r.ReadFloat(),
             WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
             ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(), Hair = r.ReadByte(), Cloth = r.ReadByte(),
+            Head = r.ReadByte(), Skin = r.ReadByte(), HideHelmet = r.ReadBool(),
         };
     }
 
     /// <summary>
-    /// A aparência de um jogador mudou (trocou de arma ou de armadura, ou melhorou a arma): quem o vê troca o modelo, o
-    /// brilho e a cor do metal.
+    /// A aparência de um jogador mudou (trocou de arma ou de armadura, melhorou a arma ou mostrou/escondeu o elmo): quem
+    /// o vê troca o modelo, o brilho e a cor do metal.
     /// Mandado a quem já conhece o jogador (o EntitySpawned leva a aparência de quem acaba de aparecer).
     /// </summary>
     public sealed class EntityLook : INetMessage
@@ -334,6 +342,7 @@ namespace Game.Shared.Net
         public byte ArmorGrade;
         public byte GlovesGrade;
         public byte BootsGrade;
+        public bool HideHelmet;
 
         public void Write(PacketWriter w)
         {
@@ -343,13 +352,25 @@ namespace Game.Shared.Net
             w.WriteByte(ArmorGrade);
             w.WriteByte(GlovesGrade);
             w.WriteByte(BootsGrade);
+            w.WriteBool(HideHelmet);
         }
 
         public static EntityLook Read(PacketReader r) => new EntityLook
         {
             Id = r.ReadInt(), WeaponId = r.ReadString(), WeaponUpgrade = r.ReadByte(),
-            ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(),
+            ArmorGrade = r.ReadByte(), GlovesGrade = r.ReadByte(), BootsGrade = r.ReadByte(), HideHelmet = r.ReadBool(),
         };
+    }
+
+    /// <summary>Cliente → servidor: mostrar ou esconder o elmo (o chapéu, no Arcanista). Fica salvo no personagem.</summary>
+    public sealed class AppearanceCommand : INetMessage
+    {
+        public MessageType Type => MessageType.AppearanceCommand;
+        public bool HideHelmet;
+
+        public void Write(PacketWriter w) => w.WriteBool(HideHelmet);
+
+        public static AppearanceCommand Read(PacketReader r) => new AppearanceCommand { HideHelmet = r.ReadBool() };
     }
 
     public sealed class EntityDespawned : INetMessage
@@ -766,6 +787,7 @@ namespace Game.Shared.Net
                 MessageType.AllocateAttributes => AllocateAttributes.Read(reader),
                 MessageType.LearnSkill => LearnSkill.Read(reader),
                 MessageType.SetHotbar => SetHotbar.Read(reader),
+                MessageType.AppearanceCommand => AppearanceCommand.Read(reader),
                 MessageType.TalkToNpc => TalkToNpc.Read(reader),
                 MessageType.QuestCommand => QuestCommand.Read(reader),
                 MessageType.ActivateAwakening => ActivateAwakening.Read(reader),

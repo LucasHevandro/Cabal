@@ -142,9 +142,12 @@ namespace Game.Shared.Accounts
         public int ClassId;
         public int Level;
 
-        /// <summary>Cores de cabelo e roupa (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
+        /// <summary>Cores de cabelo e roupa, penteado e tom de pele (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
         public int Hair;
         public int Cloth;
+        public int Head;
+        public int Skin;
+        public bool HideHelmet;
 
         /// <summary>Grau da couraça, das luvas e das botas vestidas (0 = sem), para a prévia da seleção.</summary>
         public int ArmorGrade;
@@ -165,5 +168,7 @@ namespace Game.Shared.Accounts
         public int ClassId;
         public int Hair;
         public int Cloth;
+        public int Head;
+        public int Skin;
     }
 }
