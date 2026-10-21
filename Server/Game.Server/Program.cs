@@ -2,6 +2,7 @@
 using Game.Server.Accounts;
 using Game.Server.Net;
 using Game.Server.Persistence;
+using Game.Shared.Accounts;
 using Game.Shared.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -14,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --guests       aceita entrar sem conta (bots e testes; convidados não são salvos)
 //   --dungeon-test dungeon fácil e sem nível mínimo (bots de nível 1 conseguem terminar)
 //   --elites       todo monstro comum do mundo aberto nasce elite (para testar o visual)
+//   --guest-class c convidados entram com a classe c (blade, arcanist ou ranger; para testes)
 //   --arena-size N jogadores por time na arena (padrão 5; 1 para testar a dois)
 //   --stats N      métricas de desempenho a cada N segundos
 //   --gm a,b       contas tratadas como GM nesta execução (testes locais; em produção use --set-gm)
@@ -57,6 +59,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--elites":
             options = options with { AllElites = true };
+            break;
+        case "--guest-class" when value.Length > 0:
+            options = options with { GuestClass = ClassInfo.FromTypeId(value.Trim().ToLowerInvariant()) };
             break;
         case "--gm" when value.Length > 0:
             gmAccounts.AddRange(value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -180,6 +185,7 @@ host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueW
     t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
 if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");
 if (options.AllElites) Log("ATENÇÃO: todo monstro do mundo aberto nasce elite (--elites).");
+if (options.GuestClass != CharacterClass.Blade) Log($"ATENÇÃO: convidados entram como {ClassInfo.TypeId(options.GuestClass)} (--guest-class).");
 
 // Ferramentas de GM: auditoria e moderação gravadas no banco, fora do loop do jogo.
 host.World.GmActionDone += action =>

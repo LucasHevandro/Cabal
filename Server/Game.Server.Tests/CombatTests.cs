@@ -1,5 +1,7 @@
 using Game.Server.World;
+using Game.Shared.Accounts;
 using Game.Shared.Combat;
+using Game.Shared.Items;
 using Game.Shared.Loot;
 using Game.Shared.Monsters;
 using Game.Shared.Net;
@@ -138,6 +140,27 @@ public class CombatTests
         world.Tick(1.0 + monster.Data.RespawnSeconds + 0.1);
         Assert.False(monster.IsDead);
         Assert.Equal(monster.Hp.Max, monster.Hp.Current);
+    }
+
+    [Fact]
+    public void Ranger_nasce_com_arco_e_acerta_de_longe()
+    {
+        var outbox = new FakeOutbox();
+        var spawn = new SpawnDefinition { Data = Dummy(), CenterX = 0, CenterZ = 10, Count = 1, Radius = 0 };
+        var world = new GameWorld(outbox, new[] { spawn }, new FixedRandom(0.5), eliteChance: 0) { GuestClass = CharacterClass.Ranger };
+        var player = world.AddPlayer("Lia", 0);
+        player.Movement.Teleport(0, 0, 0);
+        var monster = world.Monsters.Single();
+
+        Assert.Equal(CharacterClass.Ranger, player.Class);
+        Assert.Equal("arco_ferro", player.Equipment[EquipSlot.Weapon]?.ItemId);
+        Assert.Equal("tiro_certeiro", player.Skills[0].Id);
+        world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id, ClientTime = 1 }, now: 1);
+
+        var hit = Assert.Single(outbox.To<CombatEvent>(player.Id));
+        Assert.Equal(110 + player.Stats.AttackPower, hit.Damage); // flecha física: ataque do arco e da Força
+        world.Tick(1.1);
+        Assert.Equal("ranger", outbox.To<EntitySpawned>(player.Id).Single(s => s.Id == player.Id).TypeId);
     }
 
     [Fact]

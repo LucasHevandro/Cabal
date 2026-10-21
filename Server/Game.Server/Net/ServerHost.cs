@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using Game.Server.Accounts;
 using Game.Server.Persistence;
 using Game.Server.World;
+using Game.Shared.Accounts;
 using Game.Shared.Net;
 using Game.Shared.Text;
 using Game.Shared.World;
@@ -33,6 +34,9 @@ public sealed record ServerOptions
 
     /// <summary>Todo monstro comum do mundo aberto nasce elite (teste do visual).</summary>
     public bool AllElites { get; init; }
+
+    /// <summary>Classe dos convidados (testes da Ranger e do Arcanista com o exe).</summary>
+    public CharacterClass GuestClass { get; init; } = CharacterClass.Blade;
 
     /// <summary>Segundos para mandar o Hello depois de conectar (senão a conexão cai).</summary>
     public double HelloTimeoutSeconds { get; init; } = 15;
@@ -128,7 +132,10 @@ public sealed class ServerHost : IOutbox, IDisposable
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
         World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null,
-            arenaTeamSize: options.ArenaTeamSize, eliteChance: options.AllElites ? 1 : EliteRules.Chance);
+            arenaTeamSize: options.ArenaTeamSize, eliteChance: options.AllElites ? 1 : EliteRules.Chance)
+        {
+            GuestClass = options.GuestClass,
+        };
         // Expulsão por GM (vale também para banimento): mostra o motivo e fecha a conexão.
         World.KickRequested += (playerId, reason) =>
         {

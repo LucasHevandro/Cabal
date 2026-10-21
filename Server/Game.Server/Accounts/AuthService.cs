@@ -221,8 +221,7 @@ public sealed class AuthService
         var items = new List<ItemRecord>();
         if (newUid != null)
         {
-            var weapon = characterClass == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
-            items.Add(new ItemRecord(newUid(), ItemContainerKind.Equipment, (int)EquipSlot.Weapon, weapon, 1));
+            items.Add(new ItemRecord(newUid(), ItemContainerKind.Equipment, (int)EquipSlot.Weapon, ClassInfo.StarterWeapon(characterClass), 1));
             items.Add(new ItemRecord(newUid(), ItemContainerKind.Bag, 0, "pocao_hp_p", 5));
         }
         return new CharacterRecord(0, 0, "", characterClass, 1, 0, 0, WorldContent.PlayerSpawnX, WorldContent.PlayerSpawnZ,

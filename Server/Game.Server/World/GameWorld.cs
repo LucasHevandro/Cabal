@@ -93,7 +93,7 @@ public sealed partial class GameWorld
         var id = _nextEntityId++;
         var (spawnX, spawnZ) = SpawnPointFor(id);
         if (character != null && IsInsideWorld(character.X, character.Z)) (spawnX, spawnZ) = (character.X, character.Z);
-        var player = new ServerPlayer(character?.Class ?? CharacterClass.Blade)
+        var player = new ServerPlayer(character?.Class ?? GuestClass)
         {
             Id = id,
             Name = cleanName.Length > 20 ? cleanName[..20] : cleanName,
@@ -303,6 +303,9 @@ public sealed partial class GameWorld
 
     /// <summary>Relógio de verdade (as diárias e o horário do chefe de mundo); os testes trocam.</summary>
     public Func<DateTimeOffset> Clock { get; init; } = () => DateTimeOffset.UtcNow;
+
+    /// <summary>Classe dos convidados (sem personagem salvo). Lâmina, ou a da opção --guest-class nos testes.</summary>
+    public CharacterClass GuestClass { get; set; } = CharacterClass.Blade;
 
     private int _questDay = DailyRules.Today();
 
@@ -558,8 +561,7 @@ public sealed partial class GameWorld
     /// <summary>Convidado começa com a arma da classe vestida e algumas poções.</summary>
     private void GiveGuestKit(ServerPlayer player)
     {
-        var weapon = player.Class == CharacterClass.Arcanist ? "cajado_ferro" : "espada_ferro";
-        player.Equipment.Put(EquipSlot.Weapon, new ItemInstance { Uid = _uids.Next(), ItemId = weapon });
+        player.Equipment.Put(EquipSlot.Weapon, new ItemInstance { Uid = _uids.Next(), ItemId = ClassInfo.StarterWeapon(player.Class) });
         player.Bag.TryAdd("pocao_hp_p", 5, _uids.Next);
         foreach (var skill in player.ClassSkills) player.LearnedSkills.Add(skill.Skill.Id);
         player.Hotbar = SkillTraining.DefaultHotbar(player.ClassSkills, player.LearnedSkills);
@@ -597,8 +599,8 @@ public sealed partial class GameWorld
 
     private static EntitySpawned SpawnMessage(ServerPlayer player) => new()
     {
-        // Jogadores levam a classe no TypeId ("blade"/"arcanist"): o cliente escolhe o modelo por ela.
-        Id = player.Id, Kind = EntityKind.Player, TypeId = player.Class == CharacterClass.Arcanist ? "arcanist" : "blade",
+        // Jogadores levam a classe no TypeId ("blade", "arcanist" ou "ranger"): o cliente escolhe o modelo por ela.
+        Id = player.Id, Kind = EntityKind.Player, TypeId = ClassInfo.TypeId(player.Class),
         Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
         WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade, ArmorGrade = (byte)player.Look.ArmorGrade,
         GlovesGrade = (byte)player.Look.GlovesGrade, BootsGrade = (byte)player.Look.BootsGrade,

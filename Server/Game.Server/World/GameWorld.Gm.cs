@@ -119,7 +119,7 @@ public sealed partial class GameWorld
         switch (verb)
         {
             case "info":
-                SystemChat(gm, LT("gm.info", target.Name, target.Progress.Level, Loc.Ref(target.Class == Game.Shared.Accounts.CharacterClass.Arcanist ? "class.arcanist" : "class.blade"),
+                SystemChat(gm, LT("gm.info", target.Name, target.Progress.Level, Loc.Ref(Game.Shared.Accounts.ClassInfo.NameKey(target.Class)),
                     target.Alz, $"{target.X:0}, {target.Z:0}", target.IsGuest ? Loc.Ref("gm.guest_tag") : target.AccountId.ToString(CultureInfo.InvariantCulture),
                     $"{(now - target.JoinedAt) / 60:0}"));
                 break;
