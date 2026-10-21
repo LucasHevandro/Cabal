@@ -412,6 +412,12 @@ namespace Game.Client.Net
                 GUI.color = Color.white;
             }
             GUILayout.EndArea();
+
+            // Versão do jogo no canto (a do Player Settings; o launcher publica com ela).
+            GUI.color = new Color(1f, 1f, 1f, 0.6f);
+            GUI.Label(new Rect(UnityEngine.Screen.width - 260 * scale, UnityEngine.Screen.height - 30 * scale, 248 * scale, 24 * scale),
+                Loc.T("login.version", Application.version), new GUIStyle(_small) { alignment = TextAnchor.LowerRight, wordWrap = false });
+            GUI.color = Color.white;
         }
 
         private void Update()
