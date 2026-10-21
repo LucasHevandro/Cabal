@@ -358,3 +358,20 @@ curl -sk https://localhost/api/health
 - **Contas por IP:** cada IP cria no máximo 3 contas em 24 horas (`AuthService.MaxAccountsPerIp`). O IP vem do `X-Forwarded-For` que o Caddy envia, aceito só quando o pedido chega pela rede interna. O limite fica na memória e zera quando o servidor reinicia. O login trava a conta após 5 senhas erradas.
 - **Termos e privacidade:** preencha os campos `<<preencher>>` dos textos antes de abrir o teste (veja `Docs/metricas.md`).
 - **Uma VPS só:** se ela cair, o jogo cai. O monitoramento avisa, e o backup fora da VPS garante que nada se perde.
+
+## Instalador e zip do cliente
+
+Depois do build do Windows (menu Protótipo → Gerar build Windows):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Tools\instalador\gerar-instalador.ps1
+```
+
+- **Sai em** `Client/Builds/InstalarTerrasDeAstralis.exe` (uns 35 MB). Precisa do Inno Setup 6 (`winget install --id JRSoftware.InnoSetup -e`).
+- **O que faz:** instala na pasta do usuário, sem pedir administrador; cria os atalhos na Área de Trabalho e no Menu
+  Iniciar; aparece em "Adicionar ou remover programas". Rodar uma versão nova por cima atualiza o jogo.
+- **Versão:** a do Player Settings (`bundleVersion`), ou `-Version 0.2.0`.
+- **Aviso do Windows:** sem assinatura digital, o SmartScreen mostra "O Windows protegeu o computador". O jogador
+  clica em **Mais informações → Executar assim mesmo**.
+- **itch.io:** suba o zip da pasta `Client/Builds/Windows` (sem a `*_BackUpThisFolder_*`). O app do itch.io instala e
+  atualiza sozinho. O instalador serve para link direto (Drive, Discord, a própria VPS).
