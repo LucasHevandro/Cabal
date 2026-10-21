@@ -23,9 +23,9 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   anda junto, por fast-forward. A branch padrão antiga do GitHub ainda pode ser `feat/fase3-rede`.
 - **Pastas:** `Shared/Game.Shared` (netstandard2.1, também usada pelo Unity como pacote local), `Server/Game.Server`,
   `Client/` (Unity), `Tools/` (Bots, Balance, Launcher, instalador, publicar) e `deploy/` (VPS).
-- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 226 no Shared e 169 no Servidor). Os testes de textos
+- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 231 no Shared e 172 no Servidor). Os testes de textos
   exigem chaves literais no código: nada de `"login.head_" + i`, use um array de chaves literais.
-- **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 17`. Se mudar alguma mensagem, suba a
+- **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 18`. Se mudar alguma mensagem, suba a
   versão e atualize o cliente e o servidor juntos. O `FuzzTests` conta os tipos de mensagem.
 - **Migrações:** `cd Server/Game.Server && dotnet ef migrations add Nome -o Persistence/Migrations`.
 - **Textos:** `Shared/Game.Shared/Resources/Locales/pt-BR.txt`, lidos por `Loc.T("chave", args)`.
@@ -102,21 +102,12 @@ O usuário pediu, nesta ordem: **4, 6, 7, 8, 3 e 5**.
   - 6: música por região e som ambiente.
   - 7: penteados, tom de pele e esconder o elmo.
   - Extras: servidor na Oracle, ícone, ponte, instalador, launcher e troca do nome do repositório.
-- **Próximo, 8: monstros elite.** Ainda não começou no código. Plano combinado:
-  - **Shared:** `EliteRules`, com cerca de 5% de chance ao nascer ou renascer, só para monstros do mundo aberto (nem
-    chefe, nem dungeon, nem chefe com horário). Vida ×4, dano ×1,5, XP ×4, Alz ×3 e uma rolagem de drop a mais.
-  - **Servidor:**
-    - `ServerMonster.IsElite`, sorteado com o `_random` em `CreateMonster` (`GameWorld.cs`) e `RespawnMonster`
-      (`GameWorld.Combat.cs`), e recompensas multiplicadas no `KillMonster`.
-    - Hoje `ServerMonster.Data` vem do `Spawn` (compartilhado pelo spawn). Para os números por monstro, use
-      multiplicadores ou um `MonsterData` clonado.
-  - **Protocolo:** um campo `Elite` no `EntitySpawned` do monstro. Isso pede o protocolo 18 (o 17 já está publicado
-    na VM e no launcher).
-  - **Cliente:** modelo uns 20% maior com tom dourado (no estilo do `VisualCatalog.ApplyVariant`), nome dourado
-    "{0} (Elite)" (chave `monster.elite_name`) e talvez uma aura.
-  - **Fechamento:** testes no servidor, `Docs/balanceamento.md`, commits por camada, publicar a versão no launcher e
-    atualizar o servidor na VM.
-- **Depois:**
+- **8: monstros elite (feito no código em 2026-10-21, protocolo 18).** `EliteRules` no `WorldContent.cs` (5%, só mundo
+  aberto; vida ×4, dano ×1,5, XP ×4, Alz ×3 e uma rolagem de drop a mais), `ServerMonster.IsElite`, campo `Elite` no
+  `EntitySpawned` e, no cliente, modelo 20% maior, dourado, com luz e o nome "{0} (Elite)". O servidor aceita `--elites`
+  (todo monstro comum nasce elite) para testar o visual. Falta: publicar a versão no launcher e atualizar o servidor na VM
+  (os dois juntos, por causa do protocolo).
+- **Próximo:**
   - 3: classe **Ranger** (arqueira, com `Ranger.fbx`). Entra em Shared, Servidor e Cliente: classe, skills, arco e
     flechas, e criação de personagem.
   - 5: **barraca ou mercado de jogadores na vila.**

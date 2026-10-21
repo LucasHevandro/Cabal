@@ -232,3 +232,24 @@ de 2 em 2 horas, nas horas pares de Brasília (`WorldBossRules`).
   com quem causou mais dano.
 - Ao ligar o servidor, ele espera o próximo horário. `/gm chefe` desperta na hora (testes e eventos); `/chefe` no
   chat mostra o próximo horário (o cliente calcula sozinho).
+
+## Monstros elite (2026-10-21)
+
+Todo monstro comum do mundo aberto tem **5%** de chance de nascer (ou renascer) elite (`EliteRules`, no
+`WorldContent.cs`). Chefes, o chefe de mundo e os monstros de dungeon nunca são elite. O sorteio se repete a cada
+renascimento: um elite morto pode voltar comum, e vice-versa.
+
+| | Normal | Elite |
+|---|---|---|
+| Vida | ×1 | ×4 |
+| Dano | ×1 | ×1,5 (sobre o dano final, depois da defesa) |
+| XP | ×1 | ×4 (antes do ajuste por nível e da divisão do grupo) |
+| Alz | ×1 | ×3 |
+| Drop | 1 rolagem | 2 rolagens (só os itens; o Alz é o da primeira) |
+
+- Com 5% de chance e XP ×4, a XP média por monstro sobe uns 15%, mas o elite leva umas 4 vezes mais tempo para cair.
+  Na prática o ritmo de subida fica quase igual; o simulador não sorteia elites.
+- No cliente, o elite é 20% maior, tem o tom dourado, uma luz dourada em volta e o nome "{0} (Elite)" em dourado.
+- O `EntitySpawned` leva o campo `Elite` (protocolo 18). Quando o elite muda no renascimento, o servidor faz quem via o
+  monstro esquecê-lo e manda o `EntitySpawned` de novo.
+- Teste do visual: `Game.Server --elites` faz todo monstro comum do mundo aberto nascer elite.
