@@ -16,6 +16,9 @@ namespace Game.Client.Fx
 
         [SerializeField] private Material trailMaterial;
 
+        /// <summary>Osso da mão que segura a arma (o arco da Ranger fica na esquerda).</summary>
+        [SerializeField] private string handSlot = "handslot.r";
+
         private Transform _tip;
         private TrailRenderer _trail;
         private Transform _hand;
@@ -66,10 +69,12 @@ namespace Game.Client.Fx
 
         public void SetTrailMaterial(Material material) => trailMaterial = material;
 
+        public void SetHandSlot(string slot) => handSlot = slot;
+
         private void Awake()
         {
             _restPosition = transform.localPosition;
-            _hand = FindDeep(transform, "handslot.r");
+            _hand = FindDeep(transform, handSlot);
             var weapon = _hand != null ? _hand.GetComponentInChildren<MeshRenderer>() : null;
             if (weapon != null) Bind(weapon);
         }
@@ -210,7 +215,7 @@ namespace Game.Client.Fx
             while (true)
             {
                 var t = Time.time - start;
-                if (_trail != null) _trail.emitting = skill.Kind == SkillKind.Physical && t >= move.TrailFrom && t <= move.TrailTo;
+                if (_trail != null) _trail.emitting = skill.Kind == SkillKind.Physical && !move.NoTrail && t >= move.TrailFrom && t <= move.TrailTo;
 
                 // Avanço: vai até a distância no LungeAt e volta devagar.
                 if (move.Lunge > 0f)

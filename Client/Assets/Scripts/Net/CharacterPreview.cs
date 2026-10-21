@@ -46,7 +46,7 @@ namespace Game.Client.Net
             {
                 if (_model != null) Object.Destroy(_model);
                 _class = characterClass;
-                _model = VisualCatalog.Spawn(VisualCatalog.Class, characterClass == CharacterClass.Arcanist ? "arcanist" : "blade", _rig.transform);
+                _model = VisualCatalog.Spawn(VisualCatalog.Class, ClassInfo.TypeId(characterClass), _rig.transform);
                 _style = null;
             }
             if (_model == null) return;

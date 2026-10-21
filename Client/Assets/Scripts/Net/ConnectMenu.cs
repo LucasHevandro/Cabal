@@ -673,6 +673,8 @@ namespace Game.Client.Net
             if (GUILayout.Toggle(_newClass == CharacterClass.Arcanist, " " + Loc.T("login.class_arcanist"), GUI.skin.button, GUILayout.Height(34 * scale)))
                 _newClass = CharacterClass.Arcanist;
             GUILayout.EndHorizontal();
+            if (GUILayout.Toggle(_newClass == CharacterClass.Ranger, " " + Loc.T("login.class_ranger"), GUI.skin.button, GUILayout.Height(34 * scale)))
+                _newClass = CharacterClass.Ranger;
             _newHair = ColorRow(Loc.T("login.hair"), CharacterPaint.HairColors, _newHair, scale);
             _newCloth = ColorRow(Loc.T("login.cloth"), CharacterPaint.ClothColors, _newCloth, scale);
             _newSkin = ColorRow(Loc.T("login.skin"), CharacterPaint.SkinColors, _newSkin, scale);

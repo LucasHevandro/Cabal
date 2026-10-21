@@ -30,6 +30,9 @@ namespace Game.Client.Fx
         /// <summary>Magia que junta energia na ponta do cajado antes de soltar.</summary>
         public bool Charge;
 
+        /// <summary>Sem rastro na arma (o arco não corta o ar).</summary>
+        public bool NoTrail;
+
         public float FirstImpact => Impacts.Length > 0 ? Impacts[0] : 0f;
     }
 
@@ -91,6 +94,60 @@ namespace Game.Client.Fx
             },
             new SkillMove { Id = "cataclismo", Steps = new[] { ("CombatRanged", "Ranged_Magic_Summon", 1.5f) },
                 Impacts = new[] { 0.95f }, Charge = true },
+
+            // ----- Ranger (arco na mão esquerda: puxa a corda e solta) -----
+            new SkillMove
+            {
+                Id = "tiro_certeiro",
+                Steps = new[] { ("CombatRanged", "Ranged_Bow_Draw", 0.25f), ("CombatRanged", "Ranged_Bow_Release", 0.25f) },
+                Impacts = new[] { 0.27f }, NoTrail = true,
+            },
+            new SkillMove
+            {
+                Id = "flecha_perfurante",
+                Steps = new[] { ("CombatRanged", "Ranged_Bow_Draw", 0.35f), ("CombatRanged", "Ranged_Bow_Release", 0.3f) },
+                Impacts = new[] { 0.37f }, Charge = true, NoTrail = true,
+            },
+            new SkillMove { Id = "chute_de_recuo", Steps = new[] { ("CombatMelee", "Melee_Unarmed_Attack_Kick", 0.5f) },
+                Impacts = new[] { 0.22f }, Lunge = 0.2f, LungeAt = 0.2f, NoTrail = true },
+            new SkillMove
+            {
+                Id = "chuva_de_flechas",
+                Steps = new[] { ("CombatRanged", "Ranged_Bow_Draw_Up", 0.4f), ("CombatRanged", "Ranged_Bow_Release_Up", 0.4f) },
+                Impacts = new[] { 0.42f }, NoTrail = true,
+            },
+            new SkillMove
+            {
+                Id = "tiro_duplo",
+                Steps = new[]
+                {
+                    ("CombatRanged", "Ranged_Bow_Draw", 0.2f), ("CombatRanged", "Ranged_Bow_Release", 0.18f),
+                    ("CombatRanged", "Ranged_Bow_Draw", 0.15f), ("CombatRanged", "Ranged_Bow_Release", 0.22f),
+                },
+                Impacts = new[] { 0.22f, 0.55f }, NoTrail = true,
+            },
+            new SkillMove
+            {
+                Id = "flecha_flamejante",
+                Steps = new[] { ("CombatRanged", "Ranged_Bow_Draw", 0.45f), ("CombatRanged", "Ranged_Bow_Release", 0.4f) },
+                Impacts = new[] { 0.47f }, Charge = true, NoTrail = true,
+            },
+            new SkillMove
+            {
+                Id = "saraivada",
+                Steps = new[]
+                {
+                    ("CombatRanged", "Ranged_Bow_Draw_Up", 0.45f), ("CombatRanged", "Ranged_Bow_Release_Up", 0.25f),
+                    ("CombatRanged", "Ranged_Bow_Draw_Up", 0.15f), ("CombatRanged", "Ranged_Bow_Release_Up", 0.25f),
+                },
+                Impacts = new[] { 0.47f }, NoTrail = true,
+            },
+            new SkillMove
+            {
+                Id = "tiro_do_falcao",
+                Steps = new[] { ("CombatRanged", "Ranged_Bow_Draw", 0.75f), ("CombatRanged", "Ranged_Bow_Release", 0.55f) },
+                Impacts = new[] { 0.78f }, Charge = true, NoTrail = true,
+            },
         };
 
         private static Dictionary<string, int> _index;

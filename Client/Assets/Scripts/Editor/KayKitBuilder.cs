@@ -11,7 +11,7 @@ namespace Game.Client.Editor
     /// <summary>
     /// Personagens do KayKit (Kay Lousberg, CC0) no jogo: configura a importação, cria os materiais, o Animator
     /// Controller (andar/correr, 10 estilos de golpe, dano, esquiva e morte) e os prefabs que o
-    /// <see cref="VisualCatalog"/> procura: <c>Visuals/class/blade|arcanist</c> e <c>Visuals/npc/&lt;id&gt;</c>.
+    /// <see cref="VisualCatalog"/> procura: <c>Visuals/class/blade|arcanist|ranger</c> e <c>Visuals/npc/&lt;id&gt;</c>.
     /// Menu: Jogo &gt; Visuais &gt; Montar personagens KayKit (ou -executeMethod ...KayKitBuilder.Build).
     /// Os arquivos originais ficam em Assets/Art/KayKit (licenças junto).
     /// </summary>
@@ -50,6 +50,8 @@ namespace Game.Client.Editor
         {
             ["blade"] = new Look { Model = "Knight", RightHand = "sword_1handed", LeftHand = "shield_badge_color", Heads = true },
             ["arcanist"] = new Look { Model = "Mage", RightHand = "staff", Heads = true },
+            // Ranger: o arco fica na mão esquerda, como nas animações de arco do pacote.
+            ["ranger"] = new Look { Model = "Ranger", LeftHand = "bow_withString", Heads = true },
         };
 
         private static readonly Dictionary<string, Look> NpcLooks = new Dictionary<string, Look>
@@ -438,7 +440,12 @@ namespace Game.Client.Editor
             if (look.Heads) AddHeads(model, look.Model, materials);
 
             // Classes: rastro na arma, energia no cajado e avanço nos golpes (WeaponFx).
-            if (weaponFx) root.AddComponent<WeaponFx>().SetTrailMaterial(TrailMaterial());
+            if (weaponFx)
+            {
+                var fx = root.AddComponent<WeaponFx>();
+                fx.SetTrailMaterial(TrailMaterial());
+                if (look.RightHand.Length == 0 && look.LeftHand.Length > 0) fx.SetHandSlot("handslot.l");
+            }
 
             AssetDatabase.DeleteAsset(path);
             PrefabUtility.SaveAsPrefabAsset(root, path);

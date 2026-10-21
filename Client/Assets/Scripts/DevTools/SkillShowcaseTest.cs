@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Game.Client.DevTools
 {
     /// <summary>
-    /// Vitrine das 16 skills no jogo de verdade: <c>-skilltest pasta</c> põe o modelo da classe de lado para a câmera,
+    /// Vitrine das skills das três classes no jogo de verdade: <c>-skilltest pasta</c> põe o modelo da classe de lado para a câmera,
     /// com um alvo na frente, e para cada skill toca o golpe (animação, rastro, carga), o projétil e o impacto, com
     /// capturas no meio do golpe e no acerto. Metade das skills sai como Excellent (rastro dourado). Depois fecha.
     /// </summary>
@@ -56,12 +56,12 @@ namespace Game.Client.DevTools
 
             var report = new System.Text.StringBuilder();
             var shot = 0;
-            foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
+            foreach (var characterClass in ClassInfo.All)
             {
                 var holder = new GameObject(characterClass.ToString());
                 holder.transform.position = spot;
                 holder.transform.rotation = Quaternion.LookRotation(target.position - spot);
-                var model = VisualCatalog.Spawn(VisualCatalog.Class, characterClass == CharacterClass.Arcanist ? "arcanist" : "blade", holder.transform);
+                var model = VisualCatalog.Spawn(VisualCatalog.Class, ClassInfo.TypeId(characterClass), holder.transform);
                 yield return new WaitForSeconds(0.5f);
                 var skills = ClassCatalog.SkillsFor(characterClass);
                 for (var i = 0; i < skills.Count; i++)
@@ -74,7 +74,7 @@ namespace Game.Client.DevTools
                     var started = Time.time;
                     VisualAnimator.Attack(holder.transform, AttackStyle.For(skill), pace);
                     WeaponFx.Play(holder.transform, skill, grade);
-                    var arrived = skill.Kind != SkillKind.Magical;
+                    var arrived = !SkillFx.IsProjectile(skill);
                     var arrivedAt = 0f;
 
                     // Meio do golpe (preparação ou carga).
@@ -82,7 +82,7 @@ namespace Game.Client.DevTools
                     ScreenCapture.CaptureScreenshot(Path.Combine(_folder, $"{shot++:00}-{skill.Id}-a-preparo.png"));
 
                     yield return new WaitForSeconds(Mathf.Max(0f, impact - (Time.time - started)));
-                    if (skill.Kind == SkillKind.Magical)
+                    if (SkillFx.IsProjectile(skill))
                     {
                         SkillFx.Launch(skill, holder.transform, target, Vector3.up * 1.1f, grade, () =>
                         {
@@ -105,7 +105,7 @@ namespace Game.Client.DevTools
                 }
                 Destroy(holder);
             }
-            File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), report + "SUCESSO: 16 skills\n");
+            File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), report + $"SUCESSO: {shot / 2} skills\n");
             Application.Quit();
         }
     }

@@ -557,13 +557,13 @@ namespace Game.Client.DevTools
             // (só na tela). As fotos pegam o meio das skills pesadas de cada classe.
             var dummy = new GameObject("Alvo de teste").transform;
             dummy.position = me.transform.position + me.transform.forward * 7f;
-            foreach (var characterClass in new[] { Game.Shared.Accounts.CharacterClass.Blade, Game.Shared.Accounts.CharacterClass.Arcanist })
+            foreach (var characterClass in Game.Shared.Accounts.ClassInfo.All)
             {
                 foreach (var classSkill in ClassCatalog.SkillsFor(characterClass))
                 {
                     var skill = classSkill.Skill;
                     Game.Client.Fx.SkillFx.OnCast(skill, me.transform);
-                    var landed = skill.Kind != Game.Shared.Combat.SkillKind.Magical;
+                    var landed = !Game.Client.Fx.SkillFx.IsProjectile(skill);
                     if (!landed) Game.Client.Fx.SkillFx.Launch(skill, me.transform, dummy, Vector3.up, null, () => landed = true);
                     yield return WaitFor(() => landed, 2f);
                     Game.Client.Fx.SkillFx.OnImpact(skill, dummy.position + Vector3.up, Game.Shared.Combat.ComboGrade.Excellent, false);

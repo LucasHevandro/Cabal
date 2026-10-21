@@ -182,6 +182,49 @@ namespace Game.Client.Fx
             }, 1);
         }
 
+        /// <summary>
+        /// Flecha da Ranger: o modelo (Visuals/fx/flecha, apontando para +Z) voando reto até o alvo, com um rastro fino da
+        /// cor da skill. Sem o modelo, um palito no lugar.
+        /// </summary>
+        public void LaunchArrow(Vector3 from, Transform target, Vector3 targetOffset, Color color, Action onArrive,
+            float sizeMultiplier = 1f, float speedMultiplier = 2f)
+        {
+            var prefab = Resources.Load<GameObject>("Visuals/fx/flecha");
+            GameObject arrow;
+            if (prefab != null)
+            {
+                arrow = Instantiate(prefab);
+            }
+            else
+            {
+                arrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(arrow.GetComponent<Collider>());
+                arrow.transform.localScale = new Vector3(0.05f, 0.05f, 0.8f);
+            }
+            arrow.name = "Flecha";
+            arrow.transform.position = from;
+            arrow.transform.localScale *= sizeMultiplier;
+            if (target != null && (target.position + targetOffset - from).sqrMagnitude > 0.0001f)
+                arrow.transform.rotation = Quaternion.LookRotation(target.position + targetOffset - from);
+            foreach (var renderer in arrow.GetComponentsInChildren<Renderer>())
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var projectile = arrow.AddComponent<Projectile>();
+            projectile.Launch(target, targetOffset, projectileSpeed * speedMultiplier, () =>
+            {
+                Sparks(arrow.transform.position, color, 6);
+                onArrive?.Invoke();
+            });
+            projectile.TrailEmitter = (position) => _sparks.Emit(new ParticleSystem.EmitParams
+            {
+                position = position,
+                velocity = Vector3.zero,
+                startColor = color,
+                startSize = sparkSize * 0.5f * sizeMultiplier,
+                startLifetime = 0.15f,
+                applyShapeToPosition = false,
+            }, 1);
+        }
+
         private ParticleSystem CreateSparkSystem(float gravity = 1.2f, string name = "Faíscas")
         {
             var host = new GameObject(name);

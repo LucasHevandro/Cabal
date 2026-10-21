@@ -68,7 +68,7 @@ namespace Game.Client.Fx
         public static int ForRemote(string classTypeId, byte source)
         {
             if (source == Game.Shared.Net.CombatSource.Finisher) return Finisher;
-            var characterClass = classTypeId == "arcanist" ? CharacterClass.Arcanist : CharacterClass.Blade;
+            var characterClass = ClassInfo.FromTypeId(classTypeId);
             var skills = ClassCatalog.SkillsFor(characterClass);
             return source < skills.Count ? For(skills[source].Skill) : Slice;
         }

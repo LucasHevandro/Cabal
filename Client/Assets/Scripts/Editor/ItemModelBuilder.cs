@@ -40,6 +40,10 @@ namespace Game.Client.Editor
             WeaponPrefab("cajado_ferro", "staff", "mage", 0, 1f);
             WeaponPrefab("cajado_aco_negro", "staff", "mage", 1, 1.1f);
             WeaponPrefab("cajado_astralita", "staff", "mage", 2, 1.2f);
+            WeaponPrefab("arco_ferro", "bow_withString", "ranger", 0, 1f);
+            WeaponPrefab("arco_aco_negro", "bow_withString", "ranger", 1, 1.05f);
+            WeaponPrefab("arco_astralita", "bow_withString", "ranger", 2, 1.1f);
+            ArrowPrefab();
             Gear();
             Small();
             AssetDatabase.SaveAssets();
@@ -89,6 +93,36 @@ namespace Game.Client.Editor
             weapon.transform.localRotation = Quaternion.Euler(0, 0, 60);
             weapon.transform.localPosition = new Vector3(0.3f, -0.25f, 0);
             Save(root, $"{ItemPrefabs}/{itemId}.prefab");
+        }
+
+        /// <summary>
+        /// Flecha que voa (Visuals/fx/flecha): o modelo do pacote deitado com a ponta para +Z (o Projectile aponta o +Z
+        /// para o alvo), pelo eixo mais comprido da malha.
+        /// </summary>
+        private static void ArrowPrefab()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{Weapons}/arrow_bow.fbx");
+            var material = Tinted("ranger", 0);
+            var root = new GameObject("flecha");
+            var arrow = (GameObject)PrefabUtility.InstantiatePrefab(asset, root.transform);
+            foreach (var renderer in arrow.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterials = renderer.sharedMaterials.Select(_ => material).ToArray();
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            var filter = arrow.GetComponentInChildren<MeshFilter>();
+            if (filter != null)
+            {
+                // O pivô fica na ponta e a malha vai dele até as penas: a ponta é o lado oposto ao centro da malha.
+                var bounds = filter.sharedMesh.bounds;
+                var size = bounds.size;
+                var axis = size.x > size.y && size.x > size.z ? Vector3.right : size.y > size.z ? Vector3.up : Vector3.forward;
+                var tip = Vector3.Dot(bounds.center, axis) >= 0 ? -axis : axis;
+                arrow.transform.localRotation = Quaternion.FromToRotation(filter.transform.localRotation * tip, Vector3.forward);
+                Debug.Log($"[Itens] flecha: eixo {axis}, ponta {tip}, tamanho {size}");
+            }
+            Directory.CreateDirectory("Assets/Resources/Visuals/fx");
+            Save(root, "Assets/Resources/Visuals/fx/flecha.prefab");
         }
 
         // ===== Peças low-poly =====

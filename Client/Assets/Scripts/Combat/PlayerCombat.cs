@@ -160,14 +160,13 @@ namespace Game.Client.Combat
         }
 
         /// <summary>
-        /// Troca a cápsula pelo modelo da classe (Visuals/class/blade ou arcanist), se existir. As formas simples ficam
+        /// Troca a cápsula pelo modelo da classe (Visuals/class/blade, arcanist ou ranger), se existir. As formas simples ficam
         /// escondidas, não apagadas: sem modelo para a classe nova, elas voltam.
         /// </summary>
         private void ApplyClassModel(CharacterClass characterClass)
         {
             if (_classModel != null) Destroy(_classModel);
-            var key = characterClass == CharacterClass.Arcanist ? "arcanist" : "blade";
-            _classModel = VisualCatalog.Spawn(VisualCatalog.Class, key, transform);
+            _classModel = VisualCatalog.Spawn(VisualCatalog.Class, ClassInfo.TypeId(characterClass), transform);
             if (_classModel != null && _lookWeapon.Length > 0) WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
             if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _style);
             foreach (var name in new[] { "Corpo", "Frente" })
@@ -413,7 +412,8 @@ namespace Game.Client.Combat
             var impact = (move != null ? move.FirstImpact : 0f) / pace;
             VisualAnimator.Attack(this, AttackStyle.For(skill), pace);
             WeaponFx.Play(this, skill, grade);
-            var magical = skill.Kind == SkillKind.Magical && CombatFx.Instance != null;
+            // Magias e flechas viajam até o alvo; os golpes de perto acertam na hora do impacto.
+            var magical = SkillFx.IsProjectile(skill) && CombatFx.Instance != null;
             if (!magical)
             {
                 After(Mathf.Max(0f, impact - 0.1f), () => SoundPlayer.Play(SoundId.SwordSwing, 0.55f, 0.1f));
@@ -432,7 +432,7 @@ namespace Game.Client.Combat
                     After(impact, () =>
                     {
                         if (target == null) return;
-                        SoundPlayer.Play(SoundId.Cast, 0.6f);
+                        SkillFx.PlayLaunchSound(skill);
                         SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, null, WeaponFx.TipOf(this));
                     });
                 }
@@ -446,7 +446,7 @@ namespace Game.Client.Combat
                 After(impact, () =>
                 {
                     if (target == null) return;
-                    SoundPlayer.Play(SoundId.Cast, 0.6f);
+                    SkillFx.PlayLaunchSound(skill);
                     SkillFx.Launch(skill, transform, target.transform, Vector3.up * 1.1f, grade, () =>
                     {
                         if (target != null) LandSkill(skill, target, multiplier, inCombo, grade);

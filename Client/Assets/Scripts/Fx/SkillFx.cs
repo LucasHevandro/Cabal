@@ -19,6 +19,15 @@ namespace Game.Client.Fx
 
         /// <summary>Cai do céu em cima do alvo.</summary>
         Meteor,
+
+        /// <summary>Flecha (Ranger): o modelo da flecha, reto e rápido.</summary>
+        Arrow,
+
+        /// <summary>Duas flechas seguidas.</summary>
+        ArrowTwin,
+
+        /// <summary>Flechas caindo do céu em volta do alvo (chuva e saraivada).</summary>
+        ArrowRain,
     }
 
     /// <summary>
@@ -54,6 +63,8 @@ namespace Game.Client.Fx
         private static readonly Color Ice = new Color(0.55f, 0.95f, 1f);
         private static readonly Color Spark = new Color(1f, 0.95f, 0.5f);
         private static readonly Color Blood = new Color(1f, 0.25f, 0.2f);
+        private static readonly Color Wood = new Color(0.95f, 0.85f, 0.6f);
+        private static readonly Color Wind = new Color(0.7f, 1f, 0.75f);
 
         private static readonly Dictionary<string, Feel> Feels = new Dictionary<string, Feel>
         {
@@ -75,7 +86,29 @@ namespace Game.Client.Fx
             ["meteoro"] = new Feel { Color = Fire, Projectile = ProjectileStyle.Meteor, ProjectileSize = 2f, Weight = 1.2f, Sparks = 30 },
             ["raio_duplo"] = new Feel { Color = Spark, Projectile = ProjectileStyle.Twin, ProjectileSize = 0.8f, Double = true, Weight = 0.4f, Sparks = 16 },
             ["cataclismo"] = new Feel { Color = Arcane, Projectile = ProjectileStyle.Meteor, ProjectileSize = 2.6f, Weight = 1.8f, Sparks = 40 },
+            // ----- Ranger (flechas) -----
+            ["tiro_certeiro"] = new Feel { Color = Wood, Projectile = ProjectileStyle.Arrow, Sparks = 10 },
+            ["flecha_perfurante"] = new Feel { Color = Wind, Projectile = ProjectileStyle.Arrow, ProjectileSize = 1.2f, Weight = 0.3f, Sparks = 16 },
+            ["chute_de_recuo"] = new Feel { Color = Earth, Weight = 0.3f, Sparks = 10 },
+            ["chuva_de_flechas"] = new Feel { Color = Wood, Projectile = ProjectileStyle.ArrowRain, Weight = 0.5f, Sparks = 18 },
+            ["tiro_duplo"] = new Feel { Color = Wind, Projectile = ProjectileStyle.ArrowTwin, Double = true, Weight = 0.3f, Sparks = 14 },
+            ["flecha_flamejante"] = new Feel { Color = Fire, Projectile = ProjectileStyle.Arrow, ProjectileSize = 1.3f, Weight = 0.7f, Sparks = 24 },
+            ["saraivada"] = new Feel { Color = Steel, Projectile = ProjectileStyle.ArrowRain, ProjectileSize = 1.2f, Weight = 0.9f, Sparks = 26 },
+            ["tiro_do_falcao"] = new Feel { Color = new Color(1f, 0.85f, 0.4f), Projectile = ProjectileStyle.Arrow, ProjectileSize = 1.8f, Weight = 1.6f, Sparks = 36 },
         };
+
+        private static bool IsArrow(Feel feel) =>
+            feel.Projectile == ProjectileStyle.Arrow || feel.Projectile == ProjectileStyle.ArrowTwin || feel.Projectile == ProjectileStyle.ArrowRain;
+
+        /// <summary>A skill viaja até o alvo (magias e flechas) em vez de acertar na hora do golpe?</summary>
+        public static bool IsProjectile(SkillData skill) => skill != null && (skill.Kind == SkillKind.Magical || IsArrow(For(skill)));
+
+        /// <summary>Som da saída: a corda do arco nas flechas, o chiado da magia no resto.</summary>
+        public static void PlayLaunchSound(SkillData skill)
+        {
+            if (skill != null && IsArrow(For(skill))) SoundPlayer.Play(SoundId.BowShot, 0.6f, 0.08f);
+            else SoundPlayer.Play(SoundId.Cast, 0.6f);
+        }
 
         private static readonly Feel Default = new Feel();
         private static readonly Dictionary<string, float> LastAreaAt = new Dictionary<string, float>();
@@ -104,7 +137,7 @@ namespace Game.Client.Fx
                     Mathf.Max(1f, skill.AreaRadius), feel.Color * 1.15f, 0.9f);
                 return;
             }
-            if (skill.Kind != SkillKind.Physical) return;
+            if (skill.Kind != SkillKind.Physical || IsArrow(feel)) return;
             // Arco de faíscas da direita para a esquerda, na altura do peito.
             var center = caster.position + Vector3.up * 1.2f;
             for (var i = 0; i < 14; i++)
@@ -119,16 +152,18 @@ namespace Game.Client.Fx
         public static float TravelSeconds(SkillData skill, Vector3 from, Vector3 to)
         {
             var fx = CombatFx.Instance;
-            if (fx == null || skill == null || skill.Kind != SkillKind.Magical) return 0f;
+            if (fx == null || !IsProjectile(skill)) return 0f;
             var feel = For(skill);
             var speed = fx.ProjectileSpeed * (feel.Projectile switch
             {
                 ProjectileStyle.Meteor => 1.4f,
                 ProjectileStyle.Twin => 1.2f,
                 ProjectileStyle.Lance => 1.6f,
+                ProjectileStyle.Arrow or ProjectileStyle.ArrowTwin => ArrowSpeed,
+                ProjectileStyle.ArrowRain => RainSpeed,
                 _ => 1f,
             });
-            var distance = feel.Projectile == ProjectileStyle.Meteor ? 11.5f : Vector3.Distance(from, to);
+            var distance = feel.Projectile == ProjectileStyle.Meteor ? 11.5f : feel.Projectile == ProjectileStyle.ArrowRain ? RainHeight : Vector3.Distance(from, to);
             return distance / Mathf.Max(1f, speed);
         }
 
@@ -145,6 +180,11 @@ namespace Game.Client.Fx
             }
             var feel = For(skill);
             var color = ColorFor(skill, grade, false);
+            if (IsArrow(feel))
+            {
+                LaunchArrows(skill, feel, caster, target, targetOffset, color, onArrive);
+                return;
+            }
             var hand = origin ?? caster.position + Vector3.up * 1.4f + caster.forward * 0.6f;
             // A magia sai com um clarão na ponta do cajado.
             fx.Flash(hand, color, 2.5f, 4f, 0.12f);
@@ -167,6 +207,72 @@ namespace Game.Client.Fx
                 default:
                     fx.LaunchProjectile(hand, target, targetOffset, color, onArrive, feel.ProjectileSize, 1f);
                     break;
+            }
+        }
+
+        /// <summary>Velocidade das flechas (vezes a do projétil mágico) e de onde a chuva cai.</summary>
+        private const float ArrowSpeed = 2f;
+
+        private const float RainSpeed = 1.6f;
+        private const float RainHeight = 10f;
+
+        /// <summary>
+        /// Flechas: saem da frente do peito (o arco está na mão esquerda, esticado à frente). A chuva sobe e cai em cima
+        /// do alvo, com mais flechas espalhadas na área (só visual; o dano é o da primeira).
+        /// </summary>
+        private static void LaunchArrows(SkillData skill, Feel feel, Transform caster, Transform target, Vector3 targetOffset, Color color, Action onArrive)
+        {
+            var fx = CombatFx.Instance;
+            var bow = caster.position + Vector3.up * 1.35f + caster.forward * 0.5f;
+            fx.Flash(bow, color, 1.2f, 2.5f, 0.08f);
+            switch (feel.Projectile)
+            {
+                case ProjectileStyle.ArrowTwin:
+                    fx.LaunchArrow(bow + caster.right * 0.12f, target, targetOffset, color, onArrive, feel.ProjectileSize, ArrowSpeed);
+                    fx.StartCoroutine(Delayed(SecondHitDelay(skill), () =>
+                    {
+                        if (target != null && caster != null)
+                            fx.LaunchArrow(caster.position + Vector3.up * 1.35f + caster.forward * 0.5f, target, targetOffset, color, null, feel.ProjectileSize, ArrowSpeed);
+                    }));
+                    break;
+                case ProjectileStyle.ArrowRain:
+                    // Uma flecha sobe do arco (só para mostrar o disparo) e a chuva desce em cima do alvo.
+                    var up = new GameObject("Mira da chuva").transform;
+                    up.position = bow + Vector3.up * 6f + caster.forward * 1.5f;
+                    fx.LaunchArrow(bow, up, Vector3.zero, color, () => { if (up != null) UnityEngine.Object.Destroy(up.gameObject); }, feel.ProjectileSize, ArrowSpeed);
+                    var radius = Mathf.Max(1.5f, skill.AreaRadius);
+                    fx.LaunchArrow(target.position + Vector3.up * RainHeight, target, targetOffset, color, onArrive, feel.ProjectileSize, RainSpeed);
+                    fx.StartCoroutine(ArrowShower(target.position, color, radius, skill.Id == "saraivada" ? 14 : 8, feel.ProjectileSize));
+                    break;
+                default:
+                    fx.LaunchArrow(bow, target, targetOffset, color, onArrive, feel.ProjectileSize, ArrowSpeed);
+                    break;
+            }
+        }
+
+        private static System.Collections.IEnumerator Delayed(float seconds, Action action)
+        {
+            yield return new WaitForSeconds(seconds);
+            action();
+        }
+
+        /// <summary>Flechas extras caindo na área da chuva (cada uma some quando bate no chão).</summary>
+        private static System.Collections.IEnumerator ArrowShower(Vector3 around, Color color, float radius, int count, float size)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                yield return new WaitForSeconds(0.03f + UnityEngine.Random.value * 0.05f);
+                var fx = CombatFx.Instance;
+                if (fx == null) yield break;
+                var offset = UnityEngine.Random.insideUnitCircle * radius;
+                var spot = around + new Vector3(offset.x, 0, offset.y);
+                var holder = new GameObject("Flecha da chuva").transform;
+                holder.position = new Vector3(spot.x, GroundAt(spot), spot.z);
+                fx.LaunchArrow(holder.position + Vector3.up * RainHeight + new Vector3(-0.8f, 0, -0.8f), holder, Vector3.zero, color, () =>
+                {
+                    if (CombatFx.Instance != null) Dust(holder.position, 0.4f, 3);
+                    if (holder != null) UnityEngine.Object.Destroy(holder.gameObject);
+                }, size, RainSpeed);
             }
         }
 
@@ -307,6 +413,39 @@ namespace Game.Client.Fx
                     MagicFx.Mark(GroundMarkStyle.Scorch, floor, area * 1.15f, new Color(2.4f, 0.8f, 0.25f), 3.5f);
                     MagicFx.Mark(GroundMarkStyle.Rune, floor, area * 1.3f, tone * 1.2f, 1.6f);
                     MagicFx.Burst(center, area, tone, 0.8f);
+                    break;
+                case "chuva_de_flechas":
+                case "saraivada":
+                    Dust(ground, area * 0.7f, skill.Id == "saraivada" ? 18 : 10);
+                    MagicFx.Mark(GroundMarkStyle.Rune, floor, area, tone * 1.1f, 1.2f);
+                    fx.Flash(center, color, 2f, area * 2f, 0.12f);
+                    break;
+                case "flecha_flamejante":
+                    for (var i = 0; i < 20; i++)
+                        EmitBig(center, UnityEngine.Random.insideUnitSphere * 2.2f + Vector3.up * 2.5f, new Color(1f, 0.35f + UnityEngine.Random.value * 0.4f, 0.08f), 0.18f, 0.5f);
+                    fx.Flash(center, new Color(1f, 0.55f, 0.2f), 3f, 6f, 0.2f);
+                    MagicFx.Mark(GroundMarkStyle.Scorch, floor, area, new Color(2.5f, 0.9f, 0.2f), 2.2f);
+                    MagicFx.Burst(center, 1.2f, new Color(1f, 0.45f, 0.1f), 0.4f);
+                    break;
+                case "tiro_do_falcao":
+                    // Penas douradas abrindo como asas e um clarão forte.
+                    for (var i = 0; i < 24; i++)
+                    {
+                        var side = i % 2 == 0 ? 1f : -1f;
+                        GlowBig(center, new Vector3(side * UnityEngine.Random.Range(2f, 4f), UnityEngine.Random.Range(0.5f, 2.5f), UnityEngine.Random.Range(-1f, 1f)),
+                            Color.Lerp(color, Color.white, UnityEngine.Random.value * 0.5f), 0.22f, 0.5f);
+                    }
+                    fx.Flash(center, color, 5f, 7f, 0.25f);
+                    MagicFx.Burst(center, 1.4f, tone, 0.5f);
+                    break;
+                case "chute_de_recuo":
+                    Dust(ground, 1f, 8);
+                    break;
+                case "tiro_certeiro":
+                case "flecha_perfurante":
+                case "tiro_duplo":
+                    fx.Flash(center, color, heavy ? 2.2f : 1.4f, 3f, 0.08f);
+                    for (var i = 0; i < 6; i++) GlowBig(center, UnityEngine.Random.onUnitSphere * 1.5f, color, 0.1f, 0.18f);
                     break;
                 case "raio_duplo":
                 case "faisca":

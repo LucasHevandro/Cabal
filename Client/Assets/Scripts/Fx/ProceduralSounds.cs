@@ -26,6 +26,7 @@ namespace Game.Client.Fx
         Step,
         SwordSwing,
         MagicImpact,
+        BowShot,
     }
 
     /// <summary>
@@ -114,6 +115,10 @@ namespace Game.Client.Fx
                 case SoundId.SwordSwing:
                     // Lâmina cortando o ar: chiado que sobe e desce, com um brilho metálico.
                     data = Mix(Noise(0.18f, 0.45f, attack: 0.25f, smoothing: 0.35f), Tone(2600, 1900, 0.12f, Wave.Sine, 0.06f));
+                    break;
+                case SoundId.BowShot:
+                    // Corda do arco: um estalo grave que cai rápido e o assobio curto da flecha saindo.
+                    data = Mix(Tone(190, 120, 0.16f, Wave.Triangle, 0.55f), Noise(0.12f, 0.3f, attack: 0.01f, smoothing: 0.3f));
                     break;
                 case SoundId.MagicImpact:
                     data = Mix(Mix(Noise(0.2f, 0.4f, attack: 0.002f, smoothing: 0.6f), Tone(600, 200, 0.25f, Wave.Sine, 0.35f)),

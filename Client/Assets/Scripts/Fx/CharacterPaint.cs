@@ -116,8 +116,17 @@ namespace Game.Client.Fx
                 Hair = new[] { new Vector2Int(1, 0) },
                 Cloth = new[] { new Vector2Int(0, 1), new Vector2Int(1, 1) },
             },
-            // Os outros aventureiros só emprestam a cabeça (penteado): cabelo (1,0) e pele (0,0), como nos dois acima.
-            ["ranger_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
+            // Ranger: o couro marrom (7,0) e as placas (3,0) do corpo seguem a armadura, as luvas (7,2) as luvas e as pernas
+            // e botas (3,2) as botas; cabelo (1,0); túnica e capa azuis (0,1).
+            ["ranger_texture"] = new Layout
+            {
+                Metal = new[] { new Vector2Int(3, 0), new Vector2Int(7, 0) },
+                ArmMetal = new[] { new Vector2Int(7, 2) },
+                LegMetal = new[] { new Vector2Int(3, 2) },
+                Hair = new[] { new Vector2Int(1, 0) },
+                Cloth = new[] { new Vector2Int(0, 1) },
+            },
+            // Os outros aventureiros só emprestam a cabeça (penteado): cabelo (1,0) e pele (0,0), como nos de cima.
             ["rogue_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
             ["barbarian_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
         };

@@ -83,6 +83,13 @@ namespace Game.Client.UI
                 case "cataclismo":
                 case "explosao_arcana": return new Color(0.65f, 0.35f, 0.95f);
                 case "golpe_runico": return new Color(0.35f, 0.55f, 1f);
+                case "tiro_certeiro":
+                case "flecha_perfurante":
+                case "tiro_duplo":
+                case "chuva_de_flechas":
+                case "saraivada": return new Color(0.45f, 0.68f, 0.32f);
+                case "flecha_flamejante": return new Color(0.95f, 0.42f, 0.15f);
+                case "tiro_do_falcao": return new Color(0.9f, 0.72f, 0.25f);
             }
             return skill.Kind == SkillKind.Physical ? new Color(0.85f, 0.5f, 0.22f) : new Color(0.35f, 0.5f, 0.95f);
         }
@@ -154,8 +161,63 @@ namespace Game.Client.UI
                     };
                 case "cataclismo":
                     return new Shape[] { new Ring(0, 0, 0.5f, 0.07f), new Disc(0, 0, 0.18f), new Segment(-0.62f, 0.62f, 0.62f, -0.62f, 0.05f), new Segment(-0.62f, -0.62f, 0.62f, 0.62f, 0.05f) };
+                // ----- Ranger: flechas -----
+                case "tiro_certeiro": return Arrow(-0.55f, -0.55f, 0.55f, 0.55f);
+                case "flecha_perfurante":
+                    {
+                        var shapes = new List<Shape>(Arrow(-0.6f, 0f, 0.6f, 0f)) { new Ring(0.1f, 0, 0.32f, 0.05f) };
+                        return shapes.ToArray();
+                    }
+                case "chute_de_recuo":
+                    return new Shape[] { new Segment(-0.3f, 0.6f, -0.1f, -0.1f, 0.12f), new Segment(-0.1f, -0.1f, 0.5f, -0.35f, 0.12f), new Segment(0.55f, -0.1f, 0.7f, 0.2f, 0.05f) };
+                case "chuva_de_flechas":
+                    {
+                        var shapes = new List<Shape>();
+                        foreach (var x in new[] { -0.4f, 0f, 0.4f }) shapes.AddRange(Arrow(x, 0.6f, x, -0.55f));
+                        return shapes.ToArray();
+                    }
+                case "tiro_duplo":
+                    {
+                        var shapes = new List<Shape>(Arrow(-0.6f, -0.3f, 0.5f, 0.3f));
+                        shapes.AddRange(Arrow(-0.5f, -0.6f, 0.6f, 0f));
+                        return shapes.ToArray();
+                    }
+                case "flecha_flamejante":
+                    {
+                        var shapes = new List<Shape>(Arrow(-0.6f, -0.6f, 0.45f, 0.45f)) { new Disc(0.4f, 0.4f, 0.2f) };
+                        return shapes.ToArray();
+                    }
+                case "saraivada":
+                    {
+                        var shapes = new List<Shape>();
+                        foreach (var x in new[] { -0.5f, -0.17f, 0.17f, 0.5f }) shapes.AddRange(Arrow(x, 0.65f, x, -0.4f));
+                        shapes.Add(new Segment(-0.7f, -0.6f, 0.7f, -0.6f, 0.05f));
+                        return shapes.ToArray();
+                    }
+                case "tiro_do_falcao":
+                    {
+                        var shapes = new List<Shape>(Arrow(-0.6f, 0f, 0.6f, 0f))
+                        {
+                            new Segment(-0.1f, 0.05f, -0.45f, 0.55f, 0.07f), new Segment(-0.1f, -0.05f, -0.45f, -0.55f, 0.07f),
+                        };
+                        return shapes.ToArray();
+                    }
             }
             return new Shape[] { new Disc(0, 0, 0.3f) };
+        }
+
+        /// <summary>Flecha de (x0, y0) até a ponta em (x1, y1): haste fina e duas farpas.</summary>
+        private static Shape[] Arrow(float x0, float y0, float x1, float y1)
+        {
+            var dir = new Vector2(x1 - x0, y1 - y0).normalized;
+            var side = new Vector2(-dir.y, dir.x);
+            var back = new Vector2(x1, y1) - dir * 0.22f;
+            return new Shape[]
+            {
+                new Segment(x0, y0, x1, y1, 0.06f),
+                new Segment(x1, y1, back.x + side.x * 0.16f, back.y + side.y * 0.16f, 0.06f),
+                new Segment(x1, y1, back.x - side.x * 0.16f, back.y - side.y * 0.16f, 0.06f),
+            };
         }
 
         private static Texture2D Draw(Shape[] glyph, Color tint)
