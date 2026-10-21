@@ -26,9 +26,14 @@ public sealed class ServerPlayer
     /// <summary>Id do personagem no banco; 0 = convidado (testes e bots, não é salvo).</summary>
     public int CharacterId { get; init; }
 
-    /// <summary>Cores de cabelo e roupa escolhidas na criação (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
+    /// <summary>Cores de cabelo e roupa, penteado e tom de pele escolhidos na criação (índices de <see cref="Game.Shared.Items.Appearance"/>).</summary>
     public int Hair { get; init; }
     public int Cloth { get; init; }
+    public int Head { get; init; }
+    public int Skin { get; init; }
+
+    /// <summary>Elmo (ou chapéu) escondido: o jogador troca quando quiser, e fica salvo.</summary>
+    public bool HideHelmet { get; set; }
 
     /// <summary>
     /// Convidado é para testes e bots: tem tudo liberado (skills e combo) sem precisar das missões, e não é salvo.
@@ -113,16 +118,17 @@ public sealed class ServerPlayer
     public HashSet<int> KnownEntities { get; } = new();
 
     /// <summary>A aparência (arma, melhoria e peças vestidas) que este jogador já recebeu de cada outro jogador que vê.</summary>
-    public Dictionary<int, (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade)> KnownLooks { get; } = new();
+    public Dictionary<int, (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade, bool HideHelmet)> KnownLooks { get; } = new();
 
-    /// <summary>Arma na mão, o nível de melhoria dela e o grau da couraça, das luvas e das botas (o que os outros veem).</summary>
-    public (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade) Look =>
+    /// <summary>Arma na mão, o nível de melhoria dela, o grau da couraça, das luvas e das botas e o elmo (o que os outros veem).</summary>
+    public (string WeaponId, int Upgrade, int ArmorGrade, int GlovesGrade, int BootsGrade, bool HideHelmet) Look =>
     (
         Equipment[Game.Shared.Items.EquipSlot.Weapon]?.ItemId ?? "",
         Equipment[Game.Shared.Items.EquipSlot.Weapon]?.Upgrade ?? 0,
         WornGrade(Game.Shared.Items.EquipSlot.Armor),
         WornGrade(Game.Shared.Items.EquipSlot.Gloves),
-        WornGrade(Game.Shared.Items.EquipSlot.Boots)
+        WornGrade(Game.Shared.Items.EquipSlot.Boots),
+        HideHelmet
     );
 
     private int WornGrade(Game.Shared.Items.EquipSlot slot) => Game.Shared.Items.Appearance.GradeOf(Equipment[slot]?.ItemId, slot);

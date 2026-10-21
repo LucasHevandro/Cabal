@@ -165,6 +165,6 @@ public class FuzzTests
         Assert.Contains("ShopCommand", names);
         Assert.Contains("TradeCommand", names);
         Assert.Contains("ItemCommand", names);
-        Assert.Equal(25, names.Count); // todos do 2 ao 26 (o Hello é tratado à parte, pelo ServerHost)
+        Assert.Equal(26, names.Count); // todos do 2 ao 27 (o Hello é tratado à parte, pelo ServerHost)
     }
 }

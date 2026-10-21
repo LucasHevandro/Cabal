@@ -149,6 +149,7 @@ public sealed class AuthService
             list.Characters.Add(new CharacterSummary
             {
                 Id = c.Id, Name = c.Name, ClassId = (int)c.Class, Level = c.Level, Hair = c.Hair, Cloth = c.Cloth,
+                Head = c.Head, Skin = c.Skin, HideHelmet = c.HideHelmet,
                 ArmorGrade = Game.Shared.Items.Appearance.GradeOf(c.ArmorId, Game.Shared.Items.EquipSlot.Armor),
                 GlovesGrade = Game.Shared.Items.Appearance.GradeOf(c.GlovesId, Game.Shared.Items.EquipSlot.Gloves),
                 BootsGrade = Game.Shared.Items.Appearance.GradeOf(c.BootsId, Game.Shared.Items.EquipSlot.Boots),
@@ -169,11 +170,12 @@ public sealed class AuthService
                 InitialCharacter((CharacterClass)request.ClassId, Uids.Next) with
                 {
                     Hair = Game.Shared.Items.Appearance.Hair(request.Hair), Cloth = Game.Shared.Items.Appearance.Cloth(request.Cloth),
+                    Head = Game.Shared.Items.Appearance.Head(request.Head), Skin = Game.Shared.Items.Appearance.Skin(request.Skin),
                 });
             return AuthResult<CharacterSummary>.Success(new CharacterSummary
             {
                 Id = created.Id, Name = created.Name, ClassId = (int)created.Class, Level = created.Level,
-                Hair = created.Hair, Cloth = created.Cloth,
+                Hair = created.Hair, Cloth = created.Cloth, Head = created.Head, Skin = created.Skin,
             });
         }
         catch (StoreConflictException ex)

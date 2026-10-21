@@ -96,6 +96,9 @@ public sealed partial class GameWorld
             // Convidados (testes e bots) variam as cores pelo id, para a multidão não sair toda igual.
             Hair = character != null ? Appearance.Hair(character.Hair) : id % Appearance.HairColors,
             Cloth = character != null ? Appearance.Cloth(character.Cloth) : id / 2 % Appearance.ClothColors,
+            Head = character != null ? Appearance.Head(character.Head) : id / 3 % Appearance.Heads,
+            Skin = character != null ? Appearance.Skin(character.Skin) : id / 5 % Appearance.SkinTones,
+            HideHelmet = character?.HideHelmet ?? id % 4 == 0,
             Movement = new MovementValidator(spawnX, spawnZ, now),
         };
         if (character != null)
@@ -150,6 +153,7 @@ public sealed partial class GameWorld
             Relations = player.Relations.ToList(),
             LearnedSkills = player.ClassSkills.Select(s => s.Skill.Id).Where(player.LearnedSkills.Contains).ToList(),
             Hotbar = SkillTraining.ToIds(player.Hotbar, player.ClassSkills),
+            HideHelmet = player.HideHelmet,
             Reports = player.PendingReports.ToList(),
             Metrics = player.PendingMetrics.ToList(),
         };
@@ -231,6 +235,11 @@ public sealed partial class GameWorld
                 break;
             case SetHotbar hotbar:
                 HandleSetHotbar(player, hotbar);
+                break;
+            case AppearanceCommand appearance:
+                // Quem já o vê recebe o EntityLook no próximo envio (a aparência mudou); ele mesmo também.
+                player.HideHelmet = appearance.HideHelmet;
+                _outbox.Send(player.Id, LookMessage(player));
                 break;
             case TalkToNpc talk:
                 HandleTalk(player, talk);
@@ -348,11 +357,7 @@ public sealed partial class GameWorld
             {
                 // Trocou de arma ou de armadura, ou melhorou: quem já o via atualiza o modelo, o brilho e o metal.
                 player.KnownLooks[other.Id] = look;
-                _outbox.Send(player.Id, new EntityLook
-                {
-                    Id = other.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade, ArmorGrade = (byte)look.ArmorGrade,
-                    GlovesGrade = (byte)look.GlovesGrade, BootsGrade = (byte)look.BootsGrade,
-                });
+                _outbox.Send(player.Id, LookMessage(other));
             }
             snapshot.Entities.Add(new EntityState
             {
@@ -591,8 +596,18 @@ public sealed partial class GameWorld
         Name = player.Name, Level = player.Progress.Level, MaxHp = player.Hp.Max, X = player.X, Z = player.Z,
         WeaponId = player.Look.WeaponId, WeaponUpgrade = (byte)player.Look.Upgrade, ArmorGrade = (byte)player.Look.ArmorGrade,
         GlovesGrade = (byte)player.Look.GlovesGrade, BootsGrade = (byte)player.Look.BootsGrade,
-        Hair = (byte)player.Hair, Cloth = (byte)player.Cloth,
+        Hair = (byte)player.Hair, Cloth = (byte)player.Cloth, Head = (byte)player.Head, Skin = (byte)player.Skin, HideHelmet = player.HideHelmet,
     };
+
+    private static EntityLook LookMessage(ServerPlayer player)
+    {
+        var look = player.Look;
+        return new EntityLook
+        {
+            Id = player.Id, WeaponId = look.WeaponId, WeaponUpgrade = (byte)look.Upgrade, ArmorGrade = (byte)look.ArmorGrade,
+            GlovesGrade = (byte)look.GlovesGrade, BootsGrade = (byte)look.BootsGrade, HideHelmet = look.HideHelmet,
+        };
+    }
 
     private static EntitySpawned SpawnMessage(ServerMonster monster) => new()
     {

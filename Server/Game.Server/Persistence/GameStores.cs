@@ -174,7 +174,8 @@ public sealed class EfGameStore : IGameStore
                 c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Gloves)
                     .Select(i => i.ItemId).FirstOrDefault() ?? "",
                 c.Items.Where(i => i.Container == (int)ItemContainerKind.Equipment && i.Slot == (int)EquipSlot.Boots)
-                    .Select(i => i.ItemId).FirstOrDefault() ?? ""))
+                    .Select(i => i.ItemId).FirstOrDefault() ?? "",
+                c.Head, c.Skin, c.HideHelmet))
             .ToListAsync();
     }
 
@@ -195,7 +196,7 @@ public sealed class EfGameStore : IGameStore
             Hp = initial.Hp, Mp = initial.Mp, Sp = initial.Sp, CreatedAt = now, SavedAt = now,
             Strength = initial.Attributes.Strength, Dexterity = initial.Attributes.Dexterity,
             Intelligence = initial.Attributes.Intelligence, AwakeningGauge = initial.AwakeningGauge,
-            Hair = initial.Hair, Cloth = initial.Cloth,
+            Hair = initial.Hair, Cloth = initial.Cloth, Head = initial.Head, Skin = initial.Skin,
         };
         foreach (var item in initial.Items) character.Items.Add(ToEntity(item, 0));
         db.Characters.Add(character);
@@ -245,6 +246,7 @@ public sealed class EfGameStore : IGameStore
         character.AwakeningGauge = snapshot.AwakeningGauge;
         character.LearnedSkills = string.Join(",", snapshot.LearnedSkills);
         character.Hotbar = snapshot.Hotbar.Count == 0 ? "" : string.Join(",", snapshot.Hotbar);
+        character.HideHelmet = snapshot.HideHelmet;
         character.SavedAt = DateTimeOffset.UtcNow;
 
         // Itens e missões: o servidor é a fonte da verdade; o banco fica igual ao que está na memória.
@@ -371,7 +373,7 @@ public sealed class EfGameStore : IGameStore
             .Select(r => new RelationRecord((RelationKind)r.Kind, r.OtherId, r.OtherName)).ToList(),
         LearnedSkills = string.IsNullOrEmpty(c.LearnedSkills) ? Array.Empty<string>() : c.LearnedSkills.Split(',', StringSplitOptions.RemoveEmptyEntries),
         Hotbar = string.IsNullOrEmpty(c.Hotbar) ? Array.Empty<string>() : c.Hotbar.Split(','),
-        Hair = c.Hair, Cloth = c.Cloth,
+        Hair = c.Hair, Cloth = c.Cloth, Head = c.Head, Skin = c.Skin, HideHelmet = c.HideHelmet,
     };
 
     private static int[] ParseCounts(string counts) => string.IsNullOrEmpty(counts)
@@ -541,7 +543,7 @@ public sealed class InMemoryGameStore : IGameStore
         {
             IReadOnlyList<CharacterSummaryRecord> list = _characters.Values.Where(c => c.AccountId == accountId).OrderBy(c => c.Id)
                 .Select(c => new CharacterSummaryRecord(c.Id, c.Name, c.Class, c.Level, c.Hair, c.Cloth,
-                    Worn(c, EquipSlot.Armor), Worn(c, EquipSlot.Gloves), Worn(c, EquipSlot.Boots))).ToList();
+                    Worn(c, EquipSlot.Armor), Worn(c, EquipSlot.Gloves), Worn(c, EquipSlot.Boots), c.Head, c.Skin, c.HideHelmet)).ToList();
             return Task.FromResult(list);
         }
     }
@@ -579,7 +581,7 @@ public sealed class InMemoryGameStore : IGameStore
                 Items = s.Items.ToList(), Attributes = s.Attributes, AwakeningGauge = s.AwakeningGauge,
                 Quests = s.Quests.Select(q => q with { Counts = q.Counts.ToArray() }).ToList(),
                 Relations = s.Relations.ToList(),
-                LearnedSkills = s.LearnedSkills.ToList(), Hotbar = s.Hotbar.ToList(),
+                LearnedSkills = s.LearnedSkills.ToList(), Hotbar = s.Hotbar.ToList(), HideHelmet = s.HideHelmet,
             };
             _log.AddRange(logs);
             _reports.AddRange(s.Reports);

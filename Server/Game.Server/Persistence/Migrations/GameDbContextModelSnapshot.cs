@@ -116,6 +116,16 @@ namespace Game.Server.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<int>("Head")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("HideHelmet")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Hotbar")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -160,6 +170,11 @@ namespace Game.Server.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("SavedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Skin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("Sp")
                         .HasColumnType("integer");
