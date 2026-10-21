@@ -32,7 +32,12 @@ namespace Game.Client.Combat
         public event Action<Targetable> Died;
 
         /// <summary>Nome mostrado; se o nome guardado for uma chave do arquivo de idioma (ex.: dummy.a), vem traduzido.</summary>
-        public string DisplayName => Loc.Has(displayName) ? Loc.T(displayName) : displayName;
+        public string DisplayName => Elite ? Loc.T("monster.elite_name", BaseName) : BaseName;
+
+        private string BaseName => Loc.Has(displayName) ? Loc.T(displayName) : displayName;
+
+        /// <summary>Monstro elite: nome com "(Elite)" e plaquinha dourada.</summary>
+        public bool Elite { get; set; }
         public int Defense => defense;
         public ResourcePool Hp => _hp ??= new ResourcePool(maxHp);
         public bool IsAlive => Hp.Current > 0;

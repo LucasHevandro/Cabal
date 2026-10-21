@@ -71,7 +71,7 @@ namespace Game.Client.Monsters
         /// o corpo é o modelo (e a altura e o raio vêm dele); senão, a forma simples.
         /// </summary>
         public static MonsterParts Build(Transform root, MonsterShape shape, Vector3 scale, Material body, Material telegraph, Material ring,
-            string visualCategory = null, string visualId = null)
+            string visualCategory = null, string visualId = null, bool elite = false)
         {
             var height = 2f * scale.y;
             var radius = 0.5f * Mathf.Max(scale.x, scale.z);
@@ -81,6 +81,7 @@ namespace Game.Client.Monsters
             var model = visualCategory != null ? VisualCatalog.Spawn(visualCategory, visualId, bodyRoot.transform) : null;
             if (model != null)
             {
+                if (elite) VisualCatalog.ApplyTint(bodyRoot, VisualCatalog.EliteScale, VisualCatalog.EliteTint);
                 (height, radius) = VisualCatalog.Measure(model, root);
             }
             else
@@ -91,7 +92,14 @@ namespace Game.Client.Monsters
                 var eye = Primitive(PrimitiveType.Cube, "Frente", bodyRoot.transform, telegraph);
                 eye.transform.localPosition = new Vector3(0, height * 0.75f, radius);
                 eye.transform.localScale = new Vector3(0.3f, 0.12f, 0.12f) * Mathf.Max(1f, scale.x);
+                if (elite)
+                {
+                    VisualCatalog.ApplyTint(bodyRoot, VisualCatalog.EliteScale, VisualCatalog.EliteTint);
+                    height *= VisualCatalog.EliteScale;
+                    radius *= VisualCatalog.EliteScale;
+                }
             }
+            if (elite) EliteAura(bodyRoot.transform, height, radius);
 
             var selection = Primitive(PrimitiveType.Cylinder, "Anel de seleção", root, ring);
             selection.transform.localPosition = new Vector3(0, 0.02f, 0);
@@ -102,6 +110,20 @@ namespace Game.Client.Monsters
             warning.SetActive(false);
 
             return new MonsterParts(bodyRoot, selection, warning.transform, height, radius);
+        }
+
+        /// <summary>Aura do elite: uma luz dourada fraca em volta do corpo (some junto com ele ao morrer).</summary>
+        private static void EliteAura(Transform body, float height, float radius)
+        {
+            var aura = new GameObject("Aura de elite");
+            aura.transform.SetParent(body, false);
+            aura.transform.localPosition = new Vector3(0, height * 0.5f, 0);
+            var light = aura.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.78f, 0.3f);
+            light.range = Mathf.Max(3f, radius * 6f);
+            light.intensity = 2.5f;
+            light.shadows = LightShadows.None;
         }
 
         /// <summary>Material novo copiado de <paramref name="template"/> com outra cor (sem precisar de Shader.Find no build).</summary>

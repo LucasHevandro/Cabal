@@ -251,7 +251,7 @@ namespace Game.Client.Net
             {
                 var look = MonsterVisuals.LookFor(spawned.TypeId);
                 parts = MonsterVisuals.Build(root.transform, look.Shape, look.Scale, MaterialFor(spawned.TypeId, look.Color),
-                    telegraphMaterial, ringMaterial, VisualCatalog.Monster, spawned.TypeId);
+                    telegraphMaterial, ringMaterial, VisualCatalog.Monster, spawned.TypeId, spawned.Elite);
                 _monsterData.TryGetValue(spawned.TypeId, out data);
             }
             else
@@ -272,6 +272,7 @@ namespace Game.Client.Net
             target.Configure(spawned.Kind == EntityKind.Monster ? "monster." + spawned.TypeId : spawned.Name, Mathf.Max(1, spawned.MaxHp), parts.Height + 0.3f, parts.Radius, parts.Ring,
                 data?.Defense ?? 0);
             target.Level = spawned.Level;
+            target.Elite = spawned.Elite;
             target.NetworkId = spawned.Id;
             target.IsSelectable = spawned.Kind == EntityKind.Monster;
 

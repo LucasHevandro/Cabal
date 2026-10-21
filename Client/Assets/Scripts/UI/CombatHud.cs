@@ -298,6 +298,9 @@ namespace Game.Client.UI
                 Loc.T("hud.monsters_killed", _loot.MonstersKilled), _small);
         }
 
+        /// <summary>Nome dos monstros elite (dourado).</summary>
+        private static readonly Color EliteColor = new Color(1f, 0.75f, 0.2f);
+
         /// <summary>Nome, nível e vida acima dos monstros vivos por perto.</summary>
         private void DrawNameplates()
         {
@@ -316,7 +319,7 @@ namespace Game.Client.UI
                 var x = screen.x - width / 2;
                 var y = Screen.height - screen.y - 30f * scale;
                 var selected = target == combat.Target;
-                GUI.color = selected ? new Color(1f, 0.9f, 0.4f) : Color.white;
+                GUI.color = selected ? new Color(1f, 0.9f, 0.4f) : target.Elite ? EliteColor : Color.white;
                 _small.fontSize = Mathf.RoundToInt(14 * scale);
                 GUI.Label(new Rect(x - 40, y - 4, width + 80, 20 * scale), target.NameplateText, _small.WithCenter());
                 _small.fontSize = 16;

@@ -82,8 +82,18 @@ namespace Game.Client.Fx
         public static void ApplyVariant(GameObject instance, string category, string id)
         {
             if (id == null || !Variants.TryGetValue(id, out var variant) || Find(category, variant.BaseId) != Find(category, id)) return;
-            var tint = variant.Tint;
-            instance.transform.localScale *= variant.Scale;
+            ApplyTint(instance, variant.Scale, variant.Tint);
+        }
+
+        /// <summary>Tamanho e tom do monstro elite (maior e dourado).</summary>
+        public const float EliteScale = 1.2f;
+
+        public static readonly Color EliteTint = new Color(1.45f, 1.15f, 0.55f);
+
+        /// <summary>Aumenta o modelo e troca os materiais por cópias tingidas (uma cópia por material e tom, reaproveitada).</summary>
+        public static void ApplyTint(GameObject instance, float scale, Color tint)
+        {
+            instance.transform.localScale *= scale;
             foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
             {
                 if (renderer is ParticleSystemRenderer) continue;
