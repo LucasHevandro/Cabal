@@ -18,6 +18,7 @@ public class ClassTests
     [Theory]
     [InlineData(CharacterClass.Blade)]
     [InlineData(CharacterClass.Arcanist)]
+    [InlineData(CharacterClass.Ranger)]
     public void CadaClasseTemOitoSkillsUnicasEValidas(CharacterClass characterClass)
     {
         var skills = ClassCatalog.SkillsFor(characterClass);
@@ -42,6 +43,25 @@ public class ClassTests
         Assert.True(arcanist.Count(s => s.Skill.Kind == SkillKind.Magical) > arcanist.Count / 2);
         Assert.True(arcanist.Average(s => s.Skill.Range) > blade.Average(s => s.Skill.Range)); // Arcanista ataca de longe
         Assert.NotEqual(ClassCatalog.RouteFor(CharacterClass.Blade).Name, ClassCatalog.RouteFor(CharacterClass.Arcanist).Name);
+
+        // Ranger: física como a Lâmina, mas de longe como o Arcanista.
+        var ranger = ClassCatalog.SkillsFor(CharacterClass.Ranger);
+        Assert.True(ranger.Count(s => s.Skill.Kind == SkillKind.Physical) > ranger.Count / 2);
+        Assert.True(ranger.Average(s => s.Skill.Range) > blade.Average(s => s.Skill.Range));
+        Assert.Equal(3, ClassInfo.All.Select(c => ClassCatalog.RouteFor(c).Name).Distinct().Count());
+    }
+
+    [Fact]
+    public void Classe_vai_e_volta_pelo_TypeId_e_comeca_com_a_propria_arma()
+    {
+        foreach (var characterClass in ClassInfo.All)
+        {
+            Assert.Equal(characterClass, ClassInfo.FromTypeId(ClassInfo.TypeId(characterClass)));
+            var weapon = ItemCatalog.Get(ClassInfo.StarterWeapon(characterClass));
+            Assert.Equal(characterClass, weapon.RequiredClass);
+            Assert.Equal(1, weapon.RequiredLevel);
+            Assert.StartsWith(ClassInfo.WeaponPrefix(characterClass), weapon.Id);
+        }
     }
 
     [Fact]
@@ -49,6 +69,7 @@ public class ClassTests
     {
         Assert.NotEmpty(ClassCatalog.UnlockedSkills(CharacterClass.Blade, 1, None));
         Assert.NotEmpty(ClassCatalog.UnlockedSkills(CharacterClass.Arcanist, 1, None));
+        Assert.NotEmpty(ClassCatalog.UnlockedSkills(CharacterClass.Ranger, 1, None));
     }
 
     [Fact]
@@ -252,6 +273,7 @@ public class LevelingBalanceTests
     [Theory]
     [InlineData(CharacterClass.Blade)]
     [InlineData(CharacterClass.Arcanist)]
+    [InlineData(CharacterClass.Ranger)]
     public void Do_um_ao_trinta_leva_de_seis_a_dez_horas(CharacterClass characterClass)
     {
         var steps = LevelingSimulation.Run(characterClass);

@@ -14,6 +14,58 @@ namespace Game.Shared.Accounts
 
         /// <summary>Arcanista: à distância.</summary>
         Arcanist = 1,
+
+        /// <summary>Ranger: arqueira, à distância com o arco.</summary>
+        Ranger = 2,
+    }
+
+    /// <summary>
+    /// O que muda de uma classe para outra fora das skills: o id do modelo (o TypeId que o servidor manda), a chave do
+    /// nome e a arma inicial.
+    /// </summary>
+    public static class ClassInfo
+    {
+        public static readonly CharacterClass[] All = { CharacterClass.Blade, CharacterClass.Arcanist, CharacterClass.Ranger };
+
+        /// <summary>Id do modelo da classe (Visuals/class/&lt;id&gt;) e o TypeId do EntitySpawned do jogador.</summary>
+        public static string TypeId(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => "arcanist",
+            CharacterClass.Ranger => "ranger",
+            _ => "blade",
+        };
+
+        /// <summary>A classe pelo TypeId (desconhecido = Lâmina).</summary>
+        public static CharacterClass FromTypeId(string typeId) => typeId switch
+        {
+            "arcanist" => CharacterClass.Arcanist,
+            "ranger" => CharacterClass.Ranger,
+            _ => CharacterClass.Blade,
+        };
+
+        /// <summary>Chave do nome da classe no arquivo de idioma.</summary>
+        public static string NameKey(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => "class.arcanist",
+            CharacterClass.Ranger => "class.ranger",
+            _ => "class.blade",
+        };
+
+        /// <summary>Arma com que o personagem nasce.</summary>
+        public static string StarterWeapon(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => "cajado_ferro",
+            CharacterClass.Ranger => "arco_ferro",
+            _ => "espada_ferro",
+        };
+
+        /// <summary>Começo do id das armas da classe (espada_, cajado_ ou arco_ + grau).</summary>
+        public static string WeaponPrefix(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => "cajado_",
+            CharacterClass.Ranger => "arco_",
+            _ => "espada_",
+        };
     }
 
     /// <summary>Regras de conta, senha e nome de personagem, iguais no cliente (aviso na hora) e no servidor (decisão).</summary>
@@ -31,6 +83,7 @@ namespace Game.Shared.Accounts
         {
             CharacterClass.Blade => Loc.T("class.blade"),
             CharacterClass.Arcanist => Loc.T("class.arcanist"),
+            CharacterClass.Ranger => Loc.T("class.ranger"),
             _ => Loc.T("class.unknown"),
         };
 

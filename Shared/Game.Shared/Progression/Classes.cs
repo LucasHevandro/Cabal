@@ -27,7 +27,7 @@ namespace Game.Shared.Progression
     }
 
     /// <summary>
-    /// As duas classes do MVP: 8 skills cada, liberadas por nível e pelas missões de rank, e uma rota de combo
+    /// As três classes: 8 skills cada, liberadas por nível e pelas missões de rank, e uma rota de combo
     /// própria. Números provisórios até a planilha.
     /// </summary>
     public static class ClassCatalog
@@ -63,13 +63,20 @@ namespace Game.Shared.Progression
         /// <summary>O combo só fica disponível depois da missão de rank que o libera.</summary>
         public static bool ComboUnlocked(Func<string, bool> questCompleted) => questCompleted(ComboQuestId);
 
-        public static IReadOnlyList<ClassSkill> SkillsFor(CharacterClass characterClass) =>
-            characterClass == CharacterClass.Arcanist ? Arcanist : Blade;
+        public static IReadOnlyList<ClassSkill> SkillsFor(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => Arcanist,
+            CharacterClass.Ranger => Ranger,
+            _ => Blade,
+        };
 
         /// <summary>Rota de combo exclusiva da classe (soma-se às rotas gerais).</summary>
-        public static ComboRoute RouteFor(CharacterClass characterClass) => characterClass == CharacterClass.Arcanist
-            ? new ComboRoute("sobrecarga", 0.20, SkillKind.Magical, SkillKind.Magical, SkillKind.Magical)
-            : new ComboRoute("lamina_runica", 0.20, SkillKind.Physical, SkillKind.Magical, SkillKind.Physical);
+        public static ComboRoute RouteFor(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => new ComboRoute("sobrecarga", 0.20, SkillKind.Magical, SkillKind.Magical, SkillKind.Magical),
+            CharacterClass.Ranger => new ComboRoute("rajada_certeira", 0.20, SkillKind.Physical, SkillKind.Physical, SkillKind.Physical),
+            _ => new ComboRoute("lamina_runica", 0.20, SkillKind.Physical, SkillKind.Magical, SkillKind.Physical),
+        };
 
         /// <summary>Configuração do combo da classe: rotas gerais + a rota da classe.</summary>
         public static ComboConfig ComboConfigFor(CharacterClass characterClass, double graceSeconds = 0)
@@ -101,6 +108,19 @@ namespace Game.Shared.Progression
             new ClassSkill(new SkillData("meteoro", SkillKind.Magical, 380, 12f, 8f, areaRadius: 5f, mpCost: 120, castSeconds: 1.0f), 15, RankTwoQuestId),
             new ClassSkill(new SkillData("raio_duplo", SkillKind.Magical, 450, 12f, 6f, mpCost: 100, castSeconds: 0.7f), 20, RankThreeQuestId),
             new ClassSkill(new SkillData("cataclismo", SkillKind.Magical, 700, 12f, 20f, areaRadius: 6f, mpCost: 200, castSeconds: 1.5f), 25, RankThreeQuestId),
+        };
+
+        /// <summary>Ranger: flechas físicas de longe (o ataque vem do arco e da Força) e um chute para afastar quem chega perto.</summary>
+        private static readonly IReadOnlyList<ClassSkill> Ranger = new List<ClassSkill>
+        {
+            new ClassSkill(new SkillData("tiro_certeiro", SkillKind.Physical, 110, 12f, 0.5f, castSeconds: 0.45f), 1),
+            new ClassSkill(new SkillData("flecha_perfurante", SkillKind.Physical, 160, 12f, 1.5f, mpCost: 25, castSeconds: 0.6f), 1),
+            new ClassSkill(new SkillData("chute_de_recuo", SkillKind.Physical, 100, 2.5f, 1f, castSeconds: 0.5f), 3),
+            new ClassSkill(new SkillData("chuva_de_flechas", SkillKind.Physical, 210, 11f, 5f, areaRadius: 4f, mpCost: 70, castSeconds: 0.8f), 5),
+            new ClassSkill(new SkillData("tiro_duplo", SkillKind.Physical, 270, 12f, 4f, mpCost: 55, castSeconds: 0.75f), 12, RankTwoQuestId),
+            new ClassSkill(new SkillData("flecha_flamejante", SkillKind.Physical, 360, 12f, 7f, areaRadius: 3f, mpCost: 100, castSeconds: 0.9f), 15, RankTwoQuestId),
+            new ClassSkill(new SkillData("saraivada", SkillKind.Physical, 430, 11f, 8f, areaRadius: 5f, mpCost: 110, castSeconds: 1.1f), 20, RankThreeQuestId),
+            new ClassSkill(new SkillData("tiro_do_falcao", SkillKind.Physical, 680, 14f, 18f, mpCost: 180, castSeconds: 1.35f), 25, RankThreeQuestId),
         };
     }
 

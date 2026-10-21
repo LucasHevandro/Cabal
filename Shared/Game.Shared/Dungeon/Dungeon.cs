@@ -187,7 +187,8 @@ namespace Game.Shared.Dungeon
                     new DropEntry(ItemCatalog.CoreHigh, ItemRarity.Rare, 0.3),
                     Item("pedra_vigor", 0.15), Item("pedra_furia", 0.15), Item("pedra_precisao", 0.15),
                     Item("armadura_astralita", 0.1), Item("luvas_astralita", 0.1), Item("botas_astralita", 0.1),
-                    Item("anel_astralita", 0.1), Item("espada_astralita", 0.07), Item("cajado_astralita", 0.07)),
+                    Item("anel_astralita", 0.1), Item("espada_astralita", 0.07), Item("cajado_astralita", 0.07),
+                    Item("arco_astralita", 0.07)),
             };
             crypt.Rooms.Add(new DungeonRoom
             {
@@ -234,7 +235,8 @@ namespace Game.Shared.Dungeon
                     new DropEntry("fragmento_guardiao", ItemRarity.Epic, 0.12),
                     Item("pedra_vigor", 0.2), Item("pedra_furia", 0.2), Item("pedra_precisao", 0.2),
                     Item("armadura_astralita", 0.15), Item("luvas_astralita", 0.15), Item("botas_astralita", 0.15),
-                    Item("anel_astralita", 0.15), Item("espada_astralita", 0.1), Item("cajado_astralita", 0.1)),
+                    Item("anel_astralita", 0.15), Item("espada_astralita", 0.1), Item("cajado_astralita", 0.1),
+                    Item("arco_astralita", 0.1)),
             };
             sanctuary.Rooms.Add(new DungeonRoom
             {

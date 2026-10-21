@@ -27,6 +27,7 @@ public class EconomyTests
     [Theory]
     [InlineData(Game.Shared.Accounts.CharacterClass.Blade)]
     [InlineData(Game.Shared.Accounts.CharacterClass.Arcanist)]
+    [InlineData(Game.Shared.Accounts.CharacterClass.Ranger)]
     public void Economia_fecha_positiva_em_cada_faixa_e_gasta_boa_parte(Game.Shared.Accounts.CharacterClass characterClass)
     {
         var bands = EconomySimulation.Run(characterClass);

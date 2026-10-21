@@ -189,6 +189,11 @@ namespace Game.Shared.Items
             list.Add(Weapon("cajado_aco_negro", 2, 10, CharacterClass.Arcanist, magic: 60, perLevel: 8));
             list.Add(Weapon("cajado_astralita", 3, 20, CharacterClass.Arcanist, magic: 110, perLevel: 14));
 
+            // ===== Arcos da Ranger (um pouco menos de ataque que a espada, com crítico) =====
+            list.Add(Weapon("arco_ferro", 1, 1, CharacterClass.Ranger, atk: 22, perLevel: 4, crit: 2));
+            list.Add(Weapon("arco_aco_negro", 2, 10, CharacterClass.Ranger, atk: 54, perLevel: 7, crit: 3));
+            list.Add(Weapon("arco_astralita", 3, 20, CharacterClass.Ranger, atk: 100, perLevel: 13, crit: 4));
+
             // ===== Armaduras e acessórios (todas as classes) =====
             var grades = new[] { (1, 1, "ferro"), (2, 10, "aco_negro"), (3, 20, "astralita") };
             foreach (var (grade, level, key) in grades)
@@ -260,11 +265,11 @@ namespace Game.Shared.Items
         }
 
         private static ItemDefinition Weapon(string id, int grade, int level, CharacterClass characterClass,
-            int atk = 0, int magic = 0, int perLevel = 0) => new ItemDefinition
+            int atk = 0, int magic = 0, int perLevel = 0, float crit = 0) => new ItemDefinition
         {
             Id = id, Kind = ItemKind.Equipment, Slot = EquipSlot.Weapon, Grade = grade, RequiredLevel = level,
             RequiredClass = characterClass, Rarity = grade == 3 ? ItemRarity.Rare : grade == 2 ? ItemRarity.Uncommon : ItemRarity.Common,
-            Stats = new StatBlock { AttackPower = atk, MagicPower = magic },
+            Stats = new StatBlock { AttackPower = atk, MagicPower = magic, CritPercent = crit },
             UpgradeStats = new StatBlock { AttackPower = atk > 0 ? perLevel : 0, MagicPower = magic > 0 ? perLevel : 0 },
         };
 

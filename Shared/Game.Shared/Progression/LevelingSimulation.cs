@@ -140,7 +140,7 @@ namespace Game.Shared.Progression
 
             var grade = level >= 20 ? 3 : level >= 10 ? 2 : 1;
             var suffix = grade == 3 ? "astralita" : grade == 2 ? "aco_negro" : "ferro";
-            var weapon = (characterClass == CharacterClass.Arcanist ? "cajado_" : "espada_") + suffix;
+            var weapon = ClassInfo.WeaponPrefix(characterClass) + suffix;
             var equipment = new Equipment();
             var upgrade = assumptions.UpgradeByGrade[grade - 1];
             long uid = 0;

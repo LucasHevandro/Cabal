@@ -25,6 +25,15 @@ public class CatalogTests
                 Assert.Contains(equipment, i => i.Slot == slot && i.Grade == grade);
         Assert.Equal(3, equipment.Count(i => i.RequiredClass == CharacterClass.Blade));
         Assert.Equal(3, equipment.Count(i => i.RequiredClass == CharacterClass.Arcanist));
+        Assert.Equal(3, equipment.Count(i => i.RequiredClass == CharacterClass.Ranger));
+    }
+
+    [Fact]
+    public void Ranger_comeca_com_atributos_no_mesmo_total_das_outras()
+    {
+        var total = Attributes.StartingFor(CharacterClass.Blade).Total;
+        Assert.Equal(total, Attributes.StartingFor(CharacterClass.Ranger).Total);
+        Assert.Equal(total, Attributes.StartingFor(CharacterClass.Arcanist).Total);
     }
 
     [Fact]
@@ -32,9 +41,13 @@ public class CatalogTests
     {
         foreach (EquipSlot slot in Enum.GetValues(typeof(EquipSlot)))
         {
-            var bySlot = ItemCatalog.All.Where(i => i.Kind == ItemKind.Equipment && i.Slot == slot && i.RequiredClass != CharacterClass.Arcanist)
-                .OrderBy(i => i.Grade).Select(i => Score(i.Stats)).ToList();
-            for (var i = 1; i < bySlot.Count; i++) Assert.True(bySlot[i] > bySlot[i - 1], $"{slot}: grau {i + 1} não supera o {i}");
+            // Cada classe (e as peças de todas) comparada só com ela mesma.
+            foreach (var group in ItemCatalog.All.Where(i => i.Kind == ItemKind.Equipment && i.Slot == slot).GroupBy(i => i.RequiredClass))
+            {
+                var bySlot = group.OrderBy(i => i.Grade).Select(i => Score(i.Stats)).ToList();
+                for (var i = 1; i < bySlot.Count; i++)
+                    Assert.True(bySlot[i] > bySlot[i - 1], $"{slot} {group.Key}: grau {i + 1} não supera o {i}");
+            }
         }
     }
 

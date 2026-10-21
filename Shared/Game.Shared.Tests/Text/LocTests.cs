@@ -59,8 +59,9 @@ public class LocTests
         keys.AddRange(crypt.Rooms.SelectMany(r => r.Spawns).Select(s => "monster." + s.Data.Id));
         keys.AddRange(NpcCatalog.All.Select(n => "npc." + n.Id));
         keys.AddRange(QuestCatalog.All.SelectMany(q => new[] { "quest." + q.Id, "quest." + q.Id + ".desc" }));
-        foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
+        foreach (var characterClass in ClassInfo.All)
         {
+            keys.Add(ClassInfo.NameKey(characterClass));
             keys.AddRange(ClassCatalog.SkillsFor(characterClass).Select(s => "skill." + s.Skill.Id));
             keys.AddRange(ClassCatalog.ComboConfigFor(characterClass).Routes.Select(r => "route." + r.Id));
         }

@@ -200,9 +200,12 @@ namespace Game.Shared.Items
         public int Total => Strength + Dexterity + Intelligence;
 
         /// <summary>Pontos com que cada classe começa.</summary>
-        public static Attributes StartingFor(CharacterClass characterClass) => characterClass == CharacterClass.Arcanist
-            ? new Attributes { Strength = 3, Dexterity = 5, Intelligence = 10 }
-            : new Attributes { Strength = 10, Dexterity = 6, Intelligence = 2 };
+        public static Attributes StartingFor(CharacterClass characterClass) => characterClass switch
+        {
+            CharacterClass.Arcanist => new Attributes { Strength = 3, Dexterity = 5, Intelligence = 10 },
+            CharacterClass.Ranger => new Attributes { Strength = 8, Dexterity = 8, Intelligence = 2 },
+            _ => new Attributes { Strength = 10, Dexterity = 6, Intelligence = 2 },
+        };
 
         public const int PointsPerLevel = 5;
 
@@ -226,7 +229,7 @@ namespace Game.Shared.Items
             if (definition.Kind != ItemKind.Equipment) return new LocalText("equip.not_gear");
             if (level < definition.RequiredLevel) return new LocalText("equip.level", definition.RequiredLevel);
             if (definition.RequiredClass.HasValue && definition.RequiredClass.Value != characterClass)
-                return new LocalText("equip.class", Loc.Ref(definition.RequiredClass.Value == CharacterClass.Arcanist ? "class.arcanist" : "class.blade"));
+                return new LocalText("equip.class", Loc.Ref(ClassInfo.NameKey(definition.RequiredClass.Value)));
             return null;
         }
 
