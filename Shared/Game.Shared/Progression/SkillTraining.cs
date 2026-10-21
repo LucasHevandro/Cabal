@@ -7,12 +7,12 @@ using Game.Shared.Text;
 namespace Game.Shared.Progression
 {
     /// <summary>
-    /// Skills aprendidas com o mestre de skills da vila (como no CABAL): o nível e a missão de rank só deixam aprender;
+    /// Skills aprendidas com o mestre de skills da vila: o nível e a missão de rank só deixam aprender;
     /// a skill entra quando o jogador paga ao mestre. A barra de atalhos (8 casas) é montada pelo jogador arrastando.
     /// </summary>
     public static class SkillTraining
     {
-        /// <summary>Casas da barra: duas fileiras de 10 (1 a 0 e Alt+1 a Alt+0), como no CABAL.</summary>
+        /// <summary>Casas da barra: duas fileiras de 10 (1 a 0 e Alt+1 a Alt+0).</summary>
         public const int HotbarSize = 20;
 
         /// <summary>Casas por fileira.</summary>
