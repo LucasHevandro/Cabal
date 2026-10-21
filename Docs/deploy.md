@@ -161,11 +161,14 @@ publicada para x64 e ARM, então o passo 3 funciona igual.
    o ufw** do passo seguinte nessa máquina; em vez dele, rode:
 
    ```bash
-   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 7777 -j ACCEPT
+   sudo iptables -L INPUT -n --line-numbers   # anote o número da linha do REJECT (na A1 com Ubuntu 24.04 é a 5)
+   sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+   sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 7777 -j ACCEPT
    sudo netfilter-persistent save
    ```
+
+   Use o número do REJECT no lugar do 5: as regras precisam ficar **antes** dele, senão não valem.
 
 5. **Usuário:** entre com `ssh ubuntu@IP_DA_MAQUINA`. Daí em diante, siga os comandos abaixo, menos a linha do `ufw`.
 6. **Máquina parada:** a Oracle pode recolher instâncias grátis que ficam ociosas por muito tempo. Um servidor com gente
