@@ -173,7 +173,7 @@ O Animator ganha um estado para cada passo (no `KayKitBuilder`), no ritmo do par
 - **Conferir:** `TerrasDeAstralis.exe -geartest pasta`. Mostra as duas classes com cada arma em +0, +4, +7, +9 e +10, a
   vitrine de aparência (`aparencia.png`) e depois todos os itens.
 
-# Aparência: couraça, luvas, botas, cabelo e roupa
+# Aparência: couraça, luvas, botas, cabelo, roupa, pele, penteado e elmo
 
 A textura dos personagens do KayKit é uma paleta: uma grade de 8×4 cores em degradê. Mudar a cor de uma parte é
 repintar a célula dela. O `Fx/CharacterPaint` faz isso no cliente:
@@ -201,15 +201,29 @@ nas pernas.
   - Astralita: azul-claro.
 - **Cabelo** (6 opções): original, loiro, ruivo, preto, grisalho e castanho.
 - **Roupa** (6 opções): original, azul, verde, roxo, preto e branco.
+- **Pele** (5 opções): original, clara, morena, parda e negra. É a célula (0,0), a mesma nos cinco aventureiros do pacote.
+- **Penteado** (6 opções): a cabeça da classe ou a de um dos aventureiros do pacote (Knight, Mage, Ranger, Rogue e
+  Barbarian), que dividem o mesmo esqueleto.
+  - O `KayKitBuilder` põe as cinco cabeças no prefab de cada classe, escondidas e presas aos mesmos ossos pelo nome.
+    Cada uma fica com a textura do próprio modelo; o cabelo é a célula (1,0) em todas, então a cor de cabelo vale para
+    qualquer penteado.
+  - Na tela os nomes descrevem o penteado: da classe, curto, longo, cavanhaque, volumoso e barba.
+- **Elmo:** o jogador mostra ou esconde o elmo (o chapéu, no Arcanista) quando quiser, na caixa do inventário. O
+  servidor guarda (`HideHelmet`) e avisa quem o vê pelo `EntityLook`. Na criação, a prévia começa sem elmo para mostrar
+  o penteado.
 - **Na criação:** a cor de cabelo e a de roupa são escolhidas ao lado de uma prévia 3D girando (`Net/CharacterPreview`).
-  O servidor guarda as duas (colunas `Hair` e `Cloth`, migração `AparenciaPersonagem`) e corrige índices fora da paleta.
-- **No protocolo (v16):** o `EntitySpawned` leva o grau da couraça, das luvas e das botas, o cabelo e a roupa. O
-  `EntityLook` leva os três graus quando o jogador troca de peça.
+  O servidor guarda as escolhas (colunas `Hair` e `Cloth`, migração `AparenciaPersonagem`; `Head`, `Skin` e `HideHelmet`,
+  migração `PenteadoEElmo`) e corrige índices fora da lista.
+- **No protocolo (v17):** o `EntitySpawned` leva o grau da couraça, das luvas e das botas, o cabelo, a roupa, o penteado,
+  a pele e o elmo. O `EntityLook` leva os três graus e o elmo quando o jogador troca de peça ou mostra/esconde o elmo
+  (`AppearanceCommand`).
 - **Na seleção de personagem:** a prévia mostra quem está sob o mouse, com as cores e os graus das peças vestidas (a
   lista de personagens traz os três graus).
 - **Convidados** (testes e bots) variam as cores pelo id.
 - **Conferir:**
   - `-geartest` (`aparencia.png`): Lâmina e Arcanista com o conjunto de cada grau, peças misturadas e algumas cores;
+    `penteados.png`: os seis penteados sem elmo, com tons de pele diferentes;
+  - `-onlineui` (`5b-elmo.png`): esconde o elmo pelo servidor e volta a mostrar;
   - `-logintest`: `criacao_arcanista.png`, `criacao_lamina.png` e `selecao.png`.
 
 # Cripta e arena PvP
