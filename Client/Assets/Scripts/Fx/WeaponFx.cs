@@ -37,7 +37,7 @@ namespace Game.Client.Fx
 
         /// <summary>
         /// Arma equipada e nível de melhoria de <paramref name="owner"/>: troca o modelo na mão (Visuals/weapon/&lt;id&gt;)
-        /// e acende o brilho da melhoria, como no CABAL (+4 azul, +7 ciano com partículas, +9 roxo, +10 dourado pulsando).
+        /// e acende o brilho da melhoria (+4 azul, +7 ciano com partículas, +9 roxo, +10 dourado pulsando).
         /// </summary>
         public static void SetLook(Component owner, string weaponId, int upgrade)
         {

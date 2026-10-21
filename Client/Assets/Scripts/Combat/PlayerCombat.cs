@@ -237,7 +237,7 @@ namespace Game.Client.Combat
 
             if (KeyBindings.Pressed(GameAction.StartCombo)) RequestStartCombo();
             if (KeyBindings.Pressed(GameAction.Finisher)) RequestFinisher();
-            // 1 a 0: primeira fileira da barra; com Alt, a segunda (como no CABAL).
+            // 1 a 0: primeira fileira da barra; com Alt, a segunda.
             var alt = keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed;
             for (var key = 0; key < Game.Shared.Progression.SkillTraining.HotbarRow; key++)
                 if (KeyBindings.Pressed(GameAction.Skill1 + key)) RequestHotbar(alt ? key + Game.Shared.Progression.SkillTraining.HotbarRow : key);
@@ -349,7 +349,7 @@ namespace Game.Client.Combat
                     ShowMessage(Loc.T("combat.need_target_hint", KeyBindings.Label(GameAction.NextTarget)));
                     return;
                 case SkillUseCheck.OnCooldown:
-                    // Como no CABAL: usar skill em recarga durante o combo quebra a corrente.
+                    // Usar skill em recarga durante o combo quebra a corrente.
                     if (Combo.State == ComboState.Active)
                     {
                         Combo.Cancel();

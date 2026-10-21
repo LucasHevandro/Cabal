@@ -11,7 +11,7 @@ namespace Game.Client.UI
 {
     /// <summary>
     /// Skills: a janela das skills da classe (K), o mestre de skills (aprender pagando em Alz) e a barra de atalhos
-    /// montada arrastando, como no CABAL: da janela para a barra, entre casas da barra (troca) e para fora (tira).
+    /// montada arrastando: da janela para a barra, entre casas da barra (troca) e para fora (tira).
     /// Clicar numa casa da barra usa a skill. A arrumação vai para o servidor e fica salva com o personagem.
     /// </summary>
     public sealed partial class GameWindows
