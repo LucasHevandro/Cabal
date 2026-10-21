@@ -3,7 +3,7 @@
 #   powershell -ExecutionPolicy Bypass -File Tools/launcher/publicar.ps1 -Novidades "Monstros elite nos campos."
 # Opções: -Servidor astralis (o Host do ~/.ssh/config), -Versao 0.2.0, -Limpar (apaga da VPS os arquivos que nenhuma
 # versão usa mais), -SemInstalador (não refaz o InstalarTerrasDeAstralis.exe).
-# Na VPS, os arquivos ficam em ~/Cabal/deploy/download (o Caddy serve em https://DOMINIO/download/).
+# Na VPS, os arquivos ficam em ~/TerrasDeAstralis/deploy/download (o Caddy serve em https://DOMINIO/download/).
 param(
     [string]$Novidades = '',
     [string]$Servidor = 'astralis',
@@ -36,7 +36,7 @@ if (-not (Test-Path (Join-Path $out 'versao.json'))) { throw 'O launcher não mo
 Write-Host (Get-Content (Join-Path $out 'resumo.txt'))
 
 # 3. Envia só os arquivos que a VPS ainda não tem; o versao.json vai por último (troca de uma vez).
-$remote = '~/Cabal/deploy/download'
+$remote = '~/TerrasDeAstralis/deploy/download'
 $existing = @(ssh $Servidor "mkdir -p $remote/arquivos && ls $remote/arquivos")
 if ($LASTEXITCODE -ne 0) { throw "Não consegui entrar na VPS ($Servidor)." }
 $release = Get-Content (Join-Path $out 'versao.json') -Raw | ConvertFrom-Json
