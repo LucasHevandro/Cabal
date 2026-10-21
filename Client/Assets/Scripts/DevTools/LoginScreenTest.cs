@@ -36,11 +36,11 @@ namespace Game.Client.DevTools
             var menu = FindAnyObjectByType<ConnectMenu>();
             if (menu != null)
             {
-                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Arcanist, 1, 3);
+                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Arcanist, 1, 3, head: 2, skin: 1);
                 yield return new WaitForSecondsRealtime(1.5f);
                 ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "criacao_arcanista.png"));
                 yield return new WaitForSecondsRealtime(0.4f);
-                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Blade, 3, 1);
+                menu.OpenCreateForTest(Game.Shared.Accounts.CharacterClass.Blade, 3, 1, head: 5, skin: 3);
                 yield return new WaitForSecondsRealtime(1.5f);
                 ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "criacao_lamina.png"));
                 yield return new WaitForSecondsRealtime(0.4f);

@@ -58,15 +58,20 @@ namespace Game.Client.Net
             Target = target;
             MonsterData = monsterData;
             transform.position = Game.Client.World.Ground.Point(spawned.X, spawned.Z);
-            _hair = spawned.Hair;
-            _cloth = spawned.Cloth;
+            _style = new Fx.CharacterPaint.Style(spawned.Hair, spawned.Cloth, spawned.Head, spawned.Skin, spawned.HideHelmet);
         }
 
-        private int _hair;
-        private int _cloth;
+        private Fx.CharacterPaint.Style _style;
 
-        /// <summary>Jogadores: trocou de peça vestida (o metal muda de cor; cabelo e roupa ficam os da criação).</summary>
-        public void SetGear(Fx.CharacterPaint.Gear gear) => Fx.CharacterPaint.Apply(transform, gear, _hair, _cloth);
+        /// <summary>
+        /// Jogadores: trocou de peça vestida ou mostrou/escondeu o elmo (o metal muda de cor; cores, penteado e pele
+        /// ficam os da criação).
+        /// </summary>
+        public void SetGear(Fx.CharacterPaint.Gear gear, bool hideHelmet)
+        {
+            _style = _style.WithHelmet(hideHelmet);
+            Fx.CharacterPaint.Apply(transform, gear, _style);
+        }
 
         /// <summary>Recebe o estado do snapshot.</summary>
         public void AddSample(double serverTime, in EntityState state)

@@ -399,6 +399,22 @@ namespace Game.Client.DevTools
             yield return new WaitForSecondsRealtime(0.5f);
             Capture("5-inventario");
             yield return new WaitForEndOfFrame();
+
+            // Esconde o elmo pelo servidor (que devolve o EntityLook) e volta a mostrar.
+            var combat = PlayerCombat.Local;
+            var session = NetworkSession.Instance;
+            var hidden = combat.HelmetHidden;
+            session.Send(new AppearanceCommand { HideHelmet = !hidden });
+            yield return WaitFor(() => combat.HelmetHidden != hidden, 3f);
+            if (combat.HelmetHidden == hidden)
+            {
+                outcome.Message = "o servidor não trocou o elmo";
+                yield break;
+            }
+            Capture("5b-elmo");
+            yield return new WaitForEndOfFrame();
+            session.Send(new AppearanceCommand { HideHelmet = hidden });
+            Log($"Elmo: escondido {!hidden} e de volta");
             windows.SetInventoryOpen(false);
             windows.SetAttributesOpen(false);
 

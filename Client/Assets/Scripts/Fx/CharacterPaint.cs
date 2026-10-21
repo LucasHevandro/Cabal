@@ -33,6 +33,42 @@ namespace Game.Client.Fx
             new Color(0.92f, 0.9f, 0.86f), // branco
         };
 
+        public static readonly Color[] SkinColors =
+        {
+            Color.clear, // original
+            new Color(1f, 0.87f, 0.76f), // clara
+            new Color(0.8f, 0.58f, 0.42f), // morena
+            new Color(0.6f, 0.4f, 0.27f), // parda
+            new Color(0.36f, 0.23f, 0.16f), // negra
+        };
+
+        /// <summary>Penteados (a cabeça de qual modelo): 0 = a da classe; depois os aventureiros do pacote.</summary>
+        public static readonly string[] HeadModels = { "", "Knight", "Mage", "Ranger", "Rogue", "Barbarian" };
+
+        /// <summary>Elmo e chapéu: o jogador pode esconder.</summary>
+        private static readonly string[] HelmetParts = { "Knight_Helmet", "Knight_HelmetVisor", "Mage_Hat" };
+
+        /// <summary>O que o jogador escolheu na criação (cores, penteado, pele) e se o elmo aparece.</summary>
+        public readonly struct Style
+        {
+            public readonly int Hair;
+            public readonly int Cloth;
+            public readonly int Head;
+            public readonly int Skin;
+            public readonly bool HideHelmet;
+
+            public Style(int hair, int cloth, int head = 0, int skin = 0, bool hideHelmet = false)
+            {
+                Hair = hair;
+                Cloth = cloth;
+                Head = head;
+                Skin = skin;
+                HideHelmet = hideHelmet;
+            }
+
+            public Style WithHelmet(bool hide) => new Style(Hair, Cloth, Head, Skin, hide);
+        }
+
         /// <summary>Metal por grau da armadura (0 = sem armadura: cor original).</summary>
         public static readonly Color[] MetalColors =
         {
@@ -51,8 +87,11 @@ namespace Game.Client.Fx
             public Vector2Int[] Metal;
             public Vector2Int[] ArmMetal = System.Array.Empty<Vector2Int>();
             public Vector2Int[] LegMetal = System.Array.Empty<Vector2Int>();
-            public Vector2Int[] Hair;
-            public Vector2Int[] Cloth;
+            public Vector2Int[] Hair = System.Array.Empty<Vector2Int>();
+            public Vector2Int[] Cloth = System.Array.Empty<Vector2Int>();
+
+            /// <summary>Pele (rosto e mãos): a mesma célula em todos os aventureiros do pacote.</summary>
+            public Vector2Int[] Skin = { new Vector2Int(0, 0) };
         }
 
         private enum Part { Body, Arm, Leg }
@@ -77,6 +116,10 @@ namespace Game.Client.Fx
                 Hair = new[] { new Vector2Int(1, 0) },
                 Cloth = new[] { new Vector2Int(0, 1), new Vector2Int(1, 1) },
             },
+            // Os outros aventureiros só emprestam a cabeça (penteado): cabelo (1,0) e pele (0,0), como nos dois acima.
+            ["ranger_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
+            ["rogue_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
+            ["barbarian_texture"] = new Layout { Metal = System.Array.Empty<Vector2Int>(), Hair = new[] { new Vector2Int(1, 0) } },
         };
 
         private const int AstralGrade = 3;
@@ -84,7 +127,7 @@ namespace Game.Client.Fx
         private const string AuraName = "Aura de Astralita";
 
         private const int Size = 256; // a paleta reduzida: cada célula vira 32×64 pixels, o degradê continua liso
-        private static readonly Dictionary<(Material, Part, int, int, int), Material> Painted = new Dictionary<(Material, Part, int, int, int), Material>();
+        private static readonly Dictionary<(Material, Part, int, int, int, int), Material> Painted = new Dictionary<(Material, Part, int, int, int, int), Material>();
         private static readonly Dictionary<Texture, Color32[]> Originals = new Dictionary<Texture, Color32[]>();
 
         /// <summary>Repinta o corpo do modelo dentro de <paramref name="root"/> (sem modelo ou sem paleta conhecida, nada muda).</summary>
@@ -106,11 +149,14 @@ namespace Game.Client.Fx
             public static Gear Set(int grade) => new Gear(grade, grade, grade);
         }
 
-        public static void Apply(Transform root, int armorGrade, int hair, int cloth) => Apply(root, Gear.Set(armorGrade), hair, cloth);
+        public static void Apply(Transform root, int armorGrade, int hair, int cloth) => Apply(root, Gear.Set(armorGrade), new Style(hair, cloth));
 
-        public static void Apply(Transform root, Gear gear, int hair, int cloth)
+        public static void Apply(Transform root, Gear gear, int hair, int cloth) => Apply(root, gear, new Style(hair, cloth));
+
+        public static void Apply(Transform root, Gear gear, Style style)
         {
             if (root == null) return;
+            SetHead(root, style.Head, style.HideHelmet);
             foreach (var renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 // Knight_ArmLeft, Mage_LegRight...: braços seguem as luvas, pernas as botas, o resto a couraça.
@@ -121,7 +167,7 @@ namespace Game.Client.Fx
                 var changed = false;
                 for (var i = 0; i < materials.Length; i++)
                 {
-                    var painted = PaintedFor(materials[i], part, grade, hair, cloth);
+                    var painted = PaintedFor(materials[i], part, grade, style.Hair, style.Cloth, style.Skin);
                     if (painted == null || painted == materials[i]) continue;
                     materials[i] = painted;
                     changed = true;
@@ -129,6 +175,25 @@ namespace Game.Client.Fx
                 if (changed) renderer.sharedMaterials = materials;
             }
             SetAura(root, gear.Armor >= AstralGrade);
+        }
+
+        /// <summary>
+        /// Liga a cabeça do penteado escolhido (as outras ficam escondidas no prefab da classe) e mostra ou esconde o elmo
+        /// e o chapéu. Penteado que o modelo não tem fica com a cabeça da própria classe.
+        /// </summary>
+        private static void SetHead(Transform root, int head, bool hideHelmet)
+        {
+            var animator = root.GetComponentInChildren<Animator>(true);
+            if (animator == null) return;
+            var own = animator.gameObject.name;
+            var wanted = (head > 0 && head < HeadModels.Length ? HeadModels[head] : own) + "_Head";
+            var heads = new List<SkinnedMeshRenderer>();
+            foreach (var renderer in animator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (renderer.name.EndsWith("_Head")) heads.Add(renderer);
+            if (!heads.Exists(h => h.name == wanted)) wanted = own + "_Head";
+            foreach (var renderer in heads) renderer.gameObject.SetActive(renderer.name == wanted);
+            foreach (var t in animator.GetComponentsInChildren<Transform>(true))
+                if (System.Array.IndexOf(HelmetParts, t.name) >= 0) t.gameObject.SetActive(!hideHelmet);
         }
 
         /// <summary>Faíscas azuis subindo devagar em volta do corpo (só com a couraça de Astralita).</summary>
@@ -181,7 +246,7 @@ namespace Game.Client.Fx
             ps.Play();
         }
 
-        private static Material PaintedFor(Material material, Part part, int armorGrade, int hair, int cloth)
+        private static Material PaintedFor(Material material, Part part, int armorGrade, int hair, int cloth, int skin)
         {
             if (material == null) return null;
             // Um material já pintado guarda o original: repintar parte sempre da paleta do pacote.
@@ -192,9 +257,10 @@ namespace Game.Client.Fx
             var metal = Pick(MetalColors, armorGrade);
             var hairColor = Pick(HairColors, hair);
             var clothColor = Pick(ClothColors, cloth);
-            if (metal.a == 0 && hairColor.a == 0 && clothColor.a == 0) return material;
+            var skinColor = Pick(SkinColors, skin);
+            if (metal.a == 0 && hairColor.a == 0 && clothColor.a == 0 && skinColor.a == 0) return material;
 
-            var key = (material, part, armorGrade, hair, cloth);
+            var key = (material, part, armorGrade, hair, cloth, skin);
             if (Painted.TryGetValue(key, out var cached) && cached != null) return cached;
 
             var pixels = (Color32[])OriginalPixels(texture).Clone();
@@ -203,6 +269,7 @@ namespace Game.Client.Fx
             if (part == Part.Leg) Recolor(pixels, layout.LegMetal, metal);
             Recolor(pixels, layout.Hair, hairColor);
             Recolor(pixels, layout.Cloth, clothColor);
+            Recolor(pixels, layout.Skin, skinColor);
             var result = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = texture.name + "_pintada", wrapMode = TextureWrapMode.Clamp };
             result.SetPixels32(pixels);
             result.Apply(true, true);

@@ -38,12 +38,18 @@ namespace Game.Client.Editor
             /// <summary>Material no lugar do atlas (ex.: "fantasma" para o espectro) e cor dos olhos.</summary>
             public string Override = "";
             public string Eyes = "glow";
+
+            /// <summary>Classes: leva as cabeças dos outros aventureiros escondidas (os penteados da criação).</summary>
+            public bool Heads;
         }
+
+        /// <summary>Aventureiros do pacote com o mesmo esqueleto: a cabeça de um serve no corpo do outro.</summary>
+        private static readonly string[] HeadModels = { "Knight", "Mage", "Ranger", "Rogue", "Barbarian" };
 
         private static readonly Dictionary<string, Look> ClassLooks = new Dictionary<string, Look>
         {
-            ["blade"] = new Look { Model = "Knight", RightHand = "sword_1handed", LeftHand = "shield_badge_color" },
-            ["arcanist"] = new Look { Model = "Mage", RightHand = "staff" },
+            ["blade"] = new Look { Model = "Knight", RightHand = "sword_1handed", LeftHand = "shield_badge_color", Heads = true },
+            ["arcanist"] = new Look { Model = "Mage", RightHand = "staff", Heads = true },
         };
 
         private static readonly Dictionary<string, Look> NpcLooks = new Dictionary<string, Look>
@@ -429,6 +435,7 @@ namespace Game.Client.Editor
             model.transform.localScale = Vector3.one * scale;
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
+            if (look.Heads) AddHeads(model, look.Model, materials);
 
             // Classes: rastro na arma, energia no cajado e avanço nos golpes (WeaponFx).
             if (weaponFx) root.AddComponent<WeaponFx>().SetTrailMaterial(TrailMaterial());
@@ -436,6 +443,44 @@ namespace Game.Client.Editor
             AssetDatabase.DeleteAsset(path);
             PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
+        }
+
+        /// <summary>
+        /// Põe as cabeças dos outros aventureiros no modelo, escondidas e presas aos mesmos ossos (pelo nome). Cada uma
+        /// mantém a textura do próprio modelo; o <see cref="CharacterPaint"/> liga a do penteado escolhido.
+        /// </summary>
+        private static void AddHeads(GameObject model, string own, Dictionary<string, Material> materials)
+        {
+            var bones = new Dictionary<string, Transform>();
+            foreach (var t in model.GetComponentsInChildren<Transform>(true)) bones.TryAdd(t.name, t);
+            var ownHead = model.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == own + "_Head");
+            if (ownHead == null) throw new System.InvalidOperationException($"{own} sem {own}_Head.");
+            foreach (var other in HeadModels)
+            {
+                if (other == own) continue;
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{Characters}/{other}.fbx");
+                if (asset == null) continue;
+                var temp = Object.Instantiate(asset);
+                var source = temp.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == other + "_Head");
+                if (source != null && materials.TryGetValue(other.ToLowerInvariant(), out var material))
+                {
+                    var head = new GameObject(other + "_Head");
+                    head.transform.SetParent(ownHead.transform.parent, false);
+                    head.transform.localPosition = source.transform.localPosition;
+                    head.transform.localRotation = source.transform.localRotation;
+                    head.transform.localScale = source.transform.localScale;
+                    var skinned = head.AddComponent<SkinnedMeshRenderer>();
+                    skinned.sharedMesh = source.sharedMesh;
+                    skinned.bones = source.bones.Select(b => b != null && bones.TryGetValue(b.name, out var mine) ? mine : null).ToArray();
+                    skinned.rootBone = source.rootBone != null && bones.TryGetValue(source.rootBone.name, out var root) ? root : ownHead.rootBone;
+                    skinned.localBounds = source.localBounds;
+                    skinned.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, source.sharedMaterials.Length)).ToArray();
+                    skinned.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                    skinned.updateWhenOffscreen = false;
+                    head.SetActive(false);
+                }
+                Object.DestroyImmediate(temp);
+            }
         }
 
         private static void Attach(GameObject model, string slot, string weapon)

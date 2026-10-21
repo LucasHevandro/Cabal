@@ -17,14 +17,13 @@ namespace Game.Client.Net
         private RenderTexture _texture;
         private GameObject _model;
         private CharacterClass _class;
-        private int _hair = -1;
-        private int _cloth = -1;
+        private CharacterPaint.Style? _style;
         private CharacterPaint.Gear _gear;
         private bool _painted;
 
         public Texture Texture => _texture;
 
-        public void Show(CharacterClass characterClass, int hair, int cloth, CharacterPaint.Gear gear = default)
+        public void Show(CharacterClass characterClass, CharacterPaint.Style style, CharacterPaint.Gear gear = default)
         {
             if (_rig == null)
             {
@@ -41,22 +40,21 @@ namespace Game.Client.Net
                 _camera.targetTexture = _texture;
                 _camera.depth = -10;
                 _model = null;
-                _hair = _cloth = -1;
+                _style = null;
             }
             if (_model == null || characterClass != _class)
             {
                 if (_model != null) Object.Destroy(_model);
                 _class = characterClass;
                 _model = VisualCatalog.Spawn(VisualCatalog.Class, characterClass == CharacterClass.Arcanist ? "arcanist" : "blade", _rig.transform);
-                _hair = _cloth = -1;
+                _style = null;
             }
             if (_model == null) return;
-            if (hair != _hair || cloth != _cloth || !gear.Equals(_gear))
+            if (!_style.Equals(style) || !gear.Equals(_gear))
             {
-                _hair = hair;
-                _cloth = cloth;
+                _style = style;
                 _gear = gear;
-                CharacterPaint.Apply(_model.transform, gear, hair, cloth);
+                CharacterPaint.Apply(_model.transform, gear, style);
             }
             _model.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(Time.unscaledTime * 0.6f) * 50f, 0f);
         }

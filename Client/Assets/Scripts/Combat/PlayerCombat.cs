@@ -169,7 +169,7 @@ namespace Game.Client.Combat
             var key = characterClass == CharacterClass.Arcanist ? "arcanist" : "blade";
             _classModel = VisualCatalog.Spawn(VisualCatalog.Class, key, transform);
             if (_classModel != null && _lookWeapon.Length > 0) WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
-            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _hair, _cloth);
+            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _style);
             foreach (var name in new[] { "Corpo", "Frente" })
             {
                 var part = transform.Find(name);
@@ -181,22 +181,31 @@ namespace Game.Client.Combat
         private string _lookWeapon = "";
         private int _lookUpgrade;
         private CharacterPaint.Gear _lookGear;
-        private int _hair;
-        private int _cloth;
+        private CharacterPaint.Style _style;
+
+        /// <summary>Elmo (ou chapéu) escondido agora (a janela do inventário mostra e troca).</summary>
+        public bool HelmetHidden => _style.HideHelmet;
 
         /// <summary>
-        /// Arma equipada, melhoria e grau das peças vestidas (do servidor): o modelo na mão, o brilho e a cor do metal
-        /// acompanham. Cabelo e roupa só vêm quando o personagem aparece (nulos = mantém).
+        /// Arma equipada, melhoria, grau das peças vestidas e o elmo (do servidor): o modelo na mão, o brilho, a cor do
+        /// metal e a cabeça acompanham. Cores, penteado e pele só vêm quando o personagem aparece (nulo = mantém).
         /// </summary>
-        public void ApplyLook(string weaponId, int upgrade, CharacterPaint.Gear gear, int? hair = null, int? cloth = null)
+        public void ApplyLook(string weaponId, int upgrade, CharacterPaint.Gear gear, CharacterPaint.Style? style = null, bool? hideHelmet = null)
         {
             _lookWeapon = weaponId ?? "";
             _lookUpgrade = upgrade;
             _lookGear = gear;
-            _hair = hair ?? _hair;
-            _cloth = cloth ?? _cloth;
+            _style = style ?? _style;
+            if (hideHelmet is { } hide) _style = _style.WithHelmet(hide);
             WeaponFx.SetLook(this, _lookWeapon, _lookUpgrade);
-            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _hair, _cloth);
+            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _style);
+        }
+
+        /// <summary>Modo offline: mostrar ou esconder o elmo na hora (online, quem decide é o servidor).</summary>
+        public void SetHelmetHidden(bool hide)
+        {
+            _style = _style.WithHelmet(hide);
+            if (_classModel != null) CharacterPaint.Apply(_classModel.transform, _lookGear, _style);
         }
 
         private void Update()

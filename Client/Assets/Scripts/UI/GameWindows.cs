@@ -290,6 +290,17 @@ namespace Game.Client.UI
             var footer = rect.yMax - 58;
             var alz = Player.GetComponent<PlayerLoot>();
             GUI.Label(new Rect(x, footer, 220, 24), Loc.T("inv.alz", (alz != null ? alz.Alz : 0)), _small);
+            // Mostrar o elmo (o chapéu, no Arcanista): online o servidor guarda e avisa quem vê; offline troca na hora.
+            var combat = Player;
+            if (combat != null)
+            {
+                var show = UiTheme.Toggle(new Rect(x + 190, footer, 150, 24), !combat.HelmetHidden, " " + Loc.T("inv.show_helmet"), _tiny);
+                if (show == combat.HelmetHidden)
+                {
+                    if (NetworkSession.Instance != null) Send(new Msg.AppearanceCommand { HideHelmet = !show });
+                    else combat.SetHelmetHidden(!show);
+                }
+            }
             if (sheet != null)
                 GUI.Label(new Rect(x, footer + 22, rect.width - 28, 24),
                     Loc.T("inv.stats", sheet.AttackPower, sheet.MagicPower, sheet.Defense, sheet.CritPercent), _tiny);

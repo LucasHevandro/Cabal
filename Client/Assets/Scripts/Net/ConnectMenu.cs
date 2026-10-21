@@ -42,6 +42,9 @@ namespace Game.Client.Net
         private CharacterClass _newClass = CharacterClass.Blade;
         private int _newHair;
         private int _newCloth;
+        private int _newHead;
+        private int _newSkin;
+        private bool _newHideHelmet = true; // na criação a prévia começa sem elmo, para ver o penteado
         private readonly CharacterPreview _preview = new CharacterPreview();
         private int _previewed; // personagem da lista mostrado na prévia (o do mouse; senão o último mostrado)
         private string _message = "";
@@ -129,12 +132,14 @@ namespace Game.Client.Net
             _previewed = 0;
         }
 
-        internal void OpenCreateForTest(CharacterClass characterClass, int hair, int cloth)
+        internal void OpenCreateForTest(CharacterClass characterClass, int hair, int cloth, int head = 0, int skin = 0)
         {
             _screen = Screen.CreateCharacter;
             _newClass = characterClass;
             _newHair = hair;
             _newCloth = cloth;
+            _newHead = head;
+            _newSkin = skin;
         }
 
         private void OnDestroy()
@@ -232,7 +237,7 @@ namespace Game.Client.Net
             }
             await Run(Loc.T("login.creating_character"), async () =>
             {
-                var created = await _api.CreateCharacterAsync(_newName, _newClass, _newHair, _newCloth);
+                var created = await _api.CreateCharacterAsync(_newName, _newClass, _newHair, _newCloth, _newHead, _newSkin);
                 if (!created.Ok)
                 {
                     ShowError(created.Error);
@@ -381,7 +386,7 @@ namespace Game.Client.Net
             // Os termos precisam de mais espaço para ler.
             var wide = _screen == Screen.CreateCharacter || (_screen == Screen.Characters && _characters.Count > 0);
             var width = (_screen == Screen.Terms || wide ? 820 : 480) * scale;
-            var height = (_screen == Screen.Terms ? 780 : wide ? 600 : 520) * scale;
+            var height = (_screen == Screen.Terms ? 780 : _screen == Screen.CreateCharacter ? 700 : wide ? 600 : 520) * scale;
             var area = new Rect((UnityEngine.Screen.width - width) / 2, (UnityEngine.Screen.height - height) / 2, width, height);
             Game.Client.UI.UiTheme.Panel(area, 0.94f);
             GUILayout.BeginArea(new Rect(area.x + 14 * scale, area.y + 6 * scale, area.width - 28 * scale, area.height - 12 * scale));
@@ -412,11 +417,12 @@ namespace Game.Client.Net
         private void Update()
         {
             // Prévia do personagem só na tela de criação.
-            if (!GameMode.ChoiceMade && _screen == Screen.CreateCharacter) _preview.Show(_newClass, _newHair, _newCloth);
+            if (!GameMode.ChoiceMade && _screen == Screen.CreateCharacter)
+                _preview.Show(_newClass, new CharacterPaint.Style(_newHair, _newCloth, _newHead, _newSkin, _newHideHelmet));
             else if (!GameMode.ChoiceMade && _screen == Screen.Characters && _characters.Count > 0)
             {
                 var shown = _characters[Mathf.Clamp(_previewed, 0, _characters.Count - 1)];
-                _preview.Show((CharacterClass)shown.ClassId, shown.Hair, shown.Cloth,
+                _preview.Show((CharacterClass)shown.ClassId, new CharacterPaint.Style(shown.Hair, shown.Cloth, shown.Head, shown.Skin, shown.HideHelmet),
                     new CharacterPaint.Gear(shown.ArmorGrade, shown.GlovesGrade, shown.BootsGrade));
             }
             else _preview.Hide();
@@ -632,6 +638,23 @@ namespace Game.Client.Net
             return current;
         }
 
+        private static readonly string[] HeadLabels =
+            { "login.head_0", "login.head_1", "login.head_2", "login.head_3", "login.head_4", "login.head_5" };
+
+        /// <summary>Penteados em duas fileiras de botões com o nome (a prévia mostra cada um).</summary>
+        private int HeadRow(int current, float scale)
+        {
+            GUILayout.Label(Loc.T("login.head"), _label);
+            for (var row = 0; row < 2; row++)
+            {
+                GUILayout.BeginHorizontal();
+                for (var i = row * 3; i < row * 3 + 3 && i < HeadLabels.Length; i++)
+                    if (GUILayout.Toggle(current == i, Loc.T(HeadLabels[i]), GUI.skin.button, GUILayout.Height(28 * scale))) current = i;
+                GUILayout.EndHorizontal();
+            }
+            return current;
+        }
+
         private void DrawCreateOptions(float scale)
         {
             GUILayout.Label(Loc.T("login.new_character"), _label);
@@ -646,6 +669,9 @@ namespace Game.Client.Net
             GUILayout.EndHorizontal();
             _newHair = ColorRow(Loc.T("login.hair"), CharacterPaint.HairColors, _newHair, scale);
             _newCloth = ColorRow(Loc.T("login.cloth"), CharacterPaint.ClothColors, _newCloth, scale);
+            _newSkin = ColorRow(Loc.T("login.skin"), CharacterPaint.SkinColors, _newSkin, scale);
+            _newHead = HeadRow(_newHead, scale);
+            _newHideHelmet = !GUILayout.Toggle(!_newHideHelmet, " " + Loc.T("login.show_helmet"), GUILayout.Height(24 * scale));
             GUILayout.Space(10 * scale);
             if (GUILayout.Button(Loc.T("login.create"), GUILayout.Height(38 * scale))) _ = CreateCharacterAsync();
             if (_characters.Count > 0 && GUILayout.Button(Loc.T("ui.back"), GUILayout.Height(28 * scale)))

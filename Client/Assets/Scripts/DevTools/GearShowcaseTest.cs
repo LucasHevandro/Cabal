@@ -89,6 +89,25 @@ namespace Game.Client.DevTools
             yield return new WaitForSeconds(0.3f);
             foreach (var holder in dressed) Destroy(holder);
 
+            // 1c) Os seis penteados sem elmo, cada um com um tom de pele (em cima Lâmina, embaixo Arcanista), de perto.
+            var heads = new GameObject[CharacterPaint.HeadModels.Length * 2];
+            for (var i = 0; i < heads.Length; i++)
+            {
+                var head = i % CharacterPaint.HeadModels.Length;
+                heads[i] = new GameObject($"penteado_{i}");
+                heads[i].transform.position = World.Ground.Point(origin.x + (head - 2.5f) * 1.1f, origin.z + (i < CharacterPaint.HeadModels.Length ? 0f : 2f));
+                heads[i].transform.rotation = Quaternion.Euler(0, 180, 0);
+                var model = VisualCatalog.Spawn(VisualCatalog.Class, i < CharacterPaint.HeadModels.Length ? "blade" : "arcanist", heads[i].transform);
+                if (model != null)
+                    CharacterPaint.Apply(model.transform, CharacterPaint.Gear.Set(1), new CharacterPaint.Style(head % 6, 0, head, head % CharacterPaint.SkinColors.Length, true));
+            }
+            camera.transform.position = origin + new Vector3(0, 2.3f, -6.5f);
+            camera.transform.LookAt(origin + new Vector3(0, 1.1f, 1f));
+            yield return new WaitForSeconds(0.8f);
+            ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "penteados.png"));
+            yield return new WaitForSeconds(0.3f);
+            foreach (var holder in heads) Destroy(holder);
+
             // 2) Todos os itens no chão, em grade.
             var items = ItemCatalog.All.Select(i => i.Id).Where(id => VisualCatalog.Has(VisualCatalog.Item, id)).ToList();
             var columns = 8;
