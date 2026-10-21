@@ -37,6 +37,7 @@ namespace Game.Client.Editor
         {
             // Jogo online: continua rodando sem foco (várias janelas abertas para teste, alt-tab durante a luta).
             PlayerSettings.runInBackground = true;
+            GameIcon.Apply();
 
             var options = new BuildPlayerOptions
             {
