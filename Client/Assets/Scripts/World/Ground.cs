@@ -29,6 +29,14 @@ namespace Game.Client.World
 
         private const float RiverHalfWidth = 2.6f;
 
+        // Ponte de madeira em arco onde a estrada cruza o rio (VillageBuilder monta as tábuas com estes números).
+        public const int BridgePlanks = 9; // de cada lado do meio
+        public const float BridgePlankStep = 0.55f;
+        public const float BridgeRise = 0.25f;
+        public const float BridgeHalfWidth = 2.3f;
+        public const float BridgePlankThickness = 0.12f;
+        private const float BridgeBase = -0.05f;
+
         // Área jogável (igual ao limite do servidor, GameWorld.IsInsideWorld).
         private const float PlayMinX = -130f, PlayMaxX = 130f, PlayMinZ = -70f, PlayMaxZ = 230f;
 
@@ -53,8 +61,24 @@ namespace Game.Client.World
         {
             if (!Inside(x, z)) return 0f;
             var terrain = Terrain.activeTerrain;
-            if (terrain != null) return terrain.SampleHeight(new Vector3(x, 0, z)) + terrain.transform.position.y;
-            return Shape(x, z);
+            var ground = terrain != null ? terrain.SampleHeight(new Vector3(x, 0, z)) + terrain.transform.position.y : Shape(x, z);
+            return Mathf.Max(ground, BridgeDeck(x, z));
+        }
+
+        /// <summary>Altura do meio da tábua da ponte em arco no ponto (sem o terreno), antes da espessura.</summary>
+        public static float BridgeArch(float t) => BridgeRise * (1f - t * t) + BridgeBase;
+
+        /// <summary>
+        /// Topo das tábuas da ponte em (x, z), ou -infinito fora dela. A ponte não tem colisão: quem anda nela (jogador,
+        /// monstros, os outros jogadores) fica em cima por esta altura, que o <see cref="HeightAt"/> já inclui.
+        /// </summary>
+        public static float BridgeDeck(float x, float z)
+        {
+            var half = BridgePlanks * BridgePlankStep + BridgePlankStep * 0.5f;
+            var along = z - RiverZ(0f);
+            if (Mathf.Abs(x) > BridgeHalfWidth || Mathf.Abs(along) > half) return float.NegativeInfinity;
+            var t = Mathf.Clamp(along / (BridgePlanks * BridgePlankStep), -1f, 1f);
+            return BridgeArch(t) + BridgePlankThickness * 0.5f;
         }
 
         /// <summary>O ponto (x, z) já no chão.</summary>

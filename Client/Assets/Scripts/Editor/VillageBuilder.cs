@@ -196,10 +196,11 @@ namespace Game.Client.Editor
             var dark = Mat("madeira_escura", new Color(0.3f, 0.2f, 0.13f));
             Part(bridge, "Tábuas", wood, k =>
             {
-                for (var i = -9; i <= 9; i++)
+                for (var i = -Ground.BridgePlanks; i <= Ground.BridgePlanks; i++)
                 {
-                    var t = i / 9f;
-                    k.Box(0, new Vector3(0, 0.25f * (1f - t * t) - 0.05f, i * 0.55f), Quaternion.identity, new Vector3(4.6f, 0.12f, 0.5f));
+                    var t = i / (float)Ground.BridgePlanks;
+                    k.Box(0, new Vector3(0, Ground.BridgeArch(t), i * Ground.BridgePlankStep), Quaternion.identity,
+                        new Vector3(Ground.BridgeHalfWidth * 2f, Ground.BridgePlankThickness, 0.5f));
                 }
             });
             Part(bridge, "Corrimão", dark, k =>

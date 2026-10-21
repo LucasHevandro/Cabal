@@ -118,8 +118,19 @@ namespace Game.Client.Player
 
             CurrentSpeed = horizontal.magnitude;
             _controller.Move((horizontal + Vector3.up * _verticalVelocity) * Time.deltaTime);
+            StayOnBridge();
             if (CurrentSpeed > 0.5f) PlaySteps(CurrentSpeed > walkSpeed + 0.1f);
             else _lastStepPosition = transform.position;
+        }
+
+        /// <summary>A ponte não tem colisão: em cima dela, o jogador sobe até as tábuas e para de cair.</summary>
+        private void StayOnBridge()
+        {
+            var position = transform.position;
+            var deck = Game.Client.World.Ground.BridgeDeck(position.x, position.z);
+            if (float.IsNegativeInfinity(deck) || position.y >= deck - 0.01f) return;
+            _controller.Move(Vector3.up * (deck - position.y));
+            if (_verticalVelocity < 0) _verticalVelocity = -2f;
         }
 
         /// <summary>Gira o jogador para olhar um ponto (usado ao atacar um alvo).</summary>
