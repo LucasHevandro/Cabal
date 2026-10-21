@@ -359,19 +359,46 @@ curl -sk https://localhost/api/health
 - **Termos e privacidade:** preencha os campos `<<preencher>>` dos textos antes de abrir o teste (veja `Docs/metricas.md`).
 - **Uma VPS só:** se ela cair, o jogo cai. O monitoramento avisa, e o backup fora da VPS garante que nada se perde.
 
-## Instalador e zip do cliente
+## Launcher, atualização automática e instalador
 
-Depois do build do Windows (menu Protótipo → Gerar build Windows):
+O jogador instala uma vez (pelo instalador). O atalho abre o **launcher** (`TerrasDeAstralisLauncher.exe`, em
+`Tools/Game.Launcher`, .NET Framework 4.8, que já vem no Windows 10 e 11).
+
+**O que o launcher faz ao abrir:**
+- baixa o `https://DOMINIO/download/versao.json`;
+- confere cada arquivo do jogo pelo SHA-256 e baixa **só os que mudaram** (compactados), mostrando o progresso;
+- apaga o que saiu da versão e troca a si mesmo quando ele também mudou;
+- mostra as novidades da versão e se o servidor está no ar, e libera o botão **Jogar**;
+- sem internet, deixa abrir a versão instalada.
+
+**Publicar uma versão nova** (no PC, depois do build do Windows, com o `ssh astralis` configurado):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File Tools\instalador\gerar-instalador.ps1
+powershell -ExecutionPolicy Bypass -File Tools\launcher\publicar.ps1 -Novidades "Monstros elite nos campos."
 ```
 
+- **Envio:** só manda para a VPS os arquivos que ela ainda não tem, e o `versao.json` vai por último. Quem abrir o
+  launcher no meio do envio ainda pega a versão anterior inteira.
+- **Versão:** a do Player Settings (`bundleVersion`) mais a data, ou `-Versao 0.2.0`.
+- **Instalador:** refaz o `Client/Builds/InstalarTerrasDeAstralis.exe` com a mesma versão (`-SemInstalador` pula).
+- **Limpeza:** `-Limpar` apaga da VPS os arquivos que a versão nova não usa mais.
+- **Endereço:** o launcher usa `https://teradestralis.duckdns.org/download/`. Para outro, ponha
+  `atualizacao = https://outro/download/` no `servidor.txt` (ele vai junto na versão).
+
+**Na VPS (uma vez):** a pasta `deploy/download` é servida pelo Caddy em `/download/`. Depois do `git pull`, rode
+`docker compose -f docker-compose.prod.yml up -d caddy` para ele enxergar a pasta.
+
+**Mudou o protocolo?** Publique a versão do cliente junto com a atualização do servidor: o launcher baixa o cliente
+novo antes de o jogador entrar.
+
+**Só o instalador**, sem publicar: `powershell -ExecutionPolicy Bypass -File Tools\instalador\gerar-instalador.ps1`.
 - **Sai em** `Client/Builds/InstalarTerrasDeAstralis.exe` (uns 35 MB). Precisa do Inno Setup 6 (`winget install --id JRSoftware.InnoSetup -e`).
-- **O que faz:** instala na pasta do usuário, sem pedir administrador; cria os atalhos na Área de Trabalho e no Menu
-  Iniciar; aparece em "Adicionar ou remover programas". Rodar uma versão nova por cima atualiza o jogo.
-- **Versão:** a do Player Settings (`bundleVersion`), ou `-Version 0.2.0`.
+- **O que faz:** instala na pasta do usuário, sem pedir administrador; cria os atalhos (para o launcher) na Área de
+  Trabalho e no Menu Iniciar; aparece em "Adicionar ou remover programas".
 - **Aviso do Windows:** sem assinatura digital, o SmartScreen mostra "O Windows protegeu o computador". O jogador
   clica em **Mais informações → Executar assim mesmo**.
-- **itch.io:** suba o zip da pasta `Client/Builds/Windows` (sem a `*_BackUpThisFolder_*`). O app do itch.io instala e
-  atualiza sozinho. O instalador serve para link direto (Drive, Discord, a própria VPS).
+
+**Testar o launcher sem a VPS:** `TerrasDeAstralisLauncher.exe --publicar PASTA_DO_BUILD SAIDA 0.1.0-teste`, sirva a
+`SAIDA` (por exemplo `python -m http.server 8099 --directory SAIDA`) e rode o launcher com
+`--pasta OUTRA_PASTA --url http://127.0.0.1:8099/`. Com `--verificar` ele atualiza sem janela e escreve o
+`launcher.log`; com `--foto arquivo.png` ele salva a janela pronta.
