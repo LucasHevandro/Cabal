@@ -7,6 +7,16 @@
 		reverse_proxy game:7778
 	}
 
+	# Versões do cliente para o launcher (Tools/launcher/publicar.ps1 envia para deploy/download na VPS).
+	# Os arquivos têm o hash no nome e nunca mudam; o versao.json muda a cada publicação.
+	handle_path /download/* {
+		root * /srv/download
+		@versao path /versao.json
+		header @versao Cache-Control "no-cache"
+		header /arquivos/* Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	handle {
 		respond "Servidor do jogo." 200
 	}
