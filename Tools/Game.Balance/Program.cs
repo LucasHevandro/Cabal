@@ -8,7 +8,7 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("pt-BR");
 var markdown = args.Contains("--markdown");
 
-foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
+foreach (var characterClass in ClassInfo.All)
 {
     var steps = LevelingSimulation.Run(characterClass);
     var total = LevelingSimulation.TotalHours(steps);
@@ -32,7 +32,7 @@ foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arca
 // Sensibilidade: o mesmo personagem jogado por alguém rápido e por alguém sem pressa.
 var fast = new LevelingAssumptions { SecondsBetweenKills = 4, Downtime = 0.08, ComboBonus = 0.3 };
 var slow = new LevelingAssumptions { SecondsBetweenKills = 10, Downtime = 0.3, ComboBonus = 0.05 };
-foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
+foreach (var characterClass in ClassInfo.All)
 {
     Console.WriteLine($"{(markdown ? "- " : "")}{AccountRules.ClassDisplayName(characterClass)}: jogador rápido " +
         $"{LevelingSimulation.TotalHours(LevelingSimulation.Run(characterClass, fast)):0.0} h, sem pressa " +
@@ -42,7 +42,7 @@ foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arca
 // Economia: Alz que entra (monstros, missões e venda de drops) e que sai (melhoria, núcleos, poções, loja e skills do mestre).
 Console.WriteLine();
 Console.WriteLine(markdown ? "## Economia (1→30)\n" : "== Economia (1→30) ==");
-foreach (var characterClass in new[] { CharacterClass.Blade, CharacterClass.Arcanist })
+foreach (var characterClass in ClassInfo.All)
 {
     var bands = Game.Shared.Economy.EconomySimulation.Run(characterClass);
     Console.WriteLine(markdown ? $"### {AccountRules.ClassDisplayName(characterClass)}\n" : $"-- {AccountRules.ClassDisplayName(characterClass)} --");
