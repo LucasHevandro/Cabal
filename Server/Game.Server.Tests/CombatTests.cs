@@ -38,11 +38,11 @@ public class CombatTests
     };
 
     private static (GameWorld World, FakeOutbox Outbox, ServerPlayer Player, ServerMonster Monster) Setup(
-        MonsterData data, float monsterZ = 2f, double random = 0.5, bool boss = false)
+        MonsterData data, float monsterZ = 2f, double random = 0.5, bool boss = false, double eliteChance = 0)
     {
         var outbox = new FakeOutbox();
         var spawn = new SpawnDefinition { Data = data, CenterX = 0, CenterZ = monsterZ, Count = 1, Radius = 0, IsBoss = boss };
-        var world = new GameWorld(outbox, new[] { spawn }, new FixedRandom(random));
+        var world = new GameWorld(outbox, new[] { spawn }, new FixedRandom(random), eliteChance: eliteChance);
         var player = world.AddPlayer("Ana", 0);
         player.Movement.Teleport(0, 0, 0); // os testes medem distâncias a partir da origem
         return (world, outbox, player, world.Monsters.Single());
@@ -138,6 +138,54 @@ public class CombatTests
         world.Tick(1.0 + monster.Data.RespawnSeconds + 0.1);
         Assert.False(monster.IsDead);
         Assert.Equal(monster.Hp.Max, monster.Hp.Current);
+    }
+
+    [Fact]
+    public void Elite_tem_quatro_vezes_a_vida_e_paga_mais()
+    {
+        var (world, outbox, player, monster) = Setup(Dummy(hp: 100), random: 0.0, eliteChance: 1);
+        Assert.True(monster.IsElite);
+        Assert.Equal(400, monster.Hp.Max);
+        world.Tick(0.1);
+        Assert.True(outbox.To<EntitySpawned>(player.Id).Single(s => s.Id == monster.Id).Elite);
+
+        monster.Hp.Add(-399);
+        world.Handle(player.Id, new UseSkill { Slot = 0, TargetId = monster.Id }, now: 1);
+        world.Tick(1.0);
+
+        Assert.True(monster.IsDead);
+        var stats = outbox.To<PlayerStats>(player.Id).Last();
+        Assert.Equal(200, stats.Xp); // XP ×4
+        Assert.Equal(30, stats.Alz); // Alz ×3
+        Assert.Equal(2, outbox.To<LootSpawned>(player.Id).Count); // uma rolagem de drop a mais
+    }
+
+    [Fact]
+    public void Elite_bate_uma_vez_e_meia_mais_forte()
+    {
+        int FirstHit(double eliteChance)
+        {
+            var (world, outbox, player, monster) = Setup(Dummy(aggressive: true, attack: 200), monsterZ: 1f, eliteChance: eliteChance);
+            for (var t = 0.1; t < 5; t += 0.1)
+            {
+                world.Tick(t);
+                var hit = outbox.To<CombatEvent>(player.Id).FirstOrDefault(e => e.AttackerId == monster.Id);
+                if (hit != null) return hit.Damage;
+            }
+            throw new InvalidOperationException("O monstro não atacou.");
+        }
+
+        var normal = FirstHit(0);
+        Assert.Equal((int)Math.Round(normal * 1.5), FirstHit(1));
+    }
+
+    [Fact]
+    public void Chefe_nunca_e_elite()
+    {
+        var (_, _, _, monster) = Setup(Dummy(), boss: true, eliteChance: 1);
+
+        Assert.False(monster.IsElite);
+        Assert.Equal(5000, monster.Hp.Max);
     }
 
     [Fact]

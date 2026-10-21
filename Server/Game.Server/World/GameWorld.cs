@@ -38,6 +38,9 @@ public sealed partial class GameWorld
     private readonly ItemUidAllocator _uids;
     private readonly DungeonTuning _dungeonTuning;
     private readonly int _arenaTeamSize;
+
+    /// <summary>Chance de um monstro do mundo aberto nascer elite (os testes passam 0 ou 1).</summary>
+    private readonly double _eliteChance;
     private readonly Dictionary<int, ServerPlayer> _players = new();
     private readonly Dictionary<int, ServerMonster> _monsters = new();
     private readonly Dictionary<int, ServerLoot> _loot = new();
@@ -51,12 +54,14 @@ public sealed partial class GameWorld
     /// os testes passam grupos próprios e uma fonte aleatória fixa.
     /// </summary>
     public GameWorld(IOutbox outbox, IEnumerable<SpawnDefinition>? spawns = null, IRandomSource? random = null,
-        ItemUidAllocator? uids = null, DungeonTuning? dungeonTuning = null, int arenaTeamSize = Game.Shared.Pvp.ArenaRules.TeamSize)
+        ItemUidAllocator? uids = null, DungeonTuning? dungeonTuning = null, int arenaTeamSize = Game.Shared.Pvp.ArenaRules.TeamSize,
+        double eliteChance = EliteRules.Chance)
     {
         _outbox = outbox;
         _arenaTeamSize = Math.Max(1, arenaTeamSize);
         _dungeonTuning = dungeonTuning ?? DungeonTuning.Normal;
         _random = random ?? new SystemRandomSource();
+        _eliteChance = eliteChance;
         _uids = uids ?? new ItemUidAllocator();
 
         var seed = 1;
@@ -459,6 +464,7 @@ public sealed partial class GameWorld
             BaseAttackCooldown = spawn.Data.AttackCooldownSeconds,
         };
         monster.Brain.Revive(0);
+        RollElite(monster);
         if (spawn.Scheduled)
         {
             // Chefe de mundo: começa dormindo e só desperta no próximo horário (ou pelo /gm chefe).
@@ -612,7 +618,7 @@ public sealed partial class GameWorld
     private static EntitySpawned SpawnMessage(ServerMonster monster) => new()
     {
         Id = monster.Id, Kind = EntityKind.Monster, TypeId = monster.Data.Id, Name = monster.Data.Name,
-        Level = monster.Data.Level, MaxHp = monster.Hp.Max, X = monster.X, Z = monster.Z,
+        Level = monster.Data.Level, MaxHp = monster.Hp.Max, X = monster.X, Z = monster.Z, Elite = monster.IsElite,
     };
 
     private static LootSpawned LootMessage(ServerLoot loot) => new()

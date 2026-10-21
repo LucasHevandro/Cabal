@@ -251,6 +251,9 @@ public sealed class ServerMonster
     /// <summary>Não recebe dano (escudo do chefe da cripta).</summary>
     public bool Invulnerable { get; set; }
 
+    /// <summary>Elite (<see cref="EliteRules"/>): sorteado a cada nascimento; mais vida, dano, XP, Alz e drop.</summary>
+    public bool IsElite { get; set; }
+
     public required SpawnDefinition Spawn { get; init; }
     public required MonsterBrain Brain { get; init; }
     public required ResourcePool Hp { get; init; }

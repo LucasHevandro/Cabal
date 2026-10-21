@@ -291,7 +291,7 @@ public sealed partial class GameWorld
 
         var hit = DamageFormula.Calculate(
             new DamageInput(baseDamage, monster.Data.AttackPower, 1.0, 0.05, 1.5, player.Stats.Defense), _random);
-        var dealt = -player.Hp.Add(-hit.Amount);
+        var dealt = -player.Hp.Add(-(monster.IsElite ? EliteRules.Damage(hit.Amount) : hit.Amount));
         player.StatsDirty = true;
         SendNearby(player.X, player.Z, new CombatEvent
         {
@@ -468,14 +468,15 @@ public sealed partial class GameWorld
                 .OrderBy(m => m == killer ? 0 : 1)
                 .ToList();
         if (fighters != null) AnnounceBossDefeated(monster, killer, sharing.Count);
-        var loot = monster.Data.Drops.Roll(_random);
+        var loot = monster.IsElite ? EliteRules.RollLoot(monster.Data.Drops, _random) : monster.Data.Drops.Roll(_random);
+        var xpReward = monster.IsElite ? EliteRules.Xp(monster.Data.XpReward) : monster.Data.XpReward;
         var alzParts = PartyRules.SplitAlz(loot.Alz, sharing.Count);
         for (var i = 0; i < sharing.Count; i++)
         {
             var member = sharing[i];
             var xp = sharing.Count == 1 || fighters != null
-                ? XpRules.Adjusted(monster.Data.XpReward, member.Progress.Level, monster.Data.Level)
-                : PartyRules.SharedXp(monster.Data.XpReward, monster.Data.Level, member.Progress.Level, sharing.Count);
+                ? XpRules.Adjusted(xpReward, member.Progress.Level, monster.Data.Level)
+                : PartyRules.SharedXp(xpReward, monster.Data.Level, member.Progress.Level, sharing.Count);
             GrantXp(member, xp);
             member.Session.Kills++;
             if (member.Quests.OnKill(monster.Data.Id).Count > 0) member.QuestsDirty = true;
@@ -521,9 +522,31 @@ public sealed partial class GameWorld
     {
         monster.X = monster.HomeX;
         monster.Z = monster.HomeZ;
+        var wasElite = monster.IsElite;
+        RollElite(monster);
         monster.Hp.Add(monster.Hp.Max);
         monster.Brain.Revive(now);
         if (monster.Spawn.IsBoss) EndBossPhaseTwo(monster);
+        if (monster.IsElite != wasElite) ForgetMonster(monster);
+    }
+
+    /// <summary>Sorteia se o monstro (re)nasce elite e ajusta a vida máxima.</summary>
+    private void RollElite(ServerMonster monster)
+    {
+        monster.IsElite = EliteRules.Roll(monster.Spawn, monster.InstanceId, _random, _eliteChance);
+        monster.Hp.SetMax(monster.IsElite ? EliteRules.MaxHp(monster.Data.MaxHp) : monster.Data.MaxHp);
+    }
+
+    /// <summary>
+    /// O monstro mudou de vida máxima e de aparência (virou ou deixou de ser elite): quem o via o esquece, e o próximo
+    /// SendView manda o EntitySpawned de novo.
+    /// </summary>
+    private void ForgetMonster(ServerMonster monster)
+    {
+        foreach (var player in _players.Values)
+        {
+            if (player.KnownEntities.Remove(monster.Id)) _outbox.Send(player.Id, new EntityDespawned { Id = monster.Id });
+        }
     }
 
     // ===== Chefe de mundo com horário =====

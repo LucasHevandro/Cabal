@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 //   --db memory    banco em memória (tudo se perde ao desligar) — desenvolvimento sem Docker
 //   --guests       aceita entrar sem conta (bots e testes; convidados não são salvos)
 //   --dungeon-test dungeon fácil e sem nível mínimo (bots de nível 1 conseguem terminar)
+//   --elites       todo monstro comum do mundo aberto nasce elite (para testar o visual)
 //   --arena-size N jogadores por time na arena (padrão 5; 1 para testar a dois)
 //   --stats N      métricas de desempenho a cada N segundos
 //   --gm a,b       contas tratadas como GM nesta execução (testes locais; em produção use --set-gm)
@@ -53,6 +54,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--dungeon-test":
             options = options with { DungeonTest = true };
+            break;
+        case "--elites":
+            options = options with { AllElites = true };
             break;
         case "--gm" when value.Length > 0:
             gmAccounts.AddRange(value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -175,6 +179,7 @@ foreach (var dungeonId in Game.Shared.Dungeon.DungeonCatalog.Ids)
 host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueWith(
     t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
 if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");
+if (options.AllElites) Log("ATENÇÃO: todo monstro do mundo aberto nasce elite (--elites).");
 
 // Ferramentas de GM: auditoria e moderação gravadas no banco, fora do loop do jogo.
 host.World.GmActionDone += action =>

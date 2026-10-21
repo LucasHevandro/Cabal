@@ -50,7 +50,7 @@ public class ProgressionWorldTests
     {
         var outbox = new FakeOutbox();
         var spawns = new[] { new SpawnDefinition { Data = monster ?? Dummy(), CenterX = 0, CenterZ = 2, Count = 1 } };
-        var world = new GameWorld(outbox, spawns, new FixedRandom(random), new ItemUidAllocator(5000));
+        var world = new GameWorld(outbox, spawns, new FixedRandom(random), new ItemUidAllocator(5000), eliteChance: 0);
         record ??= AuthService.InitialCharacter(CharacterClass.Blade, NewUid) with { Id = 7, AccountId = 1, Name = "Ana" };
         var player = world.AddPlayer("", 0, null, record);
         player.Movement.Teleport(0, 0, 0);

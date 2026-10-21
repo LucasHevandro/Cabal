@@ -7,6 +7,7 @@ using Game.Server.Persistence;
 using Game.Server.World;
 using Game.Shared.Net;
 using Game.Shared.Text;
+using Game.Shared.World;
 
 namespace Game.Server.Net;
 
@@ -29,6 +30,9 @@ public sealed record ServerOptions
 
     /// <summary>Dungeon fácil (vida e dano baixos, sem nível mínimo) para os bots de nível 1 conseguirem terminar.</summary>
     public bool DungeonTest { get; init; }
+
+    /// <summary>Todo monstro comum do mundo aberto nasce elite (teste do visual).</summary>
+    public bool AllElites { get; init; }
 
     /// <summary>Segundos para mandar o Hello depois de conectar (senão a conexão cai).</summary>
     public double HelloTimeoutSeconds { get; init; } = 15;
@@ -124,7 +128,7 @@ public sealed class ServerHost : IOutbox, IDisposable
         _log = log ?? (_ => { });
         _listener = new TcpListener(IPAddress.Any, options.Port);
         World = new GameWorld(this, uids: auth?.Uids, dungeonTuning: options.DungeonTest ? DungeonTuning.Test : null,
-            arenaTeamSize: options.ArenaTeamSize);
+            arenaTeamSize: options.ArenaTeamSize, eliteChance: options.AllElites ? 1 : EliteRules.Chance);
         // Expulsão por GM (vale também para banimento): mostra o motivo e fecha a conexão.
         World.KickRequested += (playerId, reason) =>
         {
