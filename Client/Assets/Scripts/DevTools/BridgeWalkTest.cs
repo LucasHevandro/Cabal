@@ -93,9 +93,16 @@ namespace Game.Client.DevTools
                 yield return null;
             }
 
-            var ok = worst < 0.08f && widest < Ground.BridgeHalfWidth;
+            // As tábuas de verdade (a malha na cena) têm que estar onde o jogador pisa: o topo do arco igual ao da fórmula.
+            var planks = 0f;
+            foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+                if (renderer.name.StartsWith("Tábuas")) planks = renderer.bounds.max.y;
+            var gap = Mathf.Abs(planks - Ground.BridgeDeck(0f, river));
+
+            var ok = worst < 0.08f && widest < Ground.BridgeHalfWidth && gap < 0.03f;
             report.Insert(0, (ok ? "SUCESSO" : "FALHA") + $": afundou no máximo {worst:0.000} m nas tábuas; " +
-                             $"de lado foi até {widest:0.00} m do meio (corrimão em {Ground.BridgeHalfWidth:0.00} m)\n");
+                             $"de lado foi até {widest:0.00} m do meio (corrimão em {Ground.BridgeHalfWidth:0.00} m); " +
+                             $"topo das tábuas {planks:0.000} contra {Ground.BridgeDeck(0f, river):0.000} onde se pisa\n");
             File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), report.ToString());
             yield return new WaitForSeconds(0.5f);
             Application.Quit();

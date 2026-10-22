@@ -192,6 +192,9 @@ namespace Game.Client.Editor
         {
             var z = Ground.RiverZ(0);
             var bridge = Group(parent, "Ponte", new Vector3(0, 0, z), Quaternion.identity);
+            // As alturas do arco já são do mundo (Ground.BridgeDeck): a ponte fica no zero, não "no chão", que ali já
+            // inclui as próprias tábuas e a ergueria (o personagem ficaria dentro delas).
+            bridge.position = new Vector3(0, 0, z);
             var wood = Mat("madeira_ponte", new Color(0.48f, 0.33f, 0.2f));
             var dark = Mat("madeira_escura", new Color(0.3f, 0.2f, 0.13f));
             Part(bridge, "Tábuas", wood, k =>

@@ -65,7 +65,7 @@ namespace Game.Client.World
             return Mathf.Max(ground, BridgeDeck(x, z));
         }
 
-        /// <summary>Altura do meio da tábua da ponte em arco no ponto (sem o terreno), antes da espessura.</summary>
+        /// <summary>Altura da base da tábua da ponte em arco (sem o terreno); a tábua sobe a espessura a partir daí.</summary>
         public static float BridgeArch(float t) => BridgeRise * (1f - t * t) + BridgeBase;
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace Game.Client.World
             var along = z - RiverZ(0f);
             if (Mathf.Abs(x) > BridgeHalfWidth || Mathf.Abs(along) > half) return float.NegativeInfinity;
             var t = Mathf.Clamp(along / (BridgePlanks * BridgePlankStep), -1f, 1f);
-            return BridgeArch(t) + BridgePlankThickness * 0.5f;
+            return BridgeArch(t) + BridgePlankThickness;
         }
 
         /// <summary>O ponto (x, z) já no chão.</summary>
