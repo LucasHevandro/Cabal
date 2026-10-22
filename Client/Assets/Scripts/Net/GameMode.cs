@@ -32,6 +32,27 @@ namespace Game.Client.Net
         public static string Token { get; private set; } = "";
         public static int CharacterId { get; private set; }
 
+        /// <summary>
+        /// Token guardado ao trocar de personagem: o menu volta direto para a lista da conta, sem pedir o login de novo.
+        /// O menu limpa depois de usar.
+        /// </summary>
+        public static string ResumeToken { get; private set; } = "";
+
+        /// <summary>
+        /// Trocar de personagem sem fechar o jogo: sai do mundo (a cena recarrega, a conexão fecha e o servidor salva) e
+        /// volta para a tela de entrada no mesmo servidor, já na lista de personagens da conta.
+        /// </summary>
+        public static void ReturnToCharacters()
+        {
+            ResumeToken = Token;
+            IsOnline = false;
+            ChoiceMade = false;
+            Token = "";
+            CharacterId = 0;
+        }
+
+        public static void ClearResume() => ResumeToken = "";
+
         /// <summary>Login automático da linha de comando (<c>-autologin conta senha</c>), para testes.</summary>
         public static string AutoLoginAccount { get; private set; } = "";
         public static string AutoLoginPassword { get; private set; } = "";

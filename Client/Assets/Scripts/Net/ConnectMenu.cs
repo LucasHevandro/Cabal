@@ -160,7 +160,21 @@ namespace Game.Client.Net
             try { chosen = PlayerPrefs.GetString(ChosenServerKey, ""); } catch { }
             _selected = Mathf.Max(0, ServerList.Entries.FindIndex(e => e.Address == chosen));
             _ = ServerList.LoadRemoteAsync();
-            if (!string.IsNullOrEmpty(GameMode.AutoLoginAccount)) _ = AutoLoginAsync();
+            if (!string.IsNullOrEmpty(GameMode.ResumeToken)) _ = ResumeAsync();
+            else if (!string.IsNullOrEmpty(GameMode.AutoLoginAccount)) _ = AutoLoginAsync();
+        }
+
+        /// <summary>
+        /// Voltou do jogo para trocar de personagem: abre a lista da conta com o mesmo login. Se o login venceu (ou o
+        /// servidor reiniciou), cai na tela de entrada com o aviso.
+        /// </summary>
+        private async Task ResumeAsync()
+        {
+            _api = new AccountClient(GameMode.Host, GameMode.Port);
+            _apiFor = Chosen?.ApiUrl ?? "";
+            _api.UseToken(GameMode.ResumeToken);
+            GameMode.ClearResume();
+            await Run(Loc.T("login.loading_characters"), LoadCharactersAsync);
         }
 
         // ===== Ações =====

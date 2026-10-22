@@ -48,6 +48,9 @@ namespace Game.Client.Net
             _baseUrl = (GameMode.ApiOverride.Length > 0 ? GameMode.ApiOverride : ServerAddress.ApiUrl(host, gamePort)).TrimEnd('/');
         }
 
+        /// <summary>Continua com o login que já existe (trocar de personagem sem entrar de novo).</summary>
+        public void UseToken(string token) => Token = token ?? "";
+
         /// <param name="acceptTerms">Versão dos termos que o jogador aceitou (<see cref="Legal.Version"/>); o servidor exige.</param>
         public Task<ApiResult<ApiError>> RegisterAsync(string account, string password, string acceptTerms) =>
             SendAsync<ApiError>(HttpMethod.Post, "/register", new Credentials { Account = account, Password = password, AcceptTerms = acceptTerms });

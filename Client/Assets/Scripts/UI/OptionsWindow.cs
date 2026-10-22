@@ -163,6 +163,21 @@ namespace Game.Client.UI
             GameWindows.AnyOpen || Minimap.BigOpen || SocialWindows.FriendsOpen ||
             (PlayerCombat.Local != null && PlayerCombat.Local.Target != null);
 
+        /// <summary>Online com conta, dentro do mundo: dá para voltar à lista de personagens.</summary>
+        private static bool CanSwitchCharacter => GameMode.IsOnline && !string.IsNullOrEmpty(GameMode.Token) && !ConnectMenu.IsOpen;
+
+        /// <summary>
+        /// Trocar de personagem: salva as opções, sai do mundo e volta para a lista da conta (o servidor salva o
+        /// personagem ao perder a conexão e espera esse salvamento antes de deixar alguém entrar nele de novo).
+        /// </summary>
+        public static void SwitchCharacter()
+        {
+            GameSettings.Save();
+            Close();
+            GameMode.ReturnToCharacters();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        }
+
         /// <summary>Sair do jogo: salva as opções e fecha (online, o servidor salva o personagem ao perder a conexão).</summary>
         private static void QuitGame()
         {
@@ -207,6 +222,8 @@ namespace Game.Client.UI
             if (GUI.Button(new Rect(_rect.xMax - 28 - 160, buttonsY, 160, 40), "<b>" + Loc.T("ui.close") + "</b>", _button)) Close();
             GUI.Label(new Rect(x, buttonsY - 34, width, 24), Loc.T("options.hint"), _small);
             if (GUI.Button(new Rect(_rect.xMax - 28 - 170, _rect.y + 18, 170, 36), Loc.T("options.quit"), _button)) _confirmQuit = true;
+            if (CanSwitchCharacter && GUI.Button(new Rect(_rect.xMax - 28 - 170 - 10 - 220, _rect.y + 18, 220, 36), Loc.T("options.switch_character"), _button))
+                SwitchCharacter();
             if (_confirmQuit) DrawQuitConfirm();
             GUI.matrix = Matrix4x4.identity;
         }

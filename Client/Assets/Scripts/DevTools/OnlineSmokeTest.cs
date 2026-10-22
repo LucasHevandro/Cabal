@@ -32,6 +32,7 @@ namespace Game.Client.DevTools
         private bool _dungeon;
         private string _dungeonId = Shared.Dungeon.DungeonCatalog.CryptId;
         private bool _arena;
+        private bool _switch;
         private StreamWriter _report;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -52,6 +53,7 @@ namespace Game.Client.DevTools
             test._dungeon = Array.IndexOf(args, "-onlinedungeon") >= 0 || Array.IndexOf(args, "-onlinesanctuary") >= 0;
             if (Array.IndexOf(args, "-onlinesanctuary") >= 0) test._dungeonId = Shared.Dungeon.DungeonCatalog.SanctuaryId;
             test._arena = Array.IndexOf(args, "-onlinearena") >= 0;
+            test._switch = Array.IndexOf(args, "-onlineswitch") >= 0;
             var perf = Array.IndexOf(args, "-onlineperf");
             if (perf >= 0) test._perfSeconds = perf + 1 < args.Length && float.TryParse(args[perf + 1], out var s) ? s : 20f;
             DontDestroyOnLoad(test.gameObject);
@@ -217,9 +219,62 @@ namespace Game.Client.DevTools
                 yield return null;
             }
 
+            // Por último: a troca recarrega a cena e a sessão de cima deixa de existir.
+            if (_switch)
+            {
+                var outcome = new FightOutcome();
+                yield return SwitchCharacter(outcome);
+                if (!outcome.Ok)
+                {
+                    Finish("FALHA: " + outcome.Message);
+                    yield break;
+                }
+                fightResult += "; " + outcome.Message;
+            }
+
             Finish(monsters > 0
                 ? $"SUCESSO: online com {monsters} monstros e {players} jogadores à vista{fightResult}"
                 : "FALHA: nenhum monstro recebido do servidor");
+        }
+
+        /// <summary>
+        /// Trocar de personagem sem fechar o jogo: sai do mundo para o menu (a conexão fecha e o servidor salva) e entra
+        /// de novo. Com conta, o menu abre a lista de personagens; o teste entra como convidado, então volta pelo
+        /// mesmo caminho do menu (outra escolha e a cena recarregada).
+        /// </summary>
+        private IEnumerator SwitchCharacter(FightOutcome outcome)
+        {
+            var name = GameMode.PlayerName;
+            var host = GameMode.Host;
+            var port = GameMode.Port;
+            OptionsWindow.Open();
+            yield return new WaitForSecondsRealtime(0.4f);
+            OptionsWindow.SwitchCharacter();
+            yield return WaitFor(() => ConnectMenu.IsOpen && NetworkSession.Instance == null && FindAnyObjectByType<ConnectMenu>() != null, 5f);
+            if (!ConnectMenu.IsOpen || NetworkSession.Instance != null)
+            {
+                outcome.Message = "a troca de personagem não voltou para o menu";
+                yield break;
+            }
+            Log("Troca: saiu do mundo e o menu de entrada abriu (a conexão fechou)");
+            yield return new WaitForSecondsRealtime(1.5f);
+            Capture("2-troca-menu");
+            yield return new WaitForEndOfFrame();
+
+            GameMode.SetOnline(host, port, name);
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            yield return WaitFor(() => NetworkSession.Instance != null && NetworkSession.Instance.IsWelcomed && NetworkSession.Instance.Views.Count > 0, 15f);
+            if (NetworkSession.Instance == null || !NetworkSession.Instance.IsWelcomed)
+            {
+                outcome.Message = "não entrou de novo depois da troca";
+                yield break;
+            }
+            Log($"Troca: entrou de novo como id {NetworkSession.Instance.PlayerId}");
+            yield return new WaitForSecondsRealtime(1f);
+            Capture("2b-troca-de-volta");
+            yield return new WaitForEndOfFrame();
+            outcome.Ok = true;
+            outcome.Message = "trocou de personagem e voltou ao mundo";
         }
 
         private sealed class FightOutcome
