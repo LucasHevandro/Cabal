@@ -23,9 +23,9 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   anda junto, por fast-forward. A branch padrão antiga do GitHub ainda pode ser `feat/fase3-rede`.
 - **Pastas:** `Shared/Game.Shared` (netstandard2.1, também usada pelo Unity como pacote local), `Server/Game.Server`,
   `Client/` (Unity), `Tools/` (Bots, Balance, Launcher, instalador, publicar) e `deploy/` (VPS).
-- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 236 no Shared e 173 no Servidor). Os testes de textos
+- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 242 no Shared e 182 no Servidor). Os testes de textos
   exigem chaves literais no código: nada de `"login.head_" + i`, use um array de chaves literais.
-- **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 18`. Se mudar alguma mensagem, suba a
+- **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 19`. Se mudar alguma mensagem, suba a
   versão e atualize o cliente e o servidor juntos. O `FuzzTests` conta os tipos de mensagem.
 - **Migrações:** `cd Server/Game.Server && dotnet ef migrations add Nome -o Persistence/Migrations`.
 - **Textos:** `Shared/Game.Shared/Resources/Locales/pt-BR.txt`, lidos por `Loc.T("chave", args)`.
@@ -106,10 +106,12 @@ O usuário pediu, nesta ordem: **4, 6, 7, 8, 3 e 5**.
 - **8: monstros elite (feito no código em 2026-10-21, protocolo 18).** `EliteRules` no `WorldContent.cs` (5%, só mundo
   aberto; vida ×4, dano ×1,5, XP ×4, Alz ×3 e uma rolagem de drop a mais), `ServerMonster.IsElite`, campo `Elite` no
   `EntitySpawned` e, no cliente, modelo 20% maior, dourado, com luz e o nome "{0} (Elite)". O servidor aceita `--elites`
-  (todo monstro comum nasce elite) para testar o visual. Falta: publicar a versão no launcher e atualizar o servidor na VM
-  (os dois juntos, por causa do protocolo).
+  (todo monstro comum nasce elite) para testar o visual. Publicado na VM e no launcher.
 - **3: classe Ranger (feito no código em 2026-10-21).** Arqueira com `Ranger.fbx` e arco na mão esquerda, 8 skills de
   flecha, três arcos, `ClassInfo` no Shared e `--guest-class ranger` no servidor para testar com o exe. Detalhes em
-  `Docs/decisoes.md`. Falta, junto com os elites: publicar a versão no launcher e atualizar o servidor na VM.
-- **Próximo:**
-  - 5: **barraca ou mercado de jogadores na vila.**
+  `Docs/decisoes.md`. Publicada junto com os elites (protocolo 18).
+- **5: mercado (feito no código em 2026-10-21, protocolo 19).** Quadro de ofertas da Escrivã Marta (vende com o
+  vendedor offline, taxa de 5%, 72 h), tabela `market_listings` (migração `Mercado`) e a tela de progressão (tecla P).
+  Falta publicar no launcher e atualizar a VM (os dois juntos, por causa do protocolo).
+- **Depois (combinado em 2026-10-21):** teste fechado com 20 jogadores. Outras ideias do GDD ficam para mais à frente:
+  rotas de combo com efeito, localizador de grupo, guilda e guerra, crafting.

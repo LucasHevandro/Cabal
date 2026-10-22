@@ -99,6 +99,7 @@ Para gerar tudo: **Jogo > Visuais > Montar personagens KayKit**, ou `-executeMet
 | `Visuals/class/arcanist` (Arcanista) | Mage | cajado |
 | `Visuals/class/ranger` (Ranger) | Ranger | arco na mão esquerda |
 | `Visuals/npc/anciao_doran` | Rogue_Hooded | livro aberto |
+| `Visuals/npc/escriva_marta` (mercado) | Rogue | livro aberto |
 | `Visuals/npc/ferreira_ilsa` | Barbarian | machado |
 | `Visuals/npc/guarda_volumes_bento` | Ranger | caneca |
 | `Visuals/npc/mercadora_lia` | Rogue | adaga |

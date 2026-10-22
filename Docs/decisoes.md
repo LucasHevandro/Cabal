@@ -220,3 +220,27 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   chave do nome, a arma inicial e o prefixo das armas. Ninguém mais compara a classe com o Arcanista para decidir.
 - **Testes:** o servidor aceita `--guest-class ranger` para os convidados entrarem como Ranger nos testes do exe.
 - **Protocolo:** nenhuma mensagem mudou (a classe já ia como número). Vai junto com o protocolo 18 dos monstros elite.
+
+## 2026-10-21 — Mercado da vila (quadro de ofertas)
+
+- **Como é:** a Escrivã Marta, na praça (9; -1,5), cuida de um quadro de ofertas. O jogador põe um item da bolsa à
+  venda com preço (botão direito no item com a janela aberta). Outro jogador compra mesmo com o vendedor offline, e o
+  vendedor recebe o Alz com a escrivã. O GDD falava em barracas; o quadro foi escolhido porque, com poucos jogadores
+  online, a barraca quase não venderia.
+- **Regras** (`MarketRules`): até 10 ofertas por personagem, 72 horas no quadro e taxa de 5% sobre a venda (sai Alz do
+  jogo). Preço de 1 a 999.999.999 Alz. Pilhas podem ser vendidas em parte; equipamento vai inteiro, com melhoria, opção
+  e a proteção (pity). Oferta vencida não vende e volta para o vendedor ao receber. O quadro mostra as 200 mais novas.
+- **Sem duplicar nada:** o servidor guarda o mercado na memória e carrega do banco ao ligar (`market_listings`,
+  migração `Mercado`). Cada mudança entra no salvamento de quem fez a ação (vendedor ao pôr, retirar e receber;
+  comprador ao comprar), na mesma transação da bolsa e do Alz dele. O salvamento é pedido na hora (`SaveRequested`), e
+  a fila grava na ordem. Assim, a oferta salva nunca fica à frente do personagem. Além disso, a situação da oferta só
+  anda para a frente no banco (ativa → vendida → recebida): um salvamento atrasado não desfaz uma venda.
+- **Convidados:** podem usar o mercado, mas nada deles é salvo (servem só para os testes com o exe).
+- **Protocolo 19:** `MarketCommand` (cliente) e `MarketState` (servidor).
+
+## 2026-10-21 — Tela de progressão
+
+- O GDD pede uma tela única com todas as barras e o próximo objetivo de cada uma. A tecla **P** abre: nível (XP que
+  falta), rank de skill (a próxima missão de rank e o que ela libera), skills aprendidas (a próxima e o que falta),
+  equipamento (a peça mais fraca: vestir, trocar de grau ou melhorar), Despertar e missões da história.
+- As contas ficam no Shared (`ProgressionGoals`, com testes); o cliente só desenha. Nada passa pela rede.

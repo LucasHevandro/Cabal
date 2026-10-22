@@ -52,3 +52,11 @@ Itens no chão somem com a queda (não estavam com ninguém); itens no inventár
 - HTTPS na API de login (proxy reverso ou certificado no Kestrel) e TLS na conexão do jogo.
 - Agendar o backup diário e guardar as cópias fora do servidor.
 - Tokens na memória: reiniciar o servidor obriga a logar de novo (aceitável no MVP).
+
+## 2026-10-21 — Mercado
+
+As ofertas do mercado ficam em `market_listings` (o item inteiro na linha, o preço e a situação). Elas não pertencem a
+um personagem como os itens da bolsa: entram no salvamento de quem fez a ação, na mesma transação, e esse salvamento é
+pedido na hora. A situação só anda para a frente (`MarketStateOrder`), então um salvamento fora de ordem não volta uma
+oferta vendida para ativa. Ao ligar, o servidor carrega as ativas e as vendidas ainda não recebidas. O maior id
+(itens e ofertas) define de onde o contador de ids continua. Apagar a conta apaga as ofertas dos personagens dela.

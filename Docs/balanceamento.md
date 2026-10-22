@@ -233,6 +233,12 @@ de 2 em 2 horas, nas horas pares de Brasília (`WorldBossRules`).
 - Ao ligar o servidor, ele espera o próximo horário. `/gm chefe` desperta na hora (testes e eventos); `/chefe` no
   chat mostra o próximo horário (o cliente calcula sozinho).
 
+## Mercado (2026-10-21)
+
+O mercado da escrivã cobra **5%** de cada venda (`MarketRules.FeePercent`): é mais um sumidouro de Alz, junto com
+melhoria, poções, chaves e skills. O simulador de economia ainda não conta o mercado (ele não move Alz para o jogo,
+só entre jogadores, menos a taxa).
+
 ## Ranger (2026-10-21)
 
 No simulador, a Ranger sobe do 1 ao 30 em **6,8 horas**, igual à Lâmina (6,8 h) e ao Arcanista (6,9 h). Os arcos têm
