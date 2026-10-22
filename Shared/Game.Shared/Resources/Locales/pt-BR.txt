@@ -150,6 +150,7 @@ npc.guarda_volumes_bento = Bento do Armazém
 npc.mercadora_lia = Mercadora Lia
 npc.guardia_selene = Guardiã Selene
 npc.mestre_aldric = Mestre Aldric
+npc.escriva_marta = Escrivã Marta
 
 # ===== Missões =====
 quest.primeiros_passos = Primeiros passos
@@ -511,12 +512,14 @@ npc.hint_merchant = loja
 npc.hint_dungeon = dungeon
 npc.hint_quests = missões
 npc.hint_trainer = aprender skills
+npc.hint_market = mercado de jogadores
 npc.role_smith = Ferreira
 npc.role_warehouse = Armazém
 npc.role_merchant = Loja
 npc.role_dungeon = Dungeon
 npc.role_quests = Missões
 npc.role_trainer = Mestre de skills
+npc.role_market = Mercado
 
 # ===== Cliente: chat, grupo e amigos =====
 chat.hint = Enter abre o chat. Digite /ajuda para ver os comandos.
@@ -618,6 +621,81 @@ dungeon.victory_one = Vitória em {0}! Medalha {1} · baú com {2} sorteio e {3:
 
 # ===== Servidor: loja e troca =====
 trade.finish_first_shop = Termine a troca antes de usar a loja
+
+# ===== Mercado (quadro de ofertas) =====
+market.title = {0} — mercado
+market.tab_buy = Comprar
+market.tab_sell = Vender
+market.tab_mine = Minhas ofertas ({0})
+market.search = Procurar
+market.empty = Nenhuma oferta à venda agora.
+market.empty_search = Nenhuma oferta com esse nome.
+market.seller = de {0} · {1}
+market.hours_left = {0:0} h
+market.expired = vencida
+market.buy = Comprar
+market.own_offer = sua
+market.sell_hint = Clique com o botão direito num item da bolsa para escolher o que vender. A oferta fica {0:0} horas no quadro e vende mesmo com você offline.
+market.price = Preço total
+market.quantity = Quantidade: {0} de {1}
+market.max = tudo
+market.fee = Taxa do mercado: {0}% ({1:N0} Alz). Você recebe {2:N0} Alz.
+market.put = Pôr à venda
+market.limit_hint = Ofertas no quadro: {0} de {1}
+market.collect = Receber {0:N0} Alz e {1} item(ns)
+market.nothing_to_collect = Nada para receber
+market.state_active = à venda · {0}
+market.state_expired = vencida: receba o item de volta
+market.state_sold = vendida para {0}: receba {1:N0} Alz
+market.cancel = Retirar
+market.mine_empty = Você não tem ofertas no quadro.
+market.go_to = Fale com {0} para usar o mercado.
+market.finish_trade = Termine a troca antes de usar o mercado.
+market.bad_price = Preço inválido: de {0:N0} a {1:N0} Alz.
+market.limit = Você já tem {0} ofertas no quadro.
+market.listed = {0} x{1} à venda por {2:N0} Alz.
+market.not_found = Essa oferta não está mais à venda.
+market.own = Essa oferta é sua: use Retirar.
+market.no_alz = Alz insuficiente: a oferta custa {0:N0} Alz.
+market.bought = Você comprou {0} x{1} por {2:N0} Alz.
+market.sold_notice = Sua oferta de {0} x{1} foi vendida para {2}. Receba {3:N0} Alz com {4}.
+market.cancelled = {0} voltou para a bolsa.
+market.collected = Você recebeu {0:N0} Alz e {1} item(ns) do mercado.
+market.collected_partial = Bolsa cheia: alguns itens continuam esperando com a escrivã.
+market.nothing = Nada para receber no mercado.
+
+# ===== Tela de progressão =====
+progress.title = Progresso  <size=13>({0} fecha)</size>
+progress.next = Próximo: {0}
+progress.track_level = Nível
+progress.track_rank = Rank de skill
+progress.track_skills = Skills aprendidas
+progress.track_gear = Equipamento
+progress.track_awakening = Despertar
+progress.track_quests = Missões da história
+progress.level_value = {0} de {1}
+progress.level_next = nível {0} em {1:N0} XP (+{2} pontos de atributo)
+progress.level_max = nível máximo alcançado
+progress.rank_value = {0} de {1}
+progress.rank_next = missão "{0}" (Nv {1}, com {2}). {3}
+progress.rank_done = todos os ranks liberados
+progress.skills_value = {0} de {1}
+progress.skill_ready = aprender {0} com {2} ({1:N0} Alz)
+progress.skill_need = {0}: {1}
+progress.skills_done = todas as skills da classe aprendidas
+progress.gear_value = {0} de {1} peças no grau do seu nível
+progress.gear_empty = vestir algo em {0}
+progress.gear_grade = trocar {0} por {1}
+progress.gear_upgrade = melhorar {0} para +{1} com {2}
+progress.gear_done = tudo em Astralita +10
+progress.awakening_value = {0} de {1}
+progress.awakening_next = acertos Excellent enchem {0} e Good enchem {1}
+progress.awakening_ready = cheio: ative para +{0}% de dano por {1} s
+progress.quests_value = {0} de {1}
+progress.quest_active = terminar "{0}" e entregar para {1}
+progress.quest_next = pegar "{0}" com {1}
+progress.quest_locked = "{0}" libera no nível {1}
+progress.quests_done = história completa
 shop.go_to_merchant = Vá até a mercadora da vila.
 shop.no_alz = Faltam Alz: {0} x{1} custa {2:N0}
 shop.bought = Comprou {0} x{1} por {2:N0} Alz
@@ -909,6 +987,7 @@ action.map = Mapa
 action.help = Mostrar/esconder ajuda
 action.options = Opções
 action.skills = Skills
+action.progress = Progresso
 key.space = Espaço
 key.leftshift = Shift
 key.rightshift = Shift dir.

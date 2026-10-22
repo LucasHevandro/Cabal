@@ -65,6 +65,48 @@ namespace Game.Shared.Economy
     }
 
     /// <summary>Regras da troca direta entre jogadores.</summary>
+    /// <summary>
+    /// Mercado da vila (quadro de ofertas): o jogador deixa um item à venda com preço; outro compra mesmo com o vendedor
+    /// offline, e o vendedor recebe o Alz (menos a taxa) com a escrivã. Oferta vencida volta para quem pôs.
+    /// </summary>
+    public static class MarketRules
+    {
+        public const int MaxListings = 10;
+        public const double ListingHours = 72;
+
+        /// <summary>Taxa sobre a venda: tira Alz do jogo (o mercado não pode ser mais barato que vender ao NPC à toa).</summary>
+        public const int FeePercent = 5;
+
+        public const long MinPrice = 1;
+        public const long MaxPrice = 999_999_999;
+
+        /// <summary>Quantas ofertas o quadro mostra (as mais novas).</summary>
+        public const int MaxShown = 200;
+
+        public static bool ValidPrice(long price) => price >= MinPrice && price <= MaxPrice;
+
+        public static long Fee(long price) => Math.Max(0, price) * FeePercent / 100;
+
+        /// <summary>O que o vendedor recebe pela venda.</summary>
+        public static long SellerGets(long price) => price - Fee(price);
+    }
+
+    /// <summary>Situação de uma oferta do mercado. Só anda para a frente (Ativa → Vendida → Recebida).</summary>
+    public enum MarketListingState : byte
+    {
+        Active = 0,
+        Sold = 1,
+
+        /// <summary>Retirada pelo vendedor (o item voltou para a bolsa).</summary>
+        Cancelled = 2,
+
+        /// <summary>Vendida e o vendedor já recebeu o Alz.</summary>
+        Collected = 3,
+
+        /// <summary>Venceu sem vender e o item voltou para o vendedor.</summary>
+        Returned = 4,
+    }
+
     public static class TradeRules
     {
         public const int MaxItems = 8;

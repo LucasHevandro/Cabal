@@ -20,6 +20,9 @@ namespace Game.Shared.Progression
 
         /// <summary>Mestre de skills: ensina as skills da classe (nível, missão de rank e Alz).</summary>
         Trainer = 5,
+
+        /// <summary>Mercado: quadro de ofertas entre jogadores (vende mesmo com o vendedor offline).</summary>
+        Market = 6,
     }
 
     /// <summary>NPC da vila ou de uma região: posição fixa e o que ele faz.</summary>
@@ -47,6 +50,7 @@ namespace Game.Shared.Progression
         public const string Merchant = "mercadora_lia";
         public const string DungeonPortal = "guardia_selene";
         public const string Trainer = "mestre_aldric";
+        public const string Market = "escriva_marta";
 
         /// <summary>Quem dá as missões de cada região, na entrada dela (fora da vila).</summary>
         public const string Hunter = "cacador_rurik";
@@ -61,6 +65,7 @@ namespace Game.Shared.Progression
             new NpcDefinition { Id = Merchant, Role = NpcRole.Merchant, X = 5, Z = -6 },
             new NpcDefinition { Id = DungeonPortal, Role = NpcRole.DungeonPortal, X = -5, Z = -6 },
             new NpcDefinition { Id = Trainer, Role = NpcRole.Trainer, X = -9, Z = -1.5f },
+            new NpcDefinition { Id = Market, Role = NpcRole.Market, X = 9, Z = -1.5f },
             new NpcDefinition { Id = Hunter, Role = NpcRole.QuestGiver, X = -10, Z = 33 },
             new NpcDefinition { Id = Scout, Role = NpcRole.QuestGiver, X = 32, Z = 66 },
             new NpcDefinition { Id = Scholar, Role = NpcRole.QuestGiver, X = -32, Z = 106 },

@@ -34,6 +34,7 @@ namespace Game.Shared.Net
         LearnSkill = 25,
         SetHotbar = 26,
         AppearanceCommand = 27,
+        MarketCommand = 28,
 
         // Servidor → cliente
         Welcome = 100,
@@ -66,6 +67,7 @@ namespace Game.Shared.Net
         DuelInvite = 127,
         PvpState = 128,
         EntityLook = 129,
+        MarketState = 130,
     }
 
     /// <summary>Uma mensagem do protocolo. Cada tipo sabe se escrever; a leitura fica em <see cref="NetCodec"/>.</summary>
@@ -78,7 +80,7 @@ namespace Game.Shared.Net
     /// <summary>Versão do protocolo. Subir sempre que uma mensagem mudar de formato.</summary>
     public static class Protocol
     {
-        public const int Version = 18;
+        public const int Version = 19;
         public const int DefaultPort = 7777;
     }
 
@@ -820,6 +822,8 @@ namespace Game.Shared.Net
                 MessageType.DuelInvite => DuelInvite.Read(reader),
                 MessageType.PvpState => PvpState.Read(reader),
                 MessageType.EntityLook => EntityLook.Read(reader),
+                MessageType.MarketCommand => MarketCommand.Read(reader),
+                MessageType.MarketState => MarketState.Read(reader),
                 _ => throw new ProtocolException($"Tipo de mensagem desconhecido: {(ushort)type}."),
             };
             // Hello de outra versão pode ter mais campos: lê só a versão para o servidor poder recusar com motivo.

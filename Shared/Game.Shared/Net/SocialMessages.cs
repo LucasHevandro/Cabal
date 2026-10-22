@@ -440,4 +440,127 @@ namespace Game.Shared.Net
             Text = r.ReadString(), SystemText = LocalText.Read(r),
         };
     }
+
+    // ===== Mercado (quadro de ofertas) =====
+
+    public enum MarketActionKind : byte
+    {
+        /// <summary>Pede o quadro de novo (atualizar).</summary>
+        Open = 0,
+
+        /// <summary>Põe à venda <see cref="MarketCommand.Quantity"/> unidades do item da posição da bolsa.</summary>
+        Sell = 1,
+
+        Buy = 2,
+
+        /// <summary>Retira uma oferta própria (o item volta para a bolsa).</summary>
+        Cancel = 3,
+
+        /// <summary>Recebe o Alz das vendas e os itens das ofertas vencidas.</summary>
+        Collect = 4,
+    }
+
+    /// <summary>Cliente → servidor: ação no mercado (perto da escrivã).</summary>
+    public sealed class MarketCommand : INetMessage
+    {
+        public MessageType Type => MessageType.MarketCommand;
+        public MarketActionKind Action;
+        public ushort Slot;
+        public int Quantity;
+        public long Price;
+        public long ListingId;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteByte((byte)Action);
+            w.WriteUShort(Slot);
+            w.WriteInt(Quantity);
+            w.WriteLong(Price);
+            w.WriteLong(ListingId);
+        }
+
+        public static MarketCommand Read(PacketReader r) => new MarketCommand
+        {
+            Action = (MarketActionKind)r.ReadByte(), Slot = r.ReadUShort(), Quantity = r.ReadInt(), Price = r.ReadLong(), ListingId = r.ReadLong(),
+        };
+    }
+
+    /// <summary>Uma oferta como o cliente vê.</summary>
+    public sealed class MarketEntry
+    {
+        public long Id;
+        public string ItemId = "";
+        public int Quantity;
+        public byte Upgrade;
+        public string OptionId = "";
+        public long Price;
+        public string Seller = "";
+        public MarketListingState State;
+
+        /// <summary>Venceu sem vender (o vendedor pega o item de volta com a escrivã).</summary>
+        public bool Expired;
+
+        /// <summary>Horas até vencer (ativas).</summary>
+        public float HoursLeft;
+
+        /// <summary>Quem comprou (vendidas).</summary>
+        public string Buyer = "";
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteLong(Id);
+            w.WriteString(ItemId);
+            w.WriteInt(Quantity);
+            w.WriteByte(Upgrade);
+            w.WriteString(OptionId);
+            w.WriteLong(Price);
+            w.WriteString(Seller);
+            w.WriteByte((byte)State);
+            w.WriteBool(Expired);
+            w.WriteFloat(HoursLeft);
+            w.WriteString(Buyer);
+        }
+
+        public static MarketEntry Read(PacketReader r) => new MarketEntry
+        {
+            Id = r.ReadLong(), ItemId = r.ReadString(), Quantity = r.ReadInt(), Upgrade = r.ReadByte(), OptionId = r.ReadString(),
+            Price = r.ReadLong(), Seller = r.ReadString(), State = (MarketListingState)r.ReadByte(),
+            Expired = r.ReadBool(), HoursLeft = r.ReadFloat(), Buyer = r.ReadString(),
+        };
+    }
+
+    /// <summary>
+    /// Servidor → cliente: o quadro (ofertas à venda, as mais novas primeiro) e as ofertas do jogador (ativas, vencidas e
+    /// vendidas ainda não recebidas), com o total a receber.
+    /// </summary>
+    public sealed class MarketState : INetMessage
+    {
+        public MessageType Type => MessageType.MarketState;
+        public List<MarketEntry> Offers = new List<MarketEntry>();
+        public List<MarketEntry> Mine = new List<MarketEntry>();
+        public long ToCollectAlz;
+        public int ToCollectItems;
+
+        public void Write(PacketWriter w)
+        {
+            w.WriteUShort((ushort)Offers.Count);
+            foreach (var entry in Offers) entry.Write(w);
+            w.WriteUShort((ushort)Mine.Count);
+            foreach (var entry in Mine) entry.Write(w);
+            w.WriteLong(ToCollectAlz);
+            w.WriteInt(ToCollectItems);
+        }
+
+        public static MarketState Read(PacketReader r)
+        {
+            var state = new MarketState();
+            var offers = r.ReadUShort();
+            for (var i = 0; i < offers; i++) state.Offers.Add(MarketEntry.Read(r));
+            var mine = r.ReadUShort();
+            for (var i = 0; i < mine; i++) state.Mine.Add(MarketEntry.Read(r));
+            state.ToCollectAlz = r.ReadLong();
+            state.ToCollectItems = r.ReadInt();
+            return state;
+        }
+    }
 }
