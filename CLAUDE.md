@@ -23,7 +23,7 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   anda junto, por fast-forward. A branch padrão antiga do GitHub ainda pode ser `feat/fase3-rede`.
 - **Pastas:** `Shared/Game.Shared` (netstandard2.1, também usada pelo Unity como pacote local), `Server/Game.Server`,
   `Client/` (Unity), `Tools/` (Bots, Balance, Launcher, instalador, publicar) e `deploy/` (VPS).
-- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 242 no Shared e 182 no Servidor). Os testes de textos
+- **Testes:** `dotnet test Game.slnx -c Release` (hoje são 242 no Shared e 183 no Servidor). Os testes de textos
   exigem chaves literais no código: nada de `"login.head_" + i`, use um array de chaves literais.
 - **Protocolo:** `Shared/Game.Shared/Net/Messages.cs`, `Protocol.Version = 19`. Se mudar alguma mensagem, suba a
   versão e atualize o cliente e o servidor juntos. O `FuzzTests` conta os tipos de mensagem.
@@ -44,8 +44,8 @@ tem a estrutura e como rodar, e `Docs/` tem as decisões, o balanceamento, os vi
   - `Game.Client.Editor.GameIcon.Generate`: refaz o brasão em `Assets/Art/Icone`.
   - `Game.Client.Editor.MusicExport.ExportAll -musicOut pasta`: exporta as músicas e o som ambiente em WAV.
 - **Testes do exe** (DevTools): `-onlinetest pasta` com `-onlinefight`, `-onlineui`, `-onlinesanctuary`,
-  `-onlinearena` e `-onlinesocial`; e também `-worldtest`, `-geartest`, `-logintest`, `-skilltest`, `-posetest` e
-  `-bridgetest`.
+  `-onlinearena`, `-onlinesocial` e `-onlineswitch` (trocar de personagem); e também `-worldtest`, `-geartest`,
+  `-logintest`, `-skilltest`, `-posetest` e `-bridgetest`.
   - Cada um grava `relatorio.txt` (SUCESSO ou FALHA) e screenshots.
   - Para os online: servidor local com `dotnet artifacts/bin/Game.Server/release/Game.Server.dll --db memory --guests --port 7790`
     e o exe com `-connect 127.0.0.1:7790 -name Teste`.

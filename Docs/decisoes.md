@@ -245,3 +245,16 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   equipamento (a peça mais fraca: vestir, trocar de grau ou melhorar), Despertar e missões da história.
 - A tecla P fica reservada para a futura janela do personagem (equipamento vestido, que hoje fica no inventário).
 - As contas ficam no Shared (`ProgressionGoals`, com testes); o cliente só desenha. Nada passa pela rede.
+
+## 2026-10-21 — Trocar de personagem sem fechar o jogo
+
+- **Como é:** em Opções (Esc), o botão **Trocar de personagem** (só online, com conta e dentro do mundo) tira o
+  jogador do mundo e abre a lista de personagens da conta, com o mesmo login. Ele escolhe outro, ou o mesmo, e entra.
+- **Por dentro:** a cena recarrega como na entrada (`GameMode.ReturnToCharacters`). A conexão fecha, o servidor salva o
+  personagem e o menu usa o token guardado (`GameMode.ResumeToken`) para pedir a lista. Se o login venceu (12 h) ou o
+  servidor reiniciou, o menu cai na tela de entrada com o aviso.
+- **Sem estado velho:** quem sai e entra de novo logo em seguida no mesmo personagem podia ser lido do banco antes do
+  salvamento da saída. Agora o servidor espera a fila de salvamento daquele personagem terminar antes de carregá-lo
+  (`CharacterSaver.WaitForCharacterAsync`). Se em 15 s não terminar (banco fora do ar), recusa a entrada, em vez de
+  entrar com o estado antigo.
+- **Teste do exe:** `-onlineswitch` sai para o menu e entra de novo (como convidado).
