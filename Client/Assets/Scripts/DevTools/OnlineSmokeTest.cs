@@ -473,6 +473,13 @@ namespace Game.Client.DevTools
             windows.SetInventoryOpen(false);
             windows.SetAttributesOpen(false);
 
+            // Janela do personagem sozinha (P): o modelo com o que está vestido, as peças em volta e os atributos.
+            windows.SetCharacterOpen(true);
+            yield return new WaitForSecondsRealtime(0.6f);
+            Capture("5c-personagem");
+            yield return new WaitForEndOfFrame();
+            windows.SetCharacterOpen(false);
+
             var quest = "primeiros_passos";
             if (!CharacterState.QuestCompleted(quest))
             {
@@ -1208,6 +1215,13 @@ namespace Game.Client.DevTools
             var flatStart = new Vector2(motor.transform.position.x, motor.transform.position.z);
             if ((new Vector2(target.x, target.z) - flatStart).magnitude > 14f && new Vector2(npc.X, npc.Z).magnitude > 16f)
                 yield return WalkToPoint(motor, new Vector3(0f, 0, 12f));
+            // Do outro lado do rio: atravessa pela ponte (a margem a pé pode ser íngreme demais para subir).
+            var river = Game.Client.World.Ground.RiverZ(0f);
+            if (target.z > river + 3f && motor.transform.position.z < river - 3f)
+            {
+                yield return WalkToPoint(motor, new Vector3(0f, 0, river - 7f));
+                yield return WalkToPoint(motor, new Vector3(0f, 0, river + 7f));
+            }
             yield return WalkToPoint(motor, target);
             yield return new WaitForSecondsRealtime(0.3f); // a última posição chega ao servidor
             Log($"Andou até {npcId}: está em ({motor.transform.position.x:0.0}, {motor.transform.position.z:0.0}), alvo ({target.x:0.0}, {target.z:0.0})");

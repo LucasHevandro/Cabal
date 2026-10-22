@@ -10,7 +10,7 @@ namespace Game.Client.Net
     /// </summary>
     public sealed class CharacterPreview
     {
-        private static readonly Vector3 Spot = new Vector3(0f, 400f, 0f);
+        private readonly Vector3 _spot;
 
         private GameObject _rig;
         private Camera _camera;
@@ -20,20 +20,26 @@ namespace Game.Client.Net
         private CharacterPaint.Style? _style;
         private CharacterPaint.Gear _gear;
         private bool _painted;
+        private string _weapon = "";
+        private int _upgrade = -1;
+
+        /// <param name="spot">Onde a prévia fica (no alto, longe do mundo); duas prévias ao mesmo tempo usam lugares diferentes.</param>
+        public CharacterPreview(Vector3? spot = null) => _spot = spot ?? new Vector3(0f, 400f, 0f);
 
         public Texture Texture => _texture;
 
-        public void Show(CharacterClass characterClass, CharacterPaint.Style style, CharacterPaint.Gear gear = default)
+        public void Show(CharacterClass characterClass, CharacterPaint.Style style, CharacterPaint.Gear gear = default,
+            string weaponId = "", int upgrade = 0)
         {
             if (_rig == null)
             {
                 _rig = new GameObject("Prévia do personagem");
-                _rig.transform.position = Spot;
+                _rig.transform.position = _spot;
                 _texture = new RenderTexture(360, 440, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4, name = "Prévia do personagem" };
                 _camera = new GameObject("Câmera da prévia").AddComponent<Camera>();
                 _camera.transform.SetParent(_rig.transform, false);
                 _camera.transform.localPosition = new Vector3(0f, 1.15f, 3.4f);
-                _camera.transform.LookAt(Spot + Vector3.up * 0.85f);
+                _camera.transform.LookAt(_spot + Vector3.up * 0.85f);
                 _camera.fieldOfView = 30f;
                 _camera.clearFlags = CameraClearFlags.SolidColor;
                 _camera.backgroundColor = new Color(0.07f, 0.08f, 0.1f, 1f);
@@ -48,8 +54,17 @@ namespace Game.Client.Net
                 _class = characterClass;
                 _model = VisualCatalog.Spawn(VisualCatalog.Class, ClassInfo.TypeId(characterClass), _rig.transform);
                 _style = null;
+                _weapon = "";
+                _upgrade = -1;
             }
             if (_model == null) return;
+            // A arma vestida na mão (sem nada, fica a do próprio modelo).
+            if (!string.IsNullOrEmpty(weaponId) && (weaponId != _weapon || upgrade != _upgrade))
+            {
+                _weapon = weaponId;
+                _upgrade = upgrade;
+                WeaponFx.SetLook(_model.transform, weaponId, upgrade);
+            }
             if (!_style.Equals(style) || !gear.Equals(_gear))
             {
                 _style = style;

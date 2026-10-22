@@ -185,6 +185,13 @@ namespace Game.Client.Combat
         /// <summary>Elmo (ou chapéu) escondido agora (a janela do inventário mostra e troca).</summary>
         public bool HelmetHidden => _style.HideHelmet;
 
+        /// <summary>O que está vestido e as escolhas da criação (a janela do personagem mostra igual).</summary>
+        public string LookWeapon => _lookWeapon;
+
+        public int LookUpgrade => _lookUpgrade;
+        public CharacterPaint.Gear LookGear => _lookGear;
+        public CharacterPaint.Style LookStyle => _style;
+
         /// <summary>
         /// Arma equipada, melhoria, grau das peças vestidas e o elmo (do servidor): o modelo na mão, o brilho, a cor do
         /// metal e a cabeça acompanham. Cores, penteado e pele só vêm quando o personagem aparece (nulo = mantém).

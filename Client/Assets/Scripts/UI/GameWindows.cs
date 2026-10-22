@@ -124,6 +124,7 @@ namespace Game.Client.UI
         {
             OpenRects.Clear();
             RightPanelOpen = false;
+            HideCharacterPreview();
         }
 
         private void Update()
@@ -132,6 +133,14 @@ namespace Game.Client.UI
             if (keyboard == null || ConnectMenu.IsOpen) return;
 
             if (KeyBindings.Pressed(GameAction.Inventory)) Fx.UiSounds.Toggle(_inventoryOpen = !_inventoryOpen);
+            if (KeyBindings.Pressed(GameAction.Character))
+            {
+                // P: abre o personagem; aberto (sozinho ou com o inventário), fecha os dois.
+                var open = !(_characterOpen || _inventoryOpen);
+                _characterOpen = open;
+                if (!open) _inventoryOpen = false;
+                Fx.UiSounds.Toggle(open);
+            }
             if (KeyBindings.Pressed(GameAction.Attributes)) Fx.UiSounds.Toggle(_attributesOpen = !_attributesOpen);
             if (KeyBindings.Pressed(GameAction.QuestLog)) Fx.UiSounds.Toggle(_questLogOpen = !_questLogOpen);
             if (KeyBindings.Pressed(GameAction.Skills)) Fx.UiSounds.Toggle(_skillsOpen = !_skillsOpen);
@@ -150,12 +159,12 @@ namespace Game.Client.UI
 
         /// <summary>Alguma janela que o Esc fecha está aberta (aí o Esc fecha ela em vez de abrir as opções).</summary>
         public static bool AnyOpen => Instance != null && Instance.isActiveAndEnabled &&
-            (Instance._inventoryOpen || Instance._attributesOpen || Instance._questLogOpen || Instance._skillsOpen || Instance._progressOpen ||
+            (Instance._inventoryOpen || Instance._attributesOpen || Instance._questLogOpen || Instance._skillsOpen || Instance._progressOpen || Instance._characterOpen ||
              Instance._discardSlot >= 0 || CharacterState.Dialog != null);
 
         private void CloseAll()
         {
-            _inventoryOpen = _attributesOpen = _questLogOpen = _skillsOpen = _progressOpen = false;
+            _inventoryOpen = _attributesOpen = _questLogOpen = _skillsOpen = _progressOpen = _characterOpen = false;
             _discardSlot = -1;
             CharacterState.CloseDialog();
         }
@@ -226,6 +235,13 @@ namespace Game.Client.UI
             var marketOpen = npc != null && npc.Role == NpcRole.Market && !Trading;
             var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || marketOpen || Trading;
             RightPanelOpen = inventoryShown;
+            // O personagem abre junto com o inventário (ou sozinho, na P), à esquerda da janela de NPC que estiver aberta.
+            var characterShown = inventoryShown || _characterOpen;
+            var npcWindowX = warehouseOpen ? WarehouseOrigin.x - 14 : smithOpen ? SmithRect.x : marketOpen ? MarketRect.x
+                : Trading ? TradeRect.x : shopOpen ? ShopRect.x : 0f;
+            _characterX = LeftOfOpenWindows(warehouseOpen || smithOpen || marketOpen || Trading || shopOpen, npcWindowX);
+            if (characterShown) DrawCharacter();
+            else HideCharacterPreview();
 
             var pvp = CharacterState.Pvp;
             var pvpBusy = pvp != null && (pvp.InQueue || pvp.Mode == Msg.PvpMode.Arena);
@@ -248,7 +264,7 @@ namespace Game.Client.UI
             DrawTalkPrompt();
             if (_discardSlot >= 0) DrawDiscardConfirm();
 
-            HandleDrop(inventoryShown, warehouseOpen, smithOpen, shopOpen);
+            HandleDrop(inventoryShown, characterShown, warehouseOpen, smithOpen, shopOpen);
             if (_dragging) DrawDragged();
             else if (_hoverItem != null) DrawTooltip(_hoverItem, _hoverWorn);
 
@@ -269,45 +285,21 @@ namespace Game.Client.UI
 
         // ----- Inventário e equipamento -----
 
-        private Rect InventoryRect => new Rect(VirtualWidth - 480, 120, 460, 560);
+        private Rect InventoryRect => new Rect(VirtualWidth - 480, 120, 460, 400);
+
+        /// <summary>Primeira casa da bolsa no inventário.</summary>
+        private Vector2 BagOrigin => new Vector2(InventoryRect.x + 14, InventoryRect.y + 50);
 
         private void DrawInventory()
         {
             var rect = Window(InventoryRect, Loc.T("inv.title", KeyBindings.Label(GameAction.Inventory)));
 
-            // Equipamento
-            var x = rect.x + 14;
-            var y = rect.y + 46;
-            for (var i = 0; i < EquipSlots.Length; i++)
-            {
-                var (slot, label) = EquipSlots[i];
-                var slotRect = new Rect(x + i * (SlotSize + 34), y + 18, SlotSize + 26, SlotSize + 6);
-                GUI.Label(new Rect(slotRect.x, y, slotRect.width, 18), Loc.T(label), _tiny.WithCenter());
-                DrawSlot(slotRect, CharacterState.Equipment[slot], Msg.ItemContainerKind.Equipment, (int)slot, worn: true);
-            }
+            // Bolsa (o equipamento vestido fica na janela do personagem, ao lado).
+            DrawGrid(CharacterState.Bag, Msg.ItemContainerKind.Bag, BagOrigin);
 
-            // Bolsa
-            y += 92;
-            DrawGrid(CharacterState.Bag, Msg.ItemContainerKind.Bag, new Vector2(x, y));
-
-            var sheet = CharacterState.Sheet;
-            var footer = rect.yMax - 58;
+            var footer = rect.yMax - 50;
             var alz = Player.GetComponent<PlayerLoot>();
-            GUI.Label(new Rect(x, footer, 220, 24), Loc.T("inv.alz", (alz != null ? alz.Alz : 0)), _small);
-            // Mostrar o elmo (o chapéu, no Arcanista): online o servidor guarda e avisa quem vê; offline troca na hora.
-            var combat = Player;
-            if (combat != null)
-            {
-                var show = UiTheme.Toggle(new Rect(x + 190, footer, 150, 24), !combat.HelmetHidden, " " + Loc.T("inv.show_helmet"), _tiny);
-                if (show == combat.HelmetHidden)
-                {
-                    if (NetworkSession.Instance != null) Send(new Msg.AppearanceCommand { HideHelmet = !show });
-                    else combat.SetHelmetHidden(!show);
-                }
-            }
-            if (sheet != null)
-                GUI.Label(new Rect(x, footer + 22, rect.width - 28, 24),
-                    Loc.T("inv.stats", sheet.AttackPower, sheet.MagicPower, sheet.Defense, sheet.CritPercent), _tiny);
+            GUI.Label(new Rect(rect.x + 14, footer + 8, 260, 24), Loc.T("inv.alz", (alz != null ? alz.Alz : 0)), _small);
 
             // Lixeira: soltar um item aqui pede confirmação.
             var trash = TrashRect;
@@ -315,7 +307,7 @@ namespace Game.Client.UI
             GUI.Label(trash, Loc.T("inv.discard"), _tiny.WithCenter());
         }
 
-        private Rect TrashRect => new Rect(InventoryRect.xMax - 110, InventoryRect.yMax - 58, 96, 40);
+        private Rect TrashRect => new Rect(InventoryRect.xMax - 110, InventoryRect.yMax - 50, 96, 40);
 
         private void DrawGrid(ItemContainer container, Msg.ItemContainerKind kind, Vector2 origin)
         {
@@ -467,7 +459,7 @@ namespace Game.Client.UI
             Send(new Msg.ItemCommand { Action = Msg.ItemActionKind.Move, From = from, FromSlot = (ushort)fromSlot, To = to, ToSlot = (ushort)toSlot });
 
         /// <summary>Solta o item arrastado: em outra posição, no equipamento, no armazém, na ferreira ou na lixeira.</summary>
-        private void HandleDrop(bool inventoryShown, bool warehouseOpen, bool smithOpen, bool shopOpen)
+        private void HandleDrop(bool inventoryShown, bool characterShown, bool warehouseOpen, bool smithOpen, bool shopOpen)
         {
             var e = Event.current;
             if (_dragSlot < 0) return;
@@ -486,20 +478,13 @@ namespace Game.Client.UI
             var item = ItemAtSlot(from, fromSlot);
             if (item == null) return;
 
+            if (characterShown && DropOnCharacter(point, from, fromSlot, item)) return;
             if (inventoryShown)
             {
-                var bagOrigin = new Vector2(InventoryRect.x + 14, InventoryRect.y + 138);
                 for (var slot = 0; slot < CharacterState.Bag.Size; slot++)
                 {
-                    if (!SlotRect(bagOrigin, slot).Contains(point)) continue;
+                    if (!SlotRect(BagOrigin, slot).Contains(point)) continue;
                     if (from != Msg.ItemContainerKind.Bag || slot != fromSlot) SendMove(from, fromSlot, Msg.ItemContainerKind.Bag, slot);
-                    return;
-                }
-                for (var i = 0; i < EquipSlots.Length; i++)
-                {
-                    var rect = new Rect(InventoryRect.x + 14 + i * (SlotSize + 34), InventoryRect.y + 64, SlotSize + 26, SlotSize + 6);
-                    if (!rect.Contains(point)) continue;
-                    if (from == Msg.ItemContainerKind.Bag) SendMove(from, fromSlot, Msg.ItemContainerKind.Equipment, (int)EquipSlots[i].Slot);
                     return;
                 }
                 if (TrashRect.Contains(point) && from == Msg.ItemContainerKind.Bag)
