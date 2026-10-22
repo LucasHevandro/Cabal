@@ -113,6 +113,26 @@ public class DungeonWorldTests
     }
 
     [Fact]
+    public void Quem_esta_fora_da_dungeon_nao_acerta_os_monstros_dela()
+    {
+        var (world, _) = NewWorld();
+        var ana = AddAtPortal(world, "Ana");
+        Enter(world, ana);
+        var instance = Assert.Single(world.Dungeons);
+        var monster = world.FindMonster(instance.RoomMonsters[0][0])!;
+        var hp = monster.Hp.Current;
+
+        // Cliente modificado: anda até o monstro da dungeon sem ter entrado nela.
+        var intruso = AddAtPortal(world, "Intruso");
+        intruso.Movement.Teleport(monster.X, monster.Z - monster.Data.BodyRadius - 1f, _now);
+        _now += 2;
+        world.Handle(intruso.Id, new UseSkill { Slot = 0, TargetId = monster.Id }, _now);
+
+        Assert.Equal(hp, monster.Hp.Current);
+        Kill(world, ana, monster); // quem está na dungeon continua acertando
+    }
+
+    [Fact]
     public void Sem_chave_ou_longe_do_portal_nao_entra()
     {
         var (world, outbox) = NewWorld();

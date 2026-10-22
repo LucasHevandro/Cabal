@@ -271,6 +271,43 @@ public class SaveAndLogTests
     }
 
     [Fact]
+    public async Task Foto_que_falhou_a_rodada_inteira_vai_junto_com_a_proxima()
+    {
+        var store = new FlakyStore { FailuresLeft = CharacterSaver.AttemptsPerRound };
+        var character = await store.CreateCharacterAsync(1, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        await using var saver = new CharacterSaver(store) { FirstRetryDelay = TimeSpan.FromMilliseconds(1), RetryUnsavedAfter = TimeSpan.FromMinutes(5) };
+
+        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 500, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()),
+            new List<ItemLogEntry> { new(character.Id, DateTimeOffset.UtcNow, "compra", null, 0, -500, "primeira") });
+        while (store.FailuresLeft > 0) await Task.Delay(10);
+        await Task.Delay(50);
+        Assert.True(saver.IsPending(character.Id)); // não foi gravada, então ainda não pode entrar de novo
+
+        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 800, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()),
+            new List<ItemLogEntry> { new(character.Id, DateTimeOffset.UtcNow, "alz_monstro", null, 0, 300, "segunda") });
+        Assert.True(await saver.WaitForCharacterAsync(character.Id, TimeSpan.FromSeconds(10)));
+
+        Assert.Equal(800, (await store.LoadCharacterAsync(character.Id))!.Alz);
+        Assert.Equal(2, (await store.ItemLogAsync(character.Id)).Count); // o registro da foto que falhou não se perdeu
+    }
+
+    [Fact]
+    public async Task Foto_que_falhou_eh_tentada_de_novo_com_a_fila_vazia()
+    {
+        var store = new FlakyStore { FailuresLeft = CharacterSaver.AttemptsPerRound };
+        var character = await store.CreateCharacterAsync(1, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        await using var saver = new CharacterSaver(store)
+        {
+            FirstRetryDelay = TimeSpan.FromMilliseconds(1), RetryUnsavedAfter = TimeSpan.FromMilliseconds(200),
+        };
+
+        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 500, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()), new List<ItemLogEntry>());
+
+        Assert.True(await saver.WaitForCharacterAsync(character.Id, TimeSpan.FromSeconds(10)));
+        Assert.Equal(500, (await store.LoadCharacterAsync(character.Id))!.Alz);
+    }
+
+    [Fact]
     public async Task Espera_o_salvamento_do_personagem_antes_de_carregar_de_novo()
     {
         var store = new FlakyStore(); // falha 2 vezes: o salvamento leva uns 750 ms
@@ -281,6 +318,9 @@ public class SaveAndLogTests
         saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 700, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()), new List<ItemLogEntry>());
         Assert.True(saver.IsPending(character.Id));
         Assert.False(saver.IsPending(character.Id + 1));
+        // A versão muda a cada foto: quem leu o personagem do banco antes disso sabe que precisa ler de novo.
+        Assert.Equal(1, saver.SaveVersion(character.Id));
+        Assert.Equal(0, saver.SaveVersion(character.Id + 1));
 
         Assert.True(await saver.WaitForCharacterAsync(character.Id, TimeSpan.FromSeconds(10)));
         Assert.Equal(700, (await store.LoadCharacterAsync(character.Id))!.Alz); // já está no banco quando a espera acaba

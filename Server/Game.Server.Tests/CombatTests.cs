@@ -169,6 +169,7 @@ public class CombatTests
         var (world, outbox, player, monster) = Setup(Dummy(hp: 100), random: 0.0, eliteChance: 1);
         Assert.True(monster.IsElite);
         Assert.Equal(400, monster.Hp.Max);
+        Assert.Equal(400, monster.Hp.Current); // nasce com a vida cheia, não com a vida do monstro comum
         world.Tick(0.1);
         Assert.True(outbox.To<EntitySpawned>(player.Id).Single(s => s.Id == monster.Id).Elite);
 

@@ -111,6 +111,48 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Trava_de_senha_errada_vale_so_para_o_ip_que_errou()
+    {
+        var (auth, _, _, _) = Create();
+        await auth.RegisterAsync(Creds());
+
+        for (var i = 0; i < AuthService.MaxFailedLogins; i++) await auth.LoginAsync(Creds(password: "errada123"), "200.9.9.9");
+
+        Assert.Equal(429, (await auth.LoginAsync(Creds(), "200.9.9.9")).StatusCode);
+        Assert.True((await auth.LoginAsync(Creds(), "200.1.1.1")).Ok); // o dono, de outro IP, continua entrando
+    }
+
+    [Fact]
+    public async Task Mesmo_ip_faz_no_maximo_dez_pedidos_de_login_ou_cadastro_por_minuto()
+    {
+        var (auth, _, _, advance) = Create();
+        await auth.RegisterAsync(Creds());
+
+        for (var i = 0; i < AuthService.MaxAuthRequestsPerMinute; i++)
+            Assert.NotEqual(429, (await auth.LoginAsync(Creds($"conta{i}"), "200.5.5.5")).StatusCode);
+
+        var blocked = await auth.LoginAsync(Creds(), "200.5.5.5");
+        Assert.Equal(429, blocked.StatusCode);
+        Assert.Equal("auth.try_again", blocked.Error.Key);
+        Assert.Equal(429, (await auth.RegisterAsync(Creds("nova1"), "200.5.5.5")).StatusCode);
+        Assert.True((await auth.LoginAsync(Creds(), "200.5.5.6")).Ok);
+
+        advance(TimeSpan.FromMinutes(1));
+        Assert.True((await auth.LoginAsync(Creds(), "200.5.5.5")).Ok);
+    }
+
+    [Fact]
+    public async Task Nome_de_conta_gigante_no_login_eh_recusado_sem_travar_nada()
+    {
+        var (auth, _, _, _) = Create();
+
+        var result = await auth.LoginAsync(Creds(new string('a', 5000)));
+
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal("auth.wrong_credentials", result.Error.Key);
+    }
+
+    [Fact]
     public async Task Mesmo_ip_cria_no_maximo_tres_contas_por_dia()
     {
         var (auth, _, _, advance) = Create();

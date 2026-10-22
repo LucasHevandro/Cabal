@@ -35,6 +35,15 @@ public sealed class ClientConnection
     private readonly long _createdAt = Stopwatch.GetTimestamp();
     private long _lastMessageAt = Stopwatch.GetTimestamp();
 
+    /// <summary>
+    /// Bytes na fila de envio acima dos quais a conexão cai. Um cliente que não lê o que recebe (de propósito ou com a
+    /// rede travada) faria a fila crescer até acabar a memória do servidor. O normal fica em poucos KB.
+    /// </summary>
+    public long MaxPendingBytes { get; init; } = 4 * 1024 * 1024;
+
+    private long _pendingBytes;
+    private int _sendOverflow;
+
     /// <summary>Anti flood desta conexão (só a thread de leitura mexe nele).</summary>
     public InboundLimiter Limiter { get; init; } = new();
 
@@ -67,7 +76,14 @@ public sealed class ClientConnection
     /// <summary>Põe uma mensagem já codificada na fila de envio (seguro de qualquer thread).</summary>
     public void Send(byte[] frame)
     {
-        if (!IsClosed) _outgoing.Writer.TryWrite(frame);
+        if (IsClosed) return;
+        if (Interlocked.Add(ref _pendingBytes, frame.Length) > MaxPendingBytes)
+        {
+            Interlocked.Exchange(ref _sendOverflow, 1);
+            Close();
+            return;
+        }
+        _outgoing.Writer.TryWrite(frame);
     }
 
     public void Close()
@@ -125,6 +141,7 @@ public sealed class ClientConnection
         finally
         {
             Close();
+            if (Volatile.Read(ref _sendOverflow) == 1) reason = "não lia o que o servidor enviava (fila de envio cheia)";
             onClosed(this, reason);
         }
     }
@@ -134,7 +151,10 @@ public sealed class ClientConnection
         try
         {
             await foreach (var frame in _outgoing.Reader.ReadAllAsync(_closed.Token))
+            {
                 await _stream.WriteAsync(frame, _closed.Token);
+                Interlocked.Add(ref _pendingBytes, -frame.Length);
+            }
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException or ObjectDisposedException)
         {

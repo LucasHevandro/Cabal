@@ -92,6 +92,26 @@ public class FloodTests
     }
 
     [Fact]
+    public async Task Fila_de_envio_cheia_derruba_a_conexao()
+    {
+        using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        using var tcp = new TcpClient();
+        var accept = listener.AcceptTcpClientAsync();
+        await tcp.ConnectAsync("127.0.0.1", ((System.Net.IPEndPoint)listener.LocalEndpoint).Port);
+        using var server = await accept;
+        // Sem Start: nada sai da fila, como um cliente que não lê o que recebe.
+        var connection = new ClientConnection(1, server) { MaxPendingBytes = 64 * 1024 };
+
+        var frame = new byte[16 * 1024];
+        for (var i = 0; i < 4; i++) connection.Send(frame);
+        Assert.False(connection.IsClosed); // 64 KB na fila: ainda dentro do limite
+
+        connection.Send(frame);
+        Assert.True(connection.IsClosed);
+    }
+
+    [Fact]
     public async Task Conexao_que_nao_manda_hello_cai_com_aviso()
     {
         using var host = new ServerHost(new ServerOptions { Port = 0, AllowGuests = true, HelloTimeoutSeconds = 1 });

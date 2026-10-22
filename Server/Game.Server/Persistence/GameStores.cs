@@ -305,7 +305,13 @@ public sealed class EfGameStore : IGameStore
         {
             if (listing.SellerCharacterId == 0) continue;
             var row = db.MarketListings.Local.FirstOrDefault(m => m.Id == listing.Id) ?? await db.MarketListings.FindAsync(listing.Id);
-            if (row == null) db.MarketListings.Add(row = new MarketListingEntity { Id = listing.Id, SellerCharacterId = listing.SellerCharacterId });
+            if (row == null)
+            {
+                // Vendedor apagado (a oferta foi junto, em cascata): não há o que registrar, e inserir quebraria a
+                // chave estrangeira e o salvamento inteiro do comprador.
+                if (!await db.Characters.AnyAsync(c => c.Id == listing.SellerCharacterId)) continue;
+                db.MarketListings.Add(row = new MarketListingEntity { Id = listing.Id, SellerCharacterId = listing.SellerCharacterId });
+            }
             else if (!MarketStateOrder.CanReplace((MarketListingState)row.State, listing.State)) continue;
             Copy(listing, row);
         }

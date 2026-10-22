@@ -51,7 +51,7 @@ public sealed class LoginApi : IAsyncDisposable
         {
             var body = await ReadAsync<Credentials>(request);
             if (body == null) return Error(new LocalText("auth.bad_request"), 400);
-            var result = await auth.LoginAsync(body);
+            var result = await auth.LoginAsync(body, ClientIp(request));
             return result.Ok ? Ok(result.Value!) : Error(result.Error, result.StatusCode);
         });
 

@@ -30,6 +30,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    mem_limit: 2g
     <<: *logs
 
   game:
@@ -51,6 +52,11 @@ services:
       - "127.0.0.1:7778:7778"
     # Tempo para salvar todos os personagens ao desligar (docker stop manda SIGTERM).
     stop_grace_period: 30s
+    # Limites com folga (o jogo usa ~100 MB com poucos jogadores; a VPS tem 4 núcleos e 12 GB). Se um abuso passar das
+    # proteções do servidor, só este contêiner sofre: o banco, o Caddy e a própria VPS continuam de pé.
+    cpus: 3
+    mem_limit: 2g
+    pids_limit: 512
     <<: *logs
 
   caddy:
@@ -69,6 +75,7 @@ services:
       - ./download:/srv/download:ro
       - caddy-data:/data
       - caddy-config:/config
+    mem_limit: 512m
     <<: *logs
 
   # Backup todo dia no horário BACKUP_HOUR (pg_dump compactado), guardando os BACKUP_KEEP mais novos em ./backups.

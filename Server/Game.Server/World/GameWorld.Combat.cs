@@ -110,7 +110,7 @@ public sealed partial class GameWorld
             player.QueuedAt = now;
             return;
         }
-        var target = FindMonster(message.TargetId);
+        var target = TargetMonster(player, message.TargetId);
         // Sem monstro: pode ser um jogador hostil (duelo começado ou time inimigo na arena).
         var enemy = target == null ? HostilePlayer(player, message.TargetId) : null;
         double? distance = target != null && !target.IsDead ? EdgeDistance(player, target)
@@ -204,7 +204,7 @@ public sealed partial class GameWorld
     private void HandleFinisher(ServerPlayer player, Finisher message, double now)
     {
         if (player.IsDead || !player.Combo.CanFinish) return;
-        var target = FindMonster(message.TargetId);
+        var target = TargetMonster(player, message.TargetId);
         var enemy = target == null ? HostilePlayer(player, message.TargetId) : null;
         var inReach = target != null && !target.IsDead && EdgeDistance(player, target) <= PlayerRules.FinisherRange ||
                       enemy != null && Distance(player.X, player.Z, enemy.X, enemy.Z) - PlayerRules.BodyRadius <= PlayerRules.FinisherRange;
@@ -245,9 +245,17 @@ public sealed partial class GameWorld
         }
         foreach (var monster in _monsters.Values.ToList())
         {
-            if (!monster.IsDead && InRange(monster.X, monster.Z, main.X, main.Z, skill.AreaRadius)) yield return monster;
+            if (!monster.IsDead && monster.InstanceId == main.InstanceId && InRange(monster.X, monster.Z, main.X, main.Z, skill.AreaRadius))
+                yield return monster;
         }
     }
+
+    /// <summary>
+    /// Monstro que o jogador pode atacar: só os da instância dele (mundo aberto ou a dungeon do grupo). Sem isso, um
+    /// cliente modificado que andasse até a área das dungeons bateria nos monstros de outros grupos.
+    /// </summary>
+    private ServerMonster? TargetMonster(ServerPlayer player, int id) =>
+        FindMonster(id) is { } monster && SameInstance(monster, player) ? monster : null;
 
     private void DamagePlayerToMonster(ServerPlayer player, ServerMonster monster, DamageResult hit, byte source,
         byte grade, string routeId, double now)
@@ -524,17 +532,17 @@ public sealed partial class GameWorld
         monster.Z = monster.HomeZ;
         var wasElite = monster.IsElite;
         RollElite(monster);
-        monster.Hp.Add(monster.Hp.Max);
         monster.Brain.Revive(now);
         if (monster.Spawn.IsBoss) EndBossPhaseTwo(monster);
         if (monster.IsElite != wasElite) ForgetMonster(monster);
     }
 
-    /// <summary>Sorteia se o monstro (re)nasce elite e ajusta a vida máxima.</summary>
+    /// <summary>Sorteia se o monstro (re)nasce elite, ajusta a vida máxima e enche a vida.</summary>
     private void RollElite(ServerMonster monster)
     {
         monster.IsElite = EliteRules.Roll(monster.Spawn, monster.InstanceId, _random, _eliteChance);
         monster.Hp.SetMax(monster.IsElite ? EliteRules.MaxHp(monster.Data.MaxHp) : monster.Data.MaxHp);
+        monster.Hp.Add(monster.Hp.Max);
     }
 
     /// <summary>

@@ -32,6 +32,18 @@ public sealed class AuthService
 
     public static readonly TimeSpan AccountWindow = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// Pedidos de login e cadastro que um mesmo IP pode fazer por minuto. Cada um custa um hash de senha, que é
+    /// pesado de propósito: sem esse limite, um script ocupa a CPU da VPS e o jogo fica com lag.
+    /// </summary>
+    public const int MaxAuthRequestsPerMinute = 10;
+
+    /// <summary>Hashes de senha calculados ao mesmo tempo; os outros esperam a vez e sobra CPU para o loop do jogo.</summary>
+    public static readonly int MaxConcurrentHashes = Math.Max(1, Environment.ProcessorCount / 2);
+
+    /// <summary>Acima disso, as listas por IP e por conta são limpas das entradas que já venceram.</summary>
+    private const int PruneAbove = 10_000;
+
     private static readonly LocalText WrongCredentials = new("auth.wrong_credentials");
 
     private readonly IGameStore _store;
@@ -40,6 +52,8 @@ public sealed class AuthService
     private readonly Func<DateTimeOffset> _now;
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset LockedUntil)> _throttle = new();
     private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _accountsByIp = new();
+    private readonly ConcurrentDictionary<string, Queue<DateTimeOffset>> _requestsByIp = new();
+    private readonly SemaphoreSlim _hashGate = new(MaxConcurrentHashes);
     private readonly string _dummyHash;
 
     /// <summary>Ids únicos de item do servidor (o mundo usa o mesmo contador).</summary>
@@ -77,12 +91,16 @@ public sealed class AuthService
         if (error != null) return AuthResult<string>.Fail(error);
         if (_termsVersion != null && credentials.AcceptTerms != _termsVersion) return AuthResult<string>.Fail(new LocalText("auth.terms_required"));
         var now = _now();
+        if (!AllowRequest(clientIp, now)) return AuthResult<string>.Fail(new LocalText("auth.try_again"), 429);
         if (clientIp != null && RecentAccounts(clientIp, now) >= MaxAccountsPerIp)
             return AuthResult<string>.Fail(new LocalText("auth.too_many_accounts", MaxAccountsPerIp), 429);
+        // Nome já usado: recusa antes do hash, para o pedido repetido não custar CPU.
+        if (await _store.FindAccountAsync(account) != null) return AuthResult<string>.Fail(new LocalText("auth.account_exists"), 409);
 
         try
         {
-            await _store.CreateAccountAsync(account, _hasher.Hash(credentials.Password), _termsVersion ?? credentials.AcceptTerms ?? "");
+            var hash = await HashAsync(() => _hasher.Hash(credentials.Password));
+            await _store.CreateAccountAsync(account, hash, _termsVersion ?? credentials.AcceptTerms ?? "");
             if (clientIp != null)
             {
                 var created = _accountsByIp.GetOrAdd(clientIp, _ => new List<DateTimeOffset>());
@@ -107,33 +125,41 @@ public sealed class AuthService
         }
     }
 
-    public async Task<AuthResult<LoginResponse>> LoginAsync(Credentials credentials)
+    /// <param name="clientIp">
+    /// IP de quem pede (nulo = sem limite por IP). A trava de senhas erradas vale para a conta naquele IP, para
+    /// ninguém conseguir travar a conta de outro jogador errando a senha de propósito.
+    /// </param>
+    public async Task<AuthResult<LoginResponse>> LoginAsync(Credentials credentials, string? clientIp = null)
     {
         var name = AccountRules.NormalizeAccount(credentials.Account);
+        // Nome maior que o permitido não existe: recusa sem hash e sem guardar nada.
+        if (name.Length > AccountRules.MaxAccountLength) return AuthResult<LoginResponse>.Fail(WrongCredentials, 401);
         var now = _now();
-        if (_throttle.TryGetValue(name, out var state) && now < state.LockedUntil)
+        if (!AllowRequest(clientIp, now)) return AuthResult<LoginResponse>.Fail(new LocalText("auth.try_again"), 429);
+        var throttleKey = clientIp == null ? name : $"{name}|{clientIp}";
+        if (_throttle.TryGetValue(throttleKey, out var state) && now < state.LockedUntil)
         {
             var minutes = Math.Ceiling((state.LockedUntil - now).TotalMinutes);
             return AuthResult<LoginResponse>.Fail(new LocalText("auth.locked", minutes), 429);
         }
 
         var account = await _store.FindAccountAsync(name);
-        var valid = _hasher.Verify(credentials.Password ?? "", account?.PasswordHash ?? _dummyHash) && account != null;
+        var valid = await HashAsync(() => _hasher.Verify(credentials.Password ?? "", account?.PasswordHash ?? _dummyHash)) && account != null;
         if (!valid)
         {
-            RegisterFailure(name, now);
+            RegisterFailure(throttleKey, now);
             return AuthResult<LoginResponse>.Fail(WrongCredentials, 401);
         }
         if (account!.IsBanned(now)) return AuthResult<LoginResponse>.Fail(Banned(account), 403);
 
-        _throttle.TryRemove(name, out _);
+        _throttle.TryRemove(throttleKey, out _);
         // Termos novos desde o último aceite: o cliente mostra e manda de novo com o aceite.
         if (_termsVersion != null && account.TermsVersion != _termsVersion)
         {
             if (credentials.AcceptTerms != _termsVersion) return AuthResult<LoginResponse>.Fail(new LocalText("auth.terms_updated", _termsVersion), 403);
             await _store.AcceptTermsAsync(account.Id, _termsVersion);
         }
-        var rehash = _hasher.NeedsRehash(account!.PasswordHash) ? _hasher.Hash(credentials.Password!) : null;
+        var rehash = _hasher.NeedsRehash(account!.PasswordHash) ? await HashAsync(() => _hasher.Hash(credentials.Password!)) : null;
         await _store.UpdateLoginAsync(account.Id, rehash);
         return AuthResult<LoginResponse>.Success(new LoginResponse
         {
@@ -228,9 +254,40 @@ public sealed class AuthService
             stats.MaxHp, stats.MaxMp, PlayerRules.StartingSp, items, attributes);
     }
 
-    private void RegisterFailure(string name, DateTimeOffset now)
+    /// <summary>Conta um pedido de login ou cadastro do IP no último minuto; falso se passou do limite.</summary>
+    private bool AllowRequest(string? ip, DateTimeOffset now)
     {
-        _throttle.AddOrUpdate(name,
+        if (ip == null) return true;
+        if (_requestsByIp.Count > PruneAbove)
+            foreach (var (key, old) in _requestsByIp)
+                lock (old)
+                    if (old.Count == 0 || now - old.Peek() >= TimeSpan.FromMinutes(1)) _requestsByIp.TryRemove(key, out _);
+
+        var times = _requestsByIp.GetOrAdd(ip, _ => new Queue<DateTimeOffset>());
+        lock (times)
+        {
+            while (times.Count > 0 && now - times.Peek() >= TimeSpan.FromMinutes(1)) times.Dequeue();
+            if (times.Count >= MaxAuthRequestsPerMinute) return false;
+            times.Enqueue(now);
+            return true;
+        }
+    }
+
+    /// <summary>Roda um hash de senha respeitando o limite de hashes ao mesmo tempo.</summary>
+    private async Task<T> HashAsync<T>(Func<T> work)
+    {
+        await _hashGate.WaitAsync();
+        try { return work(); }
+        finally { _hashGate.Release(); }
+    }
+
+    private void RegisterFailure(string key, DateTimeOffset now)
+    {
+        if (_throttle.Count > PruneAbove)
+            foreach (var (old, s) in _throttle)
+                if (now >= s.LockedUntil) _throttle.TryRemove(old, out _);
+
+        _throttle.AddOrUpdate(key,
             _ => (1, DateTimeOffset.MinValue),
             (_, s) =>
             {

@@ -314,9 +314,10 @@ public sealed class ServerHost : IOutbox, IDisposable
         World.Handle(connection.PlayerId, message, now);
     }
 
-    private async Task ResolveAndEnterAsync(ClientConnection connection, Hello hello)
+    private async Task ResolveAndEnterAsync(ClientConnection connection, Hello hello, int attempt = 1)
     {
         AuthResult<CharacterRecord> result;
+        var version = _saver?.SaveVersion(hello.CharacterId) ?? 0;
         try
         {
             // Saiu e entrou de novo logo em seguida (trocar de personagem e voltar): espera o salvamento da saída
@@ -337,8 +338,23 @@ public sealed class ServerHost : IOutbox, IDisposable
 
         _inbox.Enqueue((connection, now =>
         {
+            if (connection.IsClosed)
+            {
+                connection.LoginPending = false;
+                return;
+            }
+            // A conexão antiga do mesmo personagem fechou enquanto ele era lido do banco: a foto da saída entrou na
+            // fila depois da leitura, então o que foi lido pode ser o estado de antes. Lê de novo depois de ela gravar.
+            if (result.Ok && _saver != null && _saver.SaveVersion(hello.CharacterId) != version)
+            {
+                if (attempt < 3)
+                {
+                    _ = ResolveAndEnterAsync(connection, hello, attempt + 1);
+                    return;
+                }
+                result = AuthResult<CharacterRecord>.Fail(new LocalText("auth.try_again"), 503);
+            }
             connection.LoginPending = false;
-            if (connection.IsClosed) return;
             if (!result.Ok)
             {
                 Refuse(connection, result.Error);
