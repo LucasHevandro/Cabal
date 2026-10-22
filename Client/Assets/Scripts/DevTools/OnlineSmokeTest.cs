@@ -533,7 +533,7 @@ namespace Game.Client.DevTools
             Log("Mercado: oferta retirada, a poção voltou para a bolsa");
             CharacterState.CloseDialog();
 
-            // Tela de progressão (P): todas as barras e o próximo objetivo de cada uma.
+            // Tela de progressão (L): todas as barras e o próximo objetivo de cada uma.
             windows.SetProgressOpen(true);
             yield return new WaitForSecondsRealtime(0.8f);
             Capture("8g-progresso");

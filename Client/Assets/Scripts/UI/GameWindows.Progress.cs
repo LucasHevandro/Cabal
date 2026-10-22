@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Game.Client.UI
 {
     /// <summary>
-    /// Tela de progressão (P): todas as barras numa tela só (nível, rank, skills, equipamento, Despertar e história), cada
+    /// Tela de progressão (L): todas as barras numa tela só (nível, rank, skills, equipamento, Despertar e história), cada
     /// uma com o próximo objetivo. As contas ficam no Shared (<see cref="ProgressionGoals"/>); aqui é só o desenho.
     /// </summary>
     public sealed partial class GameWindows

@@ -38,7 +38,7 @@ namespace Game.Client.UI
             [GameAction.Pickup] = Key.E, [GameAction.NextTarget] = Key.Tab, [GameAction.Talk] = Key.T,
             [GameAction.Inventory] = Key.I, [GameAction.Attributes] = Key.C, [GameAction.QuestLog] = Key.J,
             [GameAction.Friends] = Key.O, [GameAction.Map] = Key.M, [GameAction.Options] = Key.F10,
-            [GameAction.Skills] = Key.K, [GameAction.Progress] = Key.P,
+            [GameAction.Skills] = Key.K, [GameAction.Progress] = Key.L,
         };
 
         private static readonly Dictionary<GameAction, Key> Current = new Dictionary<GameAction, Key>(Defaults);
