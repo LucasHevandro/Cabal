@@ -1,6 +1,7 @@
 using Game.Shared.Accounts;
 using Game.Shared.Items;
 using Game.Shared.Progression;
+using Game.Shared.Text;
 
 namespace Game.Shared.Tests.Progression;
 
@@ -25,7 +26,8 @@ public class ProgressionGoalsTests
 
         var toNext = LevelCurve.XpToNext(5);
         Assert.Equal(100f / toNext, goal.Fraction, 3);
-        Assert.Contains($"{toNext - 100:N0}", goal.Next.ToString());
+        // Pelo próprio Loc (o número sai no formato do idioma do jogo, não no do sistema).
+        Assert.Equal(Loc.T("progress.level_next", 6, toNext - 100, Attributes.PointsPerLevel), goal.Next.ToString());
         Assert.True(Track(new ProgressInput { Level = LevelCurve.MaxLevel }, ProgressTrack.Level).Done);
     }
 
