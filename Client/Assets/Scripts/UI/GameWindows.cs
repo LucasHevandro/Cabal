@@ -135,6 +135,7 @@ namespace Game.Client.UI
             if (KeyBindings.Pressed(GameAction.Attributes)) Fx.UiSounds.Toggle(_attributesOpen = !_attributesOpen);
             if (KeyBindings.Pressed(GameAction.QuestLog)) Fx.UiSounds.Toggle(_questLogOpen = !_questLogOpen);
             if (KeyBindings.Pressed(GameAction.Skills)) Fx.UiSounds.Toggle(_skillsOpen = !_skillsOpen);
+            if (KeyBindings.Pressed(GameAction.Progress)) Fx.UiSounds.Toggle(_progressOpen = !_progressOpen);
             if (KeyBindings.Pressed(GameAction.Talk)) TalkToNearest();
             if (keyboard.escapeKey.wasPressedThisFrame && !OptionsWindow.EscapeTaken) CloseAll();
 
@@ -149,12 +150,12 @@ namespace Game.Client.UI
 
         /// <summary>Alguma janela que o Esc fecha está aberta (aí o Esc fecha ela em vez de abrir as opções).</summary>
         public static bool AnyOpen => Instance != null && Instance.isActiveAndEnabled &&
-            (Instance._inventoryOpen || Instance._attributesOpen || Instance._questLogOpen || Instance._skillsOpen ||
+            (Instance._inventoryOpen || Instance._attributesOpen || Instance._questLogOpen || Instance._skillsOpen || Instance._progressOpen ||
              Instance._discardSlot >= 0 || CharacterState.Dialog != null);
 
         private void CloseAll()
         {
-            _inventoryOpen = _attributesOpen = _questLogOpen = _skillsOpen = false;
+            _inventoryOpen = _attributesOpen = _questLogOpen = _skillsOpen = _progressOpen = false;
             _discardSlot = -1;
             CharacterState.CloseDialog();
         }
@@ -222,7 +223,8 @@ namespace Game.Client.UI
             var warehouseOpen = npc != null && npc.Role == NpcRole.Warehouse;
             var smithOpen = npc != null && npc.Role == NpcRole.Smith;
             var shopOpen = npc != null && npc.Role == NpcRole.Merchant && !Trading;
-            var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || Trading;
+            var marketOpen = npc != null && npc.Role == NpcRole.Market && !Trading;
+            var inventoryShown = _inventoryOpen || warehouseOpen || smithOpen || shopOpen || marketOpen || Trading;
             RightPanelOpen = inventoryShown;
 
             var pvp = CharacterState.Pvp;
@@ -232,6 +234,7 @@ namespace Game.Client.UI
             if (warehouseOpen) DrawWarehouse();
             if (smithOpen) DrawSmith(npc);
             if (shopOpen) DrawShop(npc);
+            if (marketOpen) DrawMarket(npc);
             if (Trading) DrawTrade();
             DrawTradeInvite();
             if (npc != null && npc.Role == NpcRole.QuestGiver) DrawQuestDialog(npc, dialog);
@@ -241,6 +244,7 @@ namespace Game.Client.UI
             if (_attributesOpen) DrawAttributes();
             if (_questLogOpen) DrawQuestLog();
             DrawSkills(npc);
+            if (_progressOpen) DrawProgress();
             DrawTalkPrompt();
             if (_discardSlot >= 0) DrawDiscardConfirm();
 
@@ -414,6 +418,12 @@ namespace Game.Client.UI
             if (npc != null && npc.Role == NpcRole.Merchant && kind == Msg.ItemContainerKind.Bag)
             {
                 _sellUid = item.Uid;
+                return;
+            }
+            if (npc != null && npc.Role == NpcRole.Market && kind == Msg.ItemContainerKind.Bag)
+            {
+                // Preço sugerido: o dobro do que a mercadora paga (o jogador ajusta).
+                SelectForMarket(item.Uid, System.Math.Max(1, Game.Shared.Economy.EconomyRules.SellPrice(definition, item.Upgrade) * 2));
                 return;
             }
             if (npc != null && npc.Role == NpcRole.Smith && kind != Msg.ItemContainerKind.Warehouse)
@@ -1012,14 +1022,16 @@ namespace Game.Client.UI
         private static string RoleHintKey(NpcRole role) => role switch
         {
             NpcRole.Smith => "npc.hint_smith", NpcRole.Warehouse => "npc.hint_warehouse", NpcRole.Merchant => "npc.hint_merchant",
-            NpcRole.DungeonPortal => "npc.hint_dungeon", NpcRole.Trainer => "npc.hint_trainer", _ => "npc.hint_quests",
+            NpcRole.DungeonPortal => "npc.hint_dungeon", NpcRole.Trainer => "npc.hint_trainer", NpcRole.Market => "npc.hint_market",
+            _ => "npc.hint_quests",
         };
 
         /// <summary>Plaquinha do NPC no mundo (ex.: Ferreira).</summary>
         private static string RoleLabelKey(NpcRole role) => role switch
         {
             NpcRole.Smith => "npc.role_smith", NpcRole.Warehouse => "npc.role_warehouse", NpcRole.Merchant => "npc.role_merchant",
-            NpcRole.DungeonPortal => "npc.role_dungeon", NpcRole.Trainer => "npc.role_trainer", _ => "npc.role_quests",
+            NpcRole.DungeonPortal => "npc.role_dungeon", NpcRole.Trainer => "npc.role_trainer", NpcRole.Market => "npc.role_market",
+            _ => "npc.role_quests",
         };
 
         /// <summary>Nome em cima de cada NPC (coordenadas de tela, antes da escala).</summary>

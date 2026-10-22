@@ -98,6 +98,9 @@ namespace Game.Client.Net
                 case TradeState trade:
                     CharacterState.Apply(trade);
                     break;
+                case MarketState market:
+                    CharacterState.Apply(market);
+                    break;
                 case TradeInvite tradeInvite:
                     CharacterState.Apply(tradeInvite);
                     break;

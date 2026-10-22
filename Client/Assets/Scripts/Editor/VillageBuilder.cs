@@ -356,6 +356,29 @@ namespace Game.Client.Editor
                         light.intensity = 1.6f;
                         light.shadows = LightShadows.None;
                         break;
+                    case NpcRole.Market:
+                        // Mercado: o quadro de ofertas (tábuas com papéis pregados), bandeira amarela e caixotes de quem vende.
+                        Part(corner, "Quadro", darkWood, k =>
+                        {
+                            foreach (var x in new[] { -1.1f, 1.1f })
+                                k.Box(0, new Vector3(x, 0, 0.3f), Quaternion.identity, new Vector3(0.14f, 2.3f, 0.14f));
+                            k.Box(0, new Vector3(0, 0.9f, 0.3f), Quaternion.identity, new Vector3(2.4f, 1.3f, 0.08f));
+                            k.Box(0, new Vector3(0, 2.25f, 0.3f), Quaternion.identity, new Vector3(2.7f, 0.12f, 0.3f));
+                        }, collider: true);
+                        Part(corner, "Ofertas", Mat("papel", new Color(0.93f, 0.87f, 0.7f)), k =>
+                        {
+                            for (var i = 0; i < 9; i++)
+                            {
+                                var col = i % 3;
+                                var line = i / 3;
+                                k.Box(0, new Vector3(-0.7f + col * 0.7f + (float)(r.NextDouble() - 0.5) * 0.12f, 1.0f + line * 0.38f, 0.25f),
+                                    Quaternion.Euler(0, 0, (float)(r.NextDouble() - 0.5) * 12f), new Vector3(0.42f, 0.3f, 0.02f));
+                            }
+                        });
+                        PackProp(corner, "flag_yellow", new Vector3(1.6f, 0, 0.2f), 0f, 3.2f);
+                        PackProp(corner, "crate_A_small", new Vector3(-1.7f, 0, -0.2f), 20f, 4f, true);
+                        PackProp(corner, "sack", new Vector3(-1.4f, 0, -0.9f), 60f, 5f);
+                        break;
                     case NpcRole.Trainer:
                         // Mestre de skills: armeiro com espadas e cajados, e um boneco de palha para as aulas.
                         PackProp(corner, "weaponrack", new Vector3(-0.2f, 0, 0.7f), 0f, 5f, true);

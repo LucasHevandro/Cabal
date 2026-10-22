@@ -34,6 +34,15 @@ namespace Game.Client.Net
         private static Msg.TradeInvite _tradeInvite;
         private static float _tradeInviteUntil;
 
+        /// <summary>Último quadro do mercado recebido (chega ao falar com a escrivã e a cada ação no mercado).</summary>
+        public static Msg.MarketState Market { get; private set; }
+
+        public static void Apply(Msg.MarketState state)
+        {
+            Market = state;
+            Changed?.Invoke();
+        }
+
         /// <summary>PvP (fila, duelo ou arena) e o desafio de duelo esperando resposta.</summary>
         public static Msg.PvpState Pvp { get; private set; }
 
@@ -101,6 +110,7 @@ namespace Game.Client.Net
             _rankings.Clear();
             Pvp = null;
             _duelInvite = null;
+            Market = null;
         }
 
         public static void Apply(Msg.TradeState trade)

@@ -488,6 +488,58 @@ namespace Game.Client.DevTools
             NetworkSession.Instance.Send(new SetHotbar { Slots = original });
             yield return WaitFor(() => CharacterState.HotbarSkill(7) == original[7], 3f);
 
+            // Mercado da escrivã: põe uma poção à venda, a oferta aparece no quadro, retira e a poção volta.
+            yield return WalkTo(NpcCatalog.Market);
+            windows.TalkToNearestNpc();
+            yield return WaitFor(() => CharacterState.Market != null && CharacterState.Dialog != null && CharacterState.Dialog.NpcId == NpcCatalog.Market, 3f);
+            var potions = CharacterState.Bag.Count("pocao_hp_p");
+            var potionSlot = -1;
+            foreach (var (bagSlot, bagItem) in CharacterState.Bag.Items())
+                if (bagItem.ItemId == "pocao_hp_p") potionSlot = bagSlot;
+            if (CharacterState.Market == null || potionSlot < 0)
+            {
+                outcome.Message = "o mercado não abriu (ou não há poção para vender)";
+                yield break;
+            }
+            windows.SelectForMarket(CharacterState.Bag[potionSlot].Uid, 120);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("8e-mercado-vender");
+            yield return new WaitForEndOfFrame();
+            // Até 3 tentativas: o andar do teste manda muitas mensagens e o limite por conexão pode descartar uma.
+            var attempts = 0;
+            while (attempts < 3 && CharacterState.Market.Mine.Count == 0)
+            {
+                attempts++;
+                NetworkSession.Instance.Send(new MarketCommand { Action = MarketActionKind.Sell, Slot = (ushort)potionSlot, Quantity = 1, Price = 120 });
+                yield return WaitFor(() => CharacterState.Market.Mine.Count == 1 && CharacterState.Bag.Count("pocao_hp_p") == potions - 1, 3f);
+            }
+            if (CharacterState.Market.Mine.Count != 1 || CharacterState.Bag.Count("pocao_hp_p") != potions - 1)
+            {
+                outcome.Message = "a oferta não apareceu no mercado";
+                yield break;
+            }
+            Log($"Mercado: 1 poção à venda por 120 Alz (oferta {CharacterState.Market.Mine[0].Id}, tentativa {attempts}); bolsa {potions} -> {potions - 1}");
+            windows.ShowMarketOffers();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Capture("8f-mercado-quadro");
+            yield return new WaitForEndOfFrame();
+            NetworkSession.Instance.Send(new MarketCommand { Action = MarketActionKind.Cancel, ListingId = CharacterState.Market.Mine[0].Id });
+            yield return WaitFor(() => CharacterState.Market.Mine.Count == 0 && CharacterState.Bag.Count("pocao_hp_p") == potions, 3f);
+            if (CharacterState.Bag.Count("pocao_hp_p") != potions)
+            {
+                outcome.Message = "a poção não voltou ao retirar a oferta";
+                yield break;
+            }
+            Log("Mercado: oferta retirada, a poção voltou para a bolsa");
+            CharacterState.CloseDialog();
+
+            // Tela de progressão (P): todas as barras e o próximo objetivo de cada uma.
+            windows.SetProgressOpen(true);
+            yield return new WaitForSecondsRealtime(0.8f);
+            Capture("8g-progresso");
+            yield return new WaitForEndOfFrame();
+            windows.SetProgressOpen(false);
+
             // O caçador do acampamento nos Campos do Vento (missões da região).
             yield return WalkTo(NpcCatalog.Hunter);
             windows.TalkToNearestNpc();

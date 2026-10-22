@@ -65,6 +65,7 @@ namespace Game.Client.Editor
             ["erudita_veska"] = new Look { Model = "Mage", LeftHand = "spellbook_open", RightHand = "staff" },
             ["mestre_aldric"] = new Look { Model = "Mage", RightHand = "sword_1handed", LeftHand = "spellbook_open" },
             ["guardia_selene"] = new Look { Model = "Knight", RightHand = "sword_2handed", Hide = new[] { "Knight_HelmetVisor" } },
+            ["escriva_marta"] = new Look { Model = "Rogue", LeftHand = "spellbook_open" },
         };
 
         /// <summary>Moradores que andam pela praça (só enfeite: não falam nem lutam).</summary>
