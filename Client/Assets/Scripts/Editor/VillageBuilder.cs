@@ -203,14 +203,24 @@ namespace Game.Client.Editor
                         new Vector3(Ground.BridgeHalfWidth * 2f, Ground.BridgePlankThickness, 0.5f));
                 }
             });
-            Part(bridge, "Corrimão", dark, k =>
+            // Corrimão: um de cada lado, cada um com a própria caixa de colisão (só se entra e sai pelas pontas).
+            foreach (var side in new[] { -1f, 1f })
             {
-                foreach (var side in new[] { -1f, 1f })
+                Part(bridge, side < 0 ? "Corrimão esquerdo" : "Corrimão direito", dark, k =>
                 {
                     for (var i = -2; i <= 2; i++)
                         k.Box(0, new Vector3(side * 2.35f, -0.1f, i * 2.4f), Quaternion.identity, new Vector3(0.16f, 1.25f, 0.16f));
                     k.Box(0, new Vector3(side * 2.35f, 0.95f, 0), Quaternion.identity, new Vector3(0.12f, 0.1f, 10f));
-                }
+                }, collider: true);
+            }
+            // Estrutura: vigas sob as tábuas e pilares até o leito (o rio passa por baixo).
+            Part(bridge, "Vigas e pilares", dark, k =>
+            {
+                foreach (var x in new[] { -1.6f, 0f, 1.6f })
+                    k.Box(0, new Vector3(x, -0.3f, 0), Quaternion.identity, new Vector3(0.22f, 0.22f, 10.4f));
+                foreach (var x in new[] { -1.9f, 1.9f })
+                foreach (var z in new[] { -2.6f, 2.6f })
+                    k.Box(0, new Vector3(x, -1.9f, z), Quaternion.identity, new Vector3(0.3f, 1.75f, 0.3f));
             });
         }
 

@@ -69,8 +69,33 @@ namespace Game.Client.DevTools
                 report.AppendLine($"z {feet.z - river:0.00}  pés {feet.y:0.000}  tábua {(float.IsNegativeInfinity(deck) ? "-" : deck.ToString("0.000"))}");
                 yield return null;
             }
-            var ok = worst < 0.08f;
-            report.Insert(0, (ok ? "SUCESSO" : "FALHA") + $": afundou no máximo {worst:0.000} m nas tábuas\n");
+            // Pela lateral não sai: no meio da ponte, tenta andar 4 m para cada lado (o corrimão segura).
+            var widest = 0f;
+            foreach (var side in new[] { 1f, -1f })
+            {
+                motor.Teleport(new Vector3(0f, 0f, river));
+                yield return new WaitForSeconds(0.2f);
+                for (var t = 0f; t < 1f; t += Time.deltaTime)
+                {
+                    controller.Move(Vector3.right * side * 4f * Time.deltaTime);
+                    yield return null;
+                }
+                widest = Mathf.Max(widest, Mathf.Abs(motor.transform.position.x));
+            }
+
+            // Vista da margem: a água passando por baixo da ponte.
+            if (camera != null)
+            {
+                camera.transform.position = new Vector3(7f, 2.2f, river - 7f);
+                camera.transform.LookAt(new Vector3(0f, -0.3f, river));
+                yield return null;
+                ScreenCapture.CaptureScreenshot(Path.Combine(_folder, "margem.png"));
+                yield return null;
+            }
+
+            var ok = worst < 0.08f && widest < Ground.BridgeHalfWidth;
+            report.Insert(0, (ok ? "SUCESSO" : "FALHA") + $": afundou no máximo {worst:0.000} m nas tábuas; " +
+                             $"de lado foi até {widest:0.00} m do meio (corrimão em {Ground.BridgeHalfWidth:0.00} m)\n");
             File.WriteAllText(Path.Combine(_folder, "relatorio.txt"), report.ToString());
             yield return new WaitForSeconds(0.5f);
             Application.Quit();

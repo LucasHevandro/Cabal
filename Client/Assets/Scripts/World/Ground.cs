@@ -121,16 +121,16 @@ namespace Game.Client.World
         /// <summary>Centro do rio (em Z) na posição X: uma curva suave de leste a oeste.</summary>
         public static float RiverZ(float x) => 25f + 2.2f * Mathf.Sin(x * 0.045f + 1.2f) + 1.2f * Mathf.Sin(x * 0.11f);
 
-        /// <summary>Quanto o leito do rio está abaixo do chão no ponto (0 fora do rio e na estrada).</summary>
+        /// <summary>
+        /// Quanto o leito do rio está abaixo do chão no ponto (0 fora do rio). O rio passa inteiro, também por baixo da
+        /// ponte: quem atravessa anda nas tábuas (<see cref="BridgeDeck"/>), não num aterro.
+        /// </summary>
         public static float RiverDepth(float x, float z)
         {
             if (OutsideDistance(x, z) > -6f) return 0f;
             var d = Mathf.Abs(z - RiverZ(x));
             var t = Mathf.Clamp01((RiverHalfWidth + 2.2f - d) / 2.6f);
-            var depth = t * t * (3f - 2f * t) * 1.4f;
-            // A estrada continua no chão (é onde fica a ponte).
-            var road = Mathf.Clamp01((DistanceToRoad(x, z) - 2.6f) / 2.5f);
-            return depth * road;
+            return t * t * (3f - 2f * t) * 1.4f;
         }
 
         /// <summary>Dentro da água (para não pôr árvore, pedra nem casa no rio).</summary>
