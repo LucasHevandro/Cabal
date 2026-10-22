@@ -258,3 +258,18 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
   (`CharacterSaver.WaitForCharacterAsync`). Se em 15 s não terminar (banco fora do ar), recusa a entrada, em vez de
   entrar com o estado antigo.
 - **Teste do exe:** `-onlineswitch` sai para o menu e entra de novo (como convidado).
+
+## 2026-10-22 — Janela do personagem
+
+- **Como é:** a tecla **P** abre o personagem, e o inventário (I) abre com ele ao lado. A janela mostra o modelo 3D
+  girando devagar, com a armadura, as cores e a arma vestidas, e as cinco peças em volta: arma, couraça e luvas à
+  esquerda, botas e anel à direita. Embaixo ficam "Mostrar elmo", ataque, magia, defesa, crítico e os atributos (com o
+  aviso de pontos livres para distribuir no C).
+- **Inventário:** ficou só com a bolsa, o Alz e a lixeira (o equipamento e o elmo foram para o personagem).
+- **Vestir:** arrastar uma peça da bolsa para a janela do personagem (em qualquer lugar dela) veste no lugar certo;
+  arrastar uma vestida para a bolsa tira. O botão direito continua vestindo e tirando.
+- **Com NPC:** com loja, mercado, ferreira, armazém ou troca abertos, a janela do personagem vai para a esquerda da do
+  NPC (na ferreira dá para escolher a peça vestida para melhorar).
+- **P com o inventário aberto:** fecha os dois.
+- A prévia usa a mesma câmera da criação de personagem (`CharacterPreview`), em outro ponto do céu, e só existe com a
+  janela aberta.
