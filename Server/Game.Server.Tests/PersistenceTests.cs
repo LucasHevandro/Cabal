@@ -269,4 +269,20 @@ public class SaveAndLogTests
         Assert.Equal(500, (await store.LoadCharacterAsync(character.Id))!.Alz);
         Assert.Single(await store.ItemLogAsync(character.Id)); // registro gravado uma vez só
     }
+
+    [Fact]
+    public async Task Espera_o_salvamento_do_personagem_antes_de_carregar_de_novo()
+    {
+        var store = new FlakyStore(); // falha 2 vezes: o salvamento leva uns 750 ms
+        var character = await store.CreateCharacterAsync(1, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        await using var saver = new CharacterSaver(store);
+        Assert.True(await saver.WaitForCharacterAsync(character.Id, TimeSpan.FromSeconds(1))); // nada na fila
+
+        saver.Enqueue(new CharacterSnapshot(character.Id, 2, 0, 700, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()), new List<ItemLogEntry>());
+        Assert.True(saver.IsPending(character.Id));
+        Assert.False(saver.IsPending(character.Id + 1));
+
+        Assert.True(await saver.WaitForCharacterAsync(character.Id, TimeSpan.FromSeconds(10)));
+        Assert.Equal(700, (await store.LoadCharacterAsync(character.Id))!.Alz); // já está no banco quando a espera acaba
+    }
 }

@@ -319,7 +319,15 @@ public sealed class ServerHost : IOutbox, IDisposable
         AuthResult<CharacterRecord> result;
         try
         {
-            result = await _auth!.ResolveCharacterAsync(hello.Token, hello.CharacterId);
+            // Saiu e entrou de novo logo em seguida (trocar de personagem e voltar): espera o salvamento da saída
+            // terminar, senão o personagem seria lido do banco como estava antes dela. Se não terminar (banco fora do
+            // ar), recusa: é melhor tentar de novo do que entrar com o estado antigo.
+            if (_saver != null && !await _saver.WaitForCharacterAsync(hello.CharacterId, TimeSpan.FromSeconds(15)))
+            {
+                _log($"ATENÇÃO: personagem {hello.CharacterId} ainda tinha salvamento na fila depois de 15 s; entrada recusada.");
+                result = AuthResult<CharacterRecord>.Fail(new LocalText("net.db_unavailable"), 503);
+            }
+            else result = await _auth!.ResolveCharacterAsync(hello.Token, hello.CharacterId);
         }
         catch (Exception ex)
         {

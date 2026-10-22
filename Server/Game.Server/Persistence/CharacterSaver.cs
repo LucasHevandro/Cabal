@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace Game.Server.Persistence;
@@ -14,6 +15,10 @@ public sealed class CharacterSaver : IAsyncDisposable
     private readonly Channel<(CharacterSnapshot Snapshot, List<ItemLogEntry> Logs)> _queue =
         Channel.CreateUnbounded<(CharacterSnapshot, List<ItemLogEntry>)>(new UnboundedChannelOptions { SingleReader = true });
     private readonly Task _worker;
+
+    /// <summary>Salvamentos na fila (ou gravando agora) de cada personagem.</summary>
+    private readonly ConcurrentDictionary<int, int> _pending = new();
+
     private long _saved;
     private long _failures;
 
@@ -31,7 +36,31 @@ public sealed class CharacterSaver : IAsyncDisposable
     /// <summary>Quantas fotos esperam para ser gravadas.</summary>
     public int Pending => _queue.Reader.Count;
 
-    public void Enqueue(CharacterSnapshot snapshot, List<ItemLogEntry> logs) => _queue.Writer.TryWrite((snapshot, logs));
+    public void Enqueue(CharacterSnapshot snapshot, List<ItemLogEntry> logs)
+    {
+        _pending.AddOrUpdate(snapshot.CharacterId, 1, (_, count) => count + 1);
+        if (!_queue.Writer.TryWrite((snapshot, logs))) Done(snapshot.CharacterId);
+    }
+
+    /// <summary>O personagem tem salvamento na fila ou gravando agora?</summary>
+    public bool IsPending(int characterId) => _pending.TryGetValue(characterId, out var count) && count > 0;
+
+    /// <summary>
+    /// Espera gravar tudo o que está na fila deste personagem (ou o tempo acabar). Usado antes de carregá-lo do banco:
+    /// quem sai e entra de novo logo em seguida (trocar de personagem) não volta com o estado de antes da saída.
+    /// </summary>
+    public async Task<bool> WaitForCharacterAsync(int characterId, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (IsPending(characterId))
+        {
+            if (DateTime.UtcNow >= until) return false;
+            await Task.Delay(25);
+        }
+        return true;
+    }
+
+    private void Done(int characterId) => _pending.AddOrUpdate(characterId, 0, (_, count) => Math.Max(0, count - 1));
 
     /// <summary>Para de aceitar e espera gravar tudo o que já está na fila (desligamento do servidor).</summary>
     public async Task FlushAndStopAsync(TimeSpan timeout)
@@ -69,6 +98,7 @@ public sealed class CharacterSaver : IAsyncDisposable
                     delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 10_000));
                 }
             }
+            Done(snapshot.CharacterId);
         }
     }
 }
