@@ -111,7 +111,8 @@ O usuário pediu, nesta ordem: **4, 6, 7, 8, 3 e 5**.
   flecha, três arcos, `ClassInfo` no Shared e `--guest-class ranger` no servidor para testar com o exe. Detalhes em
   `Docs/decisoes.md`. Publicada junto com os elites (protocolo 18).
 - **5: mercado (feito no código em 2026-10-21, protocolo 19).** Quadro de ofertas da Escrivã Marta (vende com o
-  vendedor offline, taxa de 5%, 72 h), tabela `market_listings` (migração `Mercado`) e a tela de progressão (tecla P).
+  vendedor offline, taxa de 5%, 72 h), tabela `market_listings` (migração `Mercado`) e a tela de progressão (tecla L).
+  A tecla P fica reservada para a futura janela do personagem (equipamento vestido, que hoje fica no inventário).
   Falta publicar no launcher e atualizar a VM (os dois juntos, por causa do protocolo).
 - **Depois (combinado em 2026-10-21):** teste fechado com 20 jogadores. Outras ideias do GDD ficam para mais à frente:
   rotas de combo com efeito, localizador de grupo, guilda e guerra, crafting.

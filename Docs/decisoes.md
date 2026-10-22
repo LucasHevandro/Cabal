@@ -240,7 +240,8 @@ Cada decisão importante fica registrada aqui com data e motivo, para não ser r
 
 ## 2026-10-21 — Tela de progressão
 
-- O GDD pede uma tela única com todas as barras e o próximo objetivo de cada uma. A tecla **P** abre: nível (XP que
+- O GDD pede uma tela única com todas as barras e o próximo objetivo de cada uma. A tecla **L** abre: nível (XP que
   falta), rank de skill (a próxima missão de rank e o que ela libera), skills aprendidas (a próxima e o que falta),
   equipamento (a peça mais fraca: vestir, trocar de grau ou melhorar), Despertar e missões da história.
+- A tecla P fica reservada para a futura janela do personagem (equipamento vestido, que hoje fica no inventário).
 - As contas ficam no Shared (`ProgressionGoals`, com testes); o cliente só desenha. Nada passa pela rede.
