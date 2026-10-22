@@ -243,6 +243,7 @@ public class SaveAndLogTests
         public Task<IReadOnlyList<ReportRecord>> ReportsAsync(int max = 100) => _inner.ReportsAsync(max);
         public Task RecordDungeonRunAsync(DungeonRunRecord run) => _inner.RecordDungeonRunAsync(run);
         public Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10) => _inner.TopDungeonRunsAsync(dungeonId, max);
+        public Task<IReadOnlyList<MarketListingRecord>> MarketListingsAsync() => _inner.MarketListingsAsync();
         public Task<AccountRecord?> FindAccountByIdAsync(int id) => _inner.FindAccountByIdAsync(id);
         public Task<(int AccountId, string CharacterName)?> FindCharacterOwnerAsync(string n) => _inner.FindCharacterOwnerAsync(n);
         public Task SetBanAsync(int id, DateTimeOffset? until, string reason) => _inner.SetBanAsync(id, until, reason);

@@ -403,6 +403,76 @@ namespace Game.Server.Persistence.Migrations
                     b.ToTable("item_log", (string)null);
                 });
 
+            modelBuilder.Entity("Game.Server.Persistence.MarketListingEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("BuyerName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ItemId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("ItemUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OptionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("PityFails")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PityLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Price")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RegainGuaranteed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SellerCharacterId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SellerName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset?>("SoldAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Upgrade")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SellerCharacterId");
+
+                    b.HasIndex("State");
+
+                    b.ToTable("market_listings", (string)null);
+                });
+
             modelBuilder.Entity("Game.Server.Persistence.MetricEventEntity", b =>
                 {
                     b.Property<long>("Id")
@@ -527,6 +597,15 @@ namespace Game.Server.Persistence.Migrations
                     b.HasOne("Game.Server.Persistence.CharacterEntity", null)
                         .WithMany("Items")
                         .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Game.Server.Persistence.MarketListingEntity", b =>
+                {
+                    b.HasOne("Game.Server.Persistence.CharacterEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SellerCharacterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

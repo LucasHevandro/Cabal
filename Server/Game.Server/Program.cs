@@ -181,6 +181,8 @@ api.Health = () => host.Health;
 // Ranking da dungeon: carrega os melhores tempos e grava cada vitória (fora do loop do jogo).
 foreach (var dungeonId in Game.Shared.Dungeon.DungeonCatalog.Ids)
     host.World.SeedRanking(await store.TopDungeonRunsAsync(dungeonId));
+// Mercado: as ofertas à venda e as vendidas ainda não recebidas voltam para o quadro.
+host.World.SeedMarket(await store.MarketListingsAsync());
 host.World.RunCompleted += run => _ = store.RecordDungeonRunAsync(run).ContinueWith(
     t => Log($"Falha ao gravar o ranking: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
 if (options.DungeonTest) Log("ATENÇÃO: dungeon de teste (fácil e sem nível mínimo).");

@@ -1,4 +1,5 @@
 using Game.Shared.Accounts;
+using Game.Shared.Economy;
 using Game.Shared.Items;
 using Game.Shared.Net;
 using Game.Shared.Text;
@@ -40,6 +41,14 @@ public sealed record GmActionRecord(string GmName, string Action, string Target,
 public sealed record ItemRecord(
     long Uid, ItemContainerKind Container, int Slot, string ItemId, int Quantity,
     int Upgrade = 0, int PityFails = 0, int PityLevel = 0, bool RegainGuaranteed = false, string OptionId = "");
+
+/// <summary>
+/// Oferta do mercado como fica no banco: quem vendeu, o item inteiro (com melhoria e opção), o preço e a situação.
+/// A situação só anda para a frente (<see cref="MarketListingState"/>): o banco nunca volta uma oferta vendida para ativa.
+/// </summary>
+public sealed record MarketListingRecord(
+    long Id, int SellerCharacterId, string SellerName, ItemRecord Item, long Price, MarketListingState State, string BuyerName,
+    DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, DateTimeOffset? SoldAt);
 
 /// <summary>Missão aceita (com contadores) ou concluída.</summary>
 /// <param name="CompletedDay">Diárias: o dia (<see cref="Game.Shared.Progression.DailyRules"/>) da última entrega; 0 nas outras.</param>
@@ -114,6 +123,9 @@ public sealed record CharacterSnapshot(
 
     /// <summary>Eventos de métricas desde o último salvamento (só acrescenta).</summary>
     public IReadOnlyList<MetricRecord> Metrics { get; init; } = Array.Empty<MetricRecord>();
+
+    /// <summary>Ofertas do mercado que este personagem criou ou mudou desde o último salvamento (na ordem em que mudaram).</summary>
+    public IReadOnlyList<MarketListingRecord> Market { get; init; } = Array.Empty<MarketListingRecord>();
 }
 
 /// <summary>Movimento de item ou Alz, para auditoria e suporte (quem ganhou o quê, quando).</summary>
@@ -191,7 +203,7 @@ public interface IGameStore
     /// <summary>Registros de itens de um personagem, mais recentes primeiro (suporte e testes).</summary>
     Task<IReadOnlyList<ItemLogEntry>> ItemLogAsync(int characterId, int max = 100);
 
-    /// <summary>Maior id único de item já guardado (o servidor continua a contar daí).</summary>
+    /// <summary>Maior id único de item ou de oferta do mercado já guardado (o servidor continua a contar daí).</summary>
     Task<long> MaxItemUidAsync();
 
     /// <summary>Denúncias, mais recentes primeiro (moderação e testes).</summary>
@@ -201,6 +213,23 @@ public interface IGameStore
 
     /// <summary>Melhores tempos de uma dungeon (menor primeiro).</summary>
     Task<IReadOnlyList<DungeonRunRecord>> TopDungeonRunsAsync(string dungeonId, int max = 10);
+
+    /// <summary>Ofertas do mercado ainda em jogo (ativas e vendidas sem o vendedor receber), para o servidor carregar ao ligar.</summary>
+    Task<IReadOnlyList<MarketListingRecord>> MarketListingsAsync();
+}
+
+/// <summary>Regra comum aos bancos: a situação de uma oferta só anda para a frente.</summary>
+public static class MarketStateOrder
+{
+    public static int Rank(MarketListingState state) => state switch
+    {
+        MarketListingState.Active => 0,
+        MarketListingState.Sold => 1,
+        _ => 2,
+    };
+
+    /// <summary>Pode gravar <paramref name="next"/> por cima de <paramref name="current"/>?</summary>
+    public static bool CanReplace(MarketListingState current, MarketListingState next) => Rank(next) >= Rank(current);
 }
 
 /// <summary>

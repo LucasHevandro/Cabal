@@ -135,6 +135,28 @@ public sealed class ItemInstanceEntity
     public string OptionId { get; set; } = "";
 }
 
+/// <summary>Oferta do mercado (quadro da escrivã). O item vai inteiro na linha; a situação só anda para a frente.</summary>
+public sealed class MarketListingEntity
+{
+    public long Id { get; set; }
+    public int SellerCharacterId { get; set; }
+    public string SellerName { get; set; } = "";
+    public long ItemUid { get; set; }
+    public string ItemId { get; set; } = "";
+    public int Quantity { get; set; }
+    public int Upgrade { get; set; }
+    public int PityFails { get; set; }
+    public int PityLevel { get; set; }
+    public bool RegainGuaranteed { get; set; }
+    public string OptionId { get; set; } = "";
+    public long Price { get; set; }
+    public int State { get; set; }
+    public string BuyerName { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? SoldAt { get; set; }
+}
+
 /// <summary>Missão aceita ou concluída. Contadores separados por vírgula ("3,10").</summary>
 public sealed class CharacterQuestEntity
 {
@@ -174,6 +196,7 @@ public sealed class GameDbContext : DbContext
     public DbSet<DungeonRunEntity> DungeonRuns => Set<DungeonRunEntity>();
     public DbSet<GmActionEntity> GmActions => Set<GmActionEntity>();
     public DbSet<MetricEventEntity> MetricEvents => Set<MetricEventEntity>();
+    public DbSet<MarketListingEntity> MarketListings => Set<MarketListingEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -261,6 +284,20 @@ public sealed class GameDbContext : DbContext
             e.HasIndex(i => i.CharacterId);
             e.Property(i => i.ItemId).HasMaxLength(64);
             e.Property(i => i.OptionId).HasMaxLength(64);
+        });
+
+        model.Entity<MarketListingEntity>(e =>
+        {
+            e.ToTable("market_listings");
+            e.Property(m => m.Id).ValueGeneratedNever(); // o servidor dá o id (ItemUidAllocator)
+            e.HasIndex(m => m.State);
+            e.HasIndex(m => m.SellerCharacterId);
+            // Conta apagada (LGPD): as ofertas dos personagens dela vão junto.
+            e.HasOne<CharacterEntity>().WithMany().HasForeignKey(m => m.SellerCharacterId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(m => m.SellerName).HasMaxLength(32);
+            e.Property(m => m.BuyerName).HasMaxLength(32);
+            e.Property(m => m.ItemId).HasMaxLength(64);
+            e.Property(m => m.OptionId).HasMaxLength(64);
         });
 
         model.Entity<CharacterQuestEntity>(e =>

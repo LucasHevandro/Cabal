@@ -1,6 +1,7 @@
 using Game.Server.Accounts;
 using Game.Server.Persistence;
 using Game.Shared.Accounts;
+using Game.Shared.Economy;
 using Game.Shared.Items;
 using Game.Shared.Net;
 using Microsoft.EntityFrameworkCore;
@@ -154,5 +155,32 @@ public class PostgresStoreTests
 
         Assert.True(created.Ok);
         Assert.True((await auth.ResolveCharacterAsync(token, created.Value!.Id)).Ok);
+    }
+
+    [Fact]
+    public async Task Mercado_salva_com_o_personagem_e_nunca_volta_a_situacao_no_banco_real()
+    {
+        var store = await FreshStoreAsync();
+        if (store == null) return;
+        var account = await store.CreateAccountAsync("lucas", "hash", "");
+        var ana = await store.CreateCharacterAsync(account.Id, "Ana", CharacterClass.Blade, AuthService.InitialCharacter());
+        var now = DateTimeOffset.UtcNow;
+        var item = new ItemRecord(9001, ItemContainerKind.Bag, 0, "espada_aco_negro", 1, Upgrade: 4, OptionId: "pedra_furia");
+        var active = new MarketListingRecord(9002, ana.Id, "Ana", item, 5000, MarketListingState.Active, "", now, now.AddHours(72), null);
+        var sold = active with { State = MarketListingState.Sold, BuyerName = "Bia", SoldAt = now };
+        CharacterSnapshot Snapshot(MarketListingRecord listing) =>
+            new(ana.Id, 1, 0, 0, 0, 0, 100, 100, 100, Array.Empty<ItemRecord>()) { Market = new[] { listing } };
+
+        await store.SaveCharacterAsync(Snapshot(active), Array.Empty<ItemLogEntry>());
+        await store.SaveCharacterAsync(Snapshot(sold), Array.Empty<ItemLogEntry>());
+        await store.SaveCharacterAsync(Snapshot(active), Array.Empty<ItemLogEntry>()); // atrasado: não volta para ativa
+
+        var loaded = Assert.Single(await store.MarketListingsAsync());
+        Assert.Equal((MarketListingState.Sold, "Bia", 4, "pedra_furia"), (loaded.State, loaded.BuyerName, loaded.Item.Upgrade, loaded.Item.OptionId));
+        Assert.True(await store.MaxItemUidAsync() >= 9002);
+
+        await store.SaveCharacterAsync(Snapshot(sold with { State = MarketListingState.Collected }), Array.Empty<ItemLogEntry>());
+        Assert.Empty(await store.MarketListingsAsync());
+        Assert.True(await store.DeleteAccountAsync("lucas")); // a oferta vai junto (cascata)
     }
 }

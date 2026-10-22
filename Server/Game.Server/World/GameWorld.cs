@@ -161,9 +161,11 @@ public sealed partial class GameWorld
             HideHelmet = player.HideHelmet,
             Reports = player.PendingReports.ToList(),
             Metrics = player.PendingMetrics.ToList(),
+            Market = player.PendingMarket.ToList(),
         };
         player.PendingReports.Clear();
         player.PendingMetrics.Clear();
+        player.PendingMarket.Clear();
         var logs = player.PendingLogs.ToList();
         player.PendingLogs.Clear();
         return (snapshot, logs);
@@ -228,6 +230,9 @@ public sealed partial class GameWorld
                 break;
             case ShopCommand shop:
                 HandleShop(player, shop);
+                break;
+            case MarketCommand market:
+                HandleMarket(player, market);
                 break;
             case TradeCommand trade:
                 HandleTrade(player, trade, now);

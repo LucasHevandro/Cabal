@@ -252,6 +252,7 @@ public sealed partial class GameWorld
         _outbox.Send(player.Id, DialogMessage(player, npc));
         if (npc.Role == NpcRole.DungeonPortal)
             foreach (var id in Game.Shared.Dungeon.DungeonCatalog.Ids) _outbox.Send(player.Id, InfoMessage(id));
+        if (npc.Role == NpcRole.Market) SendMarket(player);
     }
 
     private NpcDialog DialogMessage(ServerPlayer player, NpcDefinition npc)

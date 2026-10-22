@@ -136,6 +136,13 @@ public sealed class ServerHost : IOutbox, IDisposable
         {
             GuestClass = options.GuestClass,
         };
+        // Mercado: cada compra, venda e retirada salva quem fez na hora, na ordem da fila (veja GameWorld.Market).
+        World.SaveRequested += player =>
+        {
+            if (_saver == null || player.CharacterId == 0) return;
+            var (snapshot, logs) = World.CaptureForSave(player);
+            _saver.Enqueue(snapshot, logs);
+        };
         // Expulsão por GM (vale também para banimento): mostra o motivo e fecha a conexão.
         World.KickRequested += (playerId, reason) =>
         {

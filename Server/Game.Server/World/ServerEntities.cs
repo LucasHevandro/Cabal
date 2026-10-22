@@ -186,6 +186,9 @@ public sealed class ServerPlayer
     /// <summary>Denúncias desde o último salvamento (vão junto no próximo).</summary>
     public List<ReportRecord> PendingReports { get; } = new();
 
+    /// <summary>Ofertas do mercado que mudaram por ação dele desde o último salvamento (vão junto no próximo).</summary>
+    public List<MarketListingRecord> PendingMarket { get; } = new();
+
     // Métricas do teste fechado (GameWorld.Metrics): contadores da sessão, eventos a gravar e relatórios do cliente.
     public SessionStats Session { get; } = new();
     public List<MetricRecord> PendingMetrics { get; } = new();

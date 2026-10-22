@@ -1,4 +1,5 @@
 using Game.Shared.Accounts;
+using Game.Shared.Economy;
 using Game.Shared.Items;
 using Game.Shared.Net;
 using Game.Shared.Text;
@@ -299,6 +300,16 @@ public sealed class EfGameStore : IGameStore
             });
         }
 
+        // Mercado: cria ou atualiza cada oferta (sem nunca voltar a situação), na mesma transação da bolsa e do Alz.
+        foreach (var listing in snapshot.Market)
+        {
+            if (listing.SellerCharacterId == 0) continue;
+            var row = db.MarketListings.Local.FirstOrDefault(m => m.Id == listing.Id) ?? await db.MarketListings.FindAsync(listing.Id);
+            if (row == null) db.MarketListings.Add(row = new MarketListingEntity { Id = listing.Id, SellerCharacterId = listing.SellerCharacterId });
+            else if (!MarketStateOrder.CanReplace((MarketListingState)row.State, listing.State)) continue;
+            Copy(listing, row);
+        }
+
         foreach (var log in logs)
         {
             db.ItemLog.Add(new ItemLogEntity
@@ -326,8 +337,45 @@ public sealed class EfGameStore : IGameStore
     public async Task<long> MaxItemUidAsync()
     {
         await using var db = await _factory.CreateDbContextAsync();
-        return await db.Items.MaxAsync(i => (long?)i.Uid) ?? 0;
+        var items = await db.Items.MaxAsync(i => (long?)i.Uid) ?? 0;
+        var listings = await db.MarketListings.MaxAsync(m => (long?)m.Id) ?? 0;
+        var listedItems = await db.MarketListings.MaxAsync(m => (long?)m.ItemUid) ?? 0;
+        return Math.Max(items, Math.Max(listings, listedItems));
     }
+
+    public async Task<IReadOnlyList<MarketListingRecord>> MarketListingsAsync()
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var active = (int)MarketListingState.Active;
+        var sold = (int)MarketListingState.Sold;
+        var rows = await db.MarketListings.AsNoTracking().Where(m => m.State == active || m.State == sold).OrderBy(m => m.Id).ToListAsync();
+        return rows.Select(ToRecord).ToList();
+    }
+
+    private static void Copy(MarketListingRecord listing, MarketListingEntity row)
+    {
+        row.SellerName = listing.SellerName;
+        row.ItemUid = listing.Item.Uid;
+        row.ItemId = listing.Item.ItemId;
+        row.Quantity = listing.Item.Quantity;
+        row.Upgrade = listing.Item.Upgrade;
+        row.PityFails = listing.Item.PityFails;
+        row.PityLevel = listing.Item.PityLevel;
+        row.RegainGuaranteed = listing.Item.RegainGuaranteed;
+        row.OptionId = listing.Item.OptionId;
+        row.Price = listing.Price;
+        row.State = (int)listing.State;
+        row.BuyerName = listing.BuyerName;
+        row.CreatedAt = listing.CreatedAt;
+        row.ExpiresAt = listing.ExpiresAt;
+        row.SoldAt = listing.SoldAt;
+    }
+
+    private static MarketListingRecord ToRecord(MarketListingEntity row) => new(
+        row.Id, row.SellerCharacterId, row.SellerName,
+        new ItemRecord(row.ItemUid, ItemContainerKind.Bag, 0, row.ItemId, row.Quantity, row.Upgrade, row.PityFails, row.PityLevel,
+            row.RegainGuaranteed, row.OptionId),
+        row.Price, (MarketListingState)row.State, row.BuyerName, row.CreatedAt, row.ExpiresAt, row.SoldAt);
 
     public async Task RecordDungeonRunAsync(DungeonRunRecord run)
     {
@@ -414,6 +462,7 @@ public sealed class InMemoryGameStore : IGameStore
     private readonly List<ReportRecord> _reports = new();
     private readonly List<DungeonRunRecord> _runs = new();
     private readonly List<MetricRecord> _metrics = new();
+    private readonly Dictionary<long, MarketListingRecord> _market = new();
     private readonly Dictionary<int, DateTimeOffset> _accountCreated = new();
     private int _nextAccountId = 1;
     private int _nextCharacterId = 1;
@@ -510,6 +559,7 @@ public sealed class InMemoryGameStore : IGameStore
             if (account == null) return Task.FromResult(false);
             var characters = _characters.Values.Where(c => c.AccountId == account.Id).Select(c => c.Id).ToHashSet();
             foreach (var id in characters) _characters.Remove(id);
+            foreach (var listing in _market.Values.Where(m => characters.Contains(m.SellerCharacterId)).ToList()) _market.Remove(listing.Id);
             _log.RemoveAll(l => characters.Contains(l.CharacterId));
             _metrics.RemoveAll(m => m.AccountId == account.Id);
             _accounts.Remove(account.Id);
@@ -586,6 +636,12 @@ public sealed class InMemoryGameStore : IGameStore
             _log.AddRange(logs);
             _reports.AddRange(s.Reports);
             _metrics.AddRange(s.Metrics);
+            foreach (var listing in s.Market)
+            {
+                if (listing.SellerCharacterId == 0) continue;
+                if (_market.TryGetValue(listing.Id, out var current) && !MarketStateOrder.CanReplace(current.State, listing.State)) continue;
+                _market[listing.Id] = listing;
+            }
             SaveCount++;
         }
         return Task.CompletedTask;
@@ -602,7 +658,28 @@ public sealed class InMemoryGameStore : IGameStore
 
     public Task<long> MaxItemUidAsync()
     {
-        lock (_lock) return Task.FromResult(_characters.Values.SelectMany(c => c.Items).Select(i => i.Uid).DefaultIfEmpty(0).Max());
+        lock (_lock)
+        {
+            var items = _characters.Values.SelectMany(c => c.Items).Select(i => i.Uid)
+                .Concat(_market.Values.SelectMany(m => new[] { m.Id, m.Item.Uid }));
+            return Task.FromResult(items.DefaultIfEmpty(0).Max());
+        }
+    }
+
+    public Task<IReadOnlyList<MarketListingRecord>> MarketListingsAsync()
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<MarketListingRecord> list = _market.Values
+                .Where(m => m.State is MarketListingState.Active or MarketListingState.Sold).OrderBy(m => m.Id).ToList();
+            return Task.FromResult(list);
+        }
+    }
+
+    /// <summary>Todas as ofertas guardadas, em qualquer situação (testes).</summary>
+    public IReadOnlyList<MarketListingRecord> AllMarketListings()
+    {
+        lock (_lock) return _market.Values.OrderBy(m => m.Id).ToList();
     }
 
     public Task RecordDungeonRunAsync(DungeonRunRecord run)
